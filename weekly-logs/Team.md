@@ -4,3 +4,4 @@ For this milestone, the team met and began discussing, brainstorming, and formul
 
 GitHub Usernames:
 Chris Hill - chrishill93
+Ethan Methorst - xvardenx
