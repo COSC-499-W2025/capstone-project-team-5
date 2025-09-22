@@ -15,7 +15,9 @@
 * Ojus Sharma - ojusharma
 * Sparsh Khanna - Sparshkhannaa
 * Ribhav Sharma - ribhavsharma
+* Ronit Buti - Ron-it
 
 </details>
 
 ---
+
