@@ -7,7 +7,7 @@ This week was fairly light in work, as we were meeting as a team for the first t
 
 ## Week #4 (21 September 2025 - 28 September 2025)
 
-
+<img alt="image" src="Screenshot 2025-09-28 125237.png">
 
 This week we spent a fair amount of time planning the System Architecture. I contributed an initial sketch to work off of, and my team members drew up a more detailed diagram. After our discussions with other teams on Wednesday, I suggested that we narrow our focus and draw up a more simplified System Architecture Design. Ethan and I got the new diagram started, and I finalized it. Later in the week, we held a team meeting and worked on formulating our Project Proposal. My main contribution here was brainstorming the workload distribution.
 
