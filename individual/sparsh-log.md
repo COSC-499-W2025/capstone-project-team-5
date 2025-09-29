@@ -23,10 +23,28 @@
 - **Requirements**: Decided on a functional and non functional requirements.
 
 
----
-
 
 ## Week #4 (21 September 2025 - 28 September 2025)
+<details>
+  <summary><h3>Evaluation</h3></summary>
+  
+---![9C9A62FC-929A-4852-AC3B-1A2BD66E10E5](https://github.com/user-attachments/assets/5cb2e290-764d-47c9-8f93-9110210ea25b)
+
+</details>
+
+### What Went Well
+  - **System Architecture Design**: Built upon initial draft of our system architecture diagram based on in-class discussions and previous week's requirements.
+  - **Tech Stack Contribution**: Provided considerable input and ideas during tech stack discussion.
+  - **Team Collaboration**: Everyone had good ideas which made discussions more productive and healthy.
+
+  ### What Didn't Go Well
+  - **Decision Making Challenges**: I personally felt the team had some issues in coming to an agreement in the cloud vs completly local aspect of our project.
+  - **Resolution**: Eventually the team had a healthy discussion to decide what works ^_^ .
+
+  ### Planning for Next Week
+  - Create DFDs timely with the team.
+  - Study more about python libraries and multithreading.
+  - Look more into data mining and file scraping.
 ### Team Activities
 - **System Architecture**: Worked with the team to narrow down our existing ideas to get the best possible architecture diagram for our use case.  
 - **Project Proposal**: Engaged in detailed discussion with team to finalise and communicate regarding the project proposal.  
