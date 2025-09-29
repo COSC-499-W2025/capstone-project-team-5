@@ -24,3 +24,13 @@
 
 
 ---
+
+
+## Week #4 (21 September 2025 - 28 September 2025)
+### Team Activities
+- **System Architecture**: Worked with the team to narrow down our existing ideas to get the best possible architecture diagram for our use case.  
+- **Project Proposal**: Engaged in detailed discussion with team to finalise and communicate regarding the project proposal.  
+
+### Personal Contributions
+- **Orignal System Architecture Design**: Spent a good amount of time on the orignal system architecture we presented in Class on Wednesday. We decided as a team to not go forward with the same.  
+- **Tech Stack Requirements**: Provided inputs and suggetions for relevant libraries and tech staxk we could use.
