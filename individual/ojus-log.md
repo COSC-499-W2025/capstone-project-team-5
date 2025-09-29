@@ -24,8 +24,7 @@
 <details>
   <summary><h3>Week 4</h3></summary>
 
-<img width="1068" height="626" alt="image" src="https://github.com/user-attachments/assets/4aaa76bd-bd43-4903-bfaf-4ca2ef5a0dcb" />
-
+<img width="2109" height="1215" alt="image" src="https://github.com/user-attachments/assets/d11d6faf-bb24-47a2-9f26-df09a67dd8ef" />
 
 ### What Went Well
   - Created the initial system architecture diagram with Sparsh (based on Ronit's draft with Ribhav) and got it ready for the Wednesday in-class activity.
