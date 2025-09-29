@@ -2,7 +2,32 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-*Last Updated:* September 21, 2025
+*Last Updated:* September 28, 2025
+
+---
+
+## Week 4 | September 22-28, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+
+</details>
+
+### What Went Well
+  - **System Architecture Design**: Created the initial draft of our system architecture diagram based on in-class discussions and previous week's requirements
+  - **Tech Stack Research**: Researched and decided on major parts of our tech stack for our proposal
+  - **Team Collaboration**: Everyone had good contributions and ideas which made discussions easier
+
+  ### What Didn't Go Well
+  - **Decision Making Challenges**: I was personally divided in making some decisions (tech stack)
+  - **Architecture Modifications**: I was also a bit hesitant with modifying system architecture to go completely local
+  - **Resolution**: Eventually came to conclusions that everyone was happy with and met everyone's preferences
+
+  ### Planning for Next Week
+  - Create DFDs
+  - Conduct more research on tech stack compatibility
+    - Investigate if our chosen tech stack will work smoothly with Tauri + Python plugin for the backend
 
 ---
 
