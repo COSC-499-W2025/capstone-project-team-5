@@ -9,3 +9,9 @@ Time was spent creating the requirements and planning the project at a high leve
 ![alt text](<Screenshot 2025-09-28 083043-1.png>)
 
 Early in the week time was spent refactoring our system architecture diagram after meeting with other teams and getting feedback. Later in the week time was spent working on the project proposal, where I outlined our scope and target users, proposed solution and interesting / unique features, as well writing out our functional requirements with minor refactoring from previous.
+
+## Week #5 (September 28 - October 5 2025)
+
+Time was spent working on the level 1 data flow diagram. Our intial draft that was brought to class was refactored in whole to include more accurate components as well as attempting to improve readability. Because this was all that was needed for the week team meetings were limited and no other descion making was involved. The plan for the next cycle is to revisit our requirements and finalize them to help our final system architecture diagram.
+
+![Screenshot](week5_checklist.png)
