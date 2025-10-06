@@ -44,3 +44,5 @@ We got the System Architecture Diagram finished earlier in the week, which allow
 - Begin assigning tasks to members and start coding
 - Ensure GitHub branches are organized and a system is in place to ensure smooth project workflow in the future
 </details>
+
+
