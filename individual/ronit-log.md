@@ -11,6 +11,8 @@ _Last Updated:_ October 5, 2025
 <details>
   <summary><h3>Evaluation</h3></summary>
 
+  <img width="1070" height="623" alt="image" src="https://github.com/user-attachments/assets/15744b9f-1bda-40b1-b80b-7a4ab9fb5b9b" />
+
 </details>
 
 ### What Went Well
