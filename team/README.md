@@ -1,5 +1,32 @@
 # Team Weekly Logs
 
+<details>
+  <summary><h3>Week 5 | September 30-October 4, 2025</h3></summary>
+
+## Milestones
+* Completed DFD design and iterated based on internal, external and professor feedback
+
+## What Went Well
+* Significantly better communication than last week
+* Increased team synergy - members are comfortable sharing opinions 
+
+## What Didn't Go Well
+* Ambiguity regarding the level of detail needed in DFD
+
+## Reflection Points
+* **Strengths**: Smooth and effective completion of required tasks
+* **Areas for Improvement**: Better workload distribution for weekly tasks
+
+## Plan for Next Cycle (Week 6)
+* Reviewing finalized set of requirements
+* Dividing tasks and responsibilities
+* Populating Kanban board
+* Researching deeper into finalized tech stack
+
+
+</details>
+
+---
 
 <details>
   <summary><h3>Week 4 | September 22-28, 2025</h3></summary>
