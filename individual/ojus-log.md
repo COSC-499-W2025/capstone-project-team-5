@@ -5,7 +5,7 @@
 ---
 
 <details>
-  <summary><h3>Week 3 | September 15-21, 2025</h3></summary>
+  <summary><h3>Week 3</summary>
 
 <img width="1068" height="626" alt="image" src="https://github.com/user-attachments/assets/4aaa76bd-bd43-4903-bfaf-4ca2ef5a0dcb" />
 
@@ -41,3 +41,23 @@
   - Meeting twice during the week
 </details>
 
+---
+
+<details>
+  <summary><h3>Week 5</h3></summary>
+
+<img width="863" height="659" alt="image" src="https://github.com/user-attachments/assets/b77f6160-aa52-4eb0-ad89-a5ad9a391696" />
+
+
+### What Went Well
+  - Team worked efficiently to get the DFDs ready for class
+  - Had insightful conversations within the team, with other teams and Dr Bowen
+  - Iterated on initial designs and made a good final design
+
+  ### What Didn't Go Well
+  - No problems :)
+
+  ### Planning for Next Week
+  - Given the project requirements, we will divide tasks based on previous discussions
+  - Doing more research w.r.t finalized requirements and continuing group Knowledge Transfers
+</details>
