@@ -49,7 +49,8 @@ We got the System Architecture Diagram finished earlier in the week, which allow
 
 <details>
   <summary><h3></h3></summary>
-<img>
+<img alt="Screenshot 2025-10-12 094847" src="https://github.com/user-attachments/assets/b9a90c01-6745-4ca8-9f85-03c1179af6a2" />
+
 
 Last week was mostly spent on team meetings and assigning people to tasks. To do this, I drew up a revised Work Breakdown Structure after reviewing the finalized Milestone 1 requirements. Afterwards we held a team meeting to further hammer out the Work Breakdown Structure to come up with a distributed workload that the team was confident in. After this was achieved we moved onto initializing the project, and starting code contributions and reviews. Next sprint we plan to increase our frequency and volume of code contributions in order to establish a sustainable pace to complete all requirements for Milestone 1 within the deadline.
 
