@@ -45,4 +45,23 @@ We got the System Architecture Diagram finished earlier in the week, which allow
 - Ensure GitHub branches are organized and a system is in place to ensure smooth project workflow in the future
 </details>
 
+## Week 6 | 05 October- 12 October 2025
 
+<details>
+  <summary><h3></h3></summary>
+<img>
+
+Last week was mostly spent on team meetings and assigning people to tasks. To do this, I drew up a revised Work Breakdown Structure after reviewing the finalized Milestone 1 requirements. Afterwards we held a team meeting to further hammer out the Work Breakdown Structure to come up with a distributed workload that the team was confident in. After this was achieved we moved onto initializing the project, and starting code contributions and reviews. Next sprint we plan to increase our frequency and volume of code contributions in order to establish a sustainable pace to complete all requirements for Milestone 1 within the deadline.
+
+
+### Previous Week:
+| Task  | Status | Notes |
+| :---- | :------: | -------: |
+| Revise WBS | Done | WBS has been finalized. |
+| Build Database | In Progress | Initial database schema has been created. |
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :-----: | -------: |
+| Build Database | In Progress | Expand database as needed. |
+| Start R13 Code | Not Yet Started | "Output all key information for a project." |
