@@ -1,6 +1,40 @@
 # Team Weekly Logs
 
 <details>
+  <summary><h3>Week 6 | October 6-12, 2025</h3></summary>
+
+### Burnup Chart
+<img width="1200" height="864" alt="chart" src="https://github.com/user-attachments/assets/5b943c91-ef41-4047-993a-2a0de65e341f" />
+
+### Past Work
+- Revised WBS and finalized task distribution; populated Kanban board
+- Initial Python tooling setup with `uv`, `ruff`, `pytest`
+- Framework/language detection implementation
+- Database schema creation
+- User configuration and consent input features started
+- Code contributions and PR reviews initiated
+
+### Updates on Previous To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Populate Kanban/task board based on Milestone 1 requirements | ✅ Done | Initial tasks created and distributed |
+| Research Python integration with Tauri | ❌ Not Started | Deferred to later in Milestone 1 |
+| Framework/language detection | ✅ Done | Initial version merged |
+| Database schema | In Progress | Initial schema created |
+| User configuration | In Progress | Early contributions made |
+
+### Upcoming Work
+- Upload parsing specification and validation
+- Artifact extraction research
+- Database expansion
+- Output key project information (R13)
+- PR reviews and continued code contributions
+
+</details>
+
+---
+
+<details>
   <summary><h3>Week 5 | September 30-October 4, 2025</h3></summary>
 
 ## Milestones
