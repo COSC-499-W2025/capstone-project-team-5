@@ -1,7 +1,6 @@
 name: Ruff
 on:
-  pull_request:
-    branches: [ develop ] 
+  pull_request: 
   push:
     branches: [ main ]   
 
