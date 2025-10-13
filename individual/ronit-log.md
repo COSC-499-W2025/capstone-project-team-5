@@ -2,9 +2,41 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-_Last Updated:_ October 5, 2025
+_Last Updated:_ October 12, 2025
 
 ---
+
+## Week 6 | October 6-12, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+  <img width="1339" height="783" alt="image" src="https://github.com/user-attachments/assets/832667ec-9a98-4d94-a813-7a239562af2b" />
+
+
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Initialized the codebase with `uv` and `ruff`; added pre-commit hooks (lint + format). | ✅ Done | Linting + formatting enforced via pre-commit |
+| Set up `pytest` with a basic example. | ✅ Done |  |
+| Populated the Kanban board with initial tasks based on the WBS. | ✅ Done |  |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Define + implement zipped upload parsing spec (what to parse, output format, DB storage). | ❌ Not Started |  |
+| Add validation to reject wrong upload formats. | ❌ Not Started | |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Populate the Kanban/task board based on the Milestone 1 requirements | ✅ Done | Initial tasks created |
+| Research Python integration with Tauri for our backend implementation | ❌ Not Started | Will review this later towards the end of Milestone 1 |
+
+---
+
 
 ## Week 5 | September 29-October 5, 2025
 
