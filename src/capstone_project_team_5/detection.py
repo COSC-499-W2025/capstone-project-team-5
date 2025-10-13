@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Iterable, Optional, Tuple
 import json
+from collections.abc import Iterable
+from pathlib import Path
 
 try:
     import tomllib
-except ModuleNotFoundError: 
-    tomllib = None  
+except ModuleNotFoundError:
+    tomllib = None
 
 
 def _read_text(path: Path) -> str:
@@ -31,13 +31,13 @@ def _contains_any(text: str, needles: Iterable[str]) -> bool:
     return any(needle.lower() in lowered for needle in needles)
 
 
-def _detect_from_pyproject(root: Path) -> Tuple[Optional[str], Optional[str]]:
+def _detect_from_pyproject(root: Path) -> tuple[str | None, str | None]:
     pyproject = root / "pyproject.toml"
     if not pyproject.exists():
         return None, None
 
-    language: Optional[str] = "Python"
-    framework: Optional[str] = None
+    language: str | None = "Python"
+    framework: str | None = None
 
     deps: set[str] = set()
     try:
@@ -71,7 +71,7 @@ def _detect_from_pyproject(root: Path) -> Tuple[Optional[str], Optional[str]]:
     return language, framework
 
 
-def _detect_from_requirements(root: Path) -> Tuple[Optional[str], Optional[str]]:
+def _detect_from_requirements(root: Path) -> tuple[str | None, str | None]:
     for fname in ("requirements.txt", "requirements-dev.txt"):
         path = root / fname
         if not path.exists():
@@ -81,8 +81,8 @@ def _detect_from_requirements(root: Path) -> Tuple[Optional[str], Optional[str]]
         if not content:
             continue
 
-        language: Optional[str] = "Python"
-        framework: Optional[str] = None
+        language: str | None = "Python"
+        framework: str | None = None
         if _contains_any(content, ("fastapi",)):
             framework = "FastAPI"
         elif _contains_any(content, ("django",)):
@@ -97,7 +97,7 @@ def _detect_from_requirements(root: Path) -> Tuple[Optional[str], Optional[str]]
     return None, None
 
 
-def _detect_from_package_json(root: Path) -> Tuple[Optional[str], Optional[str]]:
+def _detect_from_package_json(root: Path) -> tuple[str | None, str | None]:
     pkg = root / "package.json"
     if not pkg.exists():
         return None, None
@@ -113,10 +113,14 @@ def _detect_from_package_json(root: Path) -> Tuple[Optional[str], Optional[str]]
     }
     deps_lower = {str(k).lower(): str(v) for k, v in deps.items()}
 
-    language: Optional[str] = "TypeScript" if any(
-        f.endswith(".ts") or f.endswith(".tsx") for f in [p.name for p in root.rglob("*.ts*")]
-    ) else "JavaScript"
-    framework: Optional[str] = None
+    language: str | None = (
+        "TypeScript"
+        if any(
+            f.endswith(".ts") or f.endswith(".tsx") for f in [p.name for p in root.rglob("*.ts*")]
+        )
+        else "JavaScript"
+    )
+    framework: str | None = None
 
     framework_checks: list[tuple[str, Iterable[str]]] = [
         ("Next.js", ("next",)),
@@ -133,38 +137,39 @@ def _detect_from_package_json(root: Path) -> Tuple[Optional[str], Optional[str]]
             framework = fw
             break
 
-    if framework is None:
-        if (root / "src-tauri" / "tauri.conf.json").exists() or (root / "tauri.conf.json").exists():
-            framework = "Tauri"
+    if framework is None and (
+        (root / "src-tauri" / "tauri.conf.json").exists() or (root / "tauri.conf.json").exists()
+    ):
+        framework = "Tauri"
 
     return language, framework
 
 
-def _detect_from_rust(root: Path) -> Tuple[Optional[str], Optional[str]]:
+def _detect_from_rust(root: Path) -> tuple[str | None, str | None]:
     cargo = root / "Cargo.toml"
     if not cargo.exists():
         return None, None
 
-    language: Optional[str] = "Rust"
-    framework: Optional[str] = None
+    language: str | None = "Rust"
+    framework: str | None = None
     content = _read_text(cargo)
     if _contains_any(content, ("tauri",)):
         framework = "Tauri"
     return language, framework
 
 
-def _detect_from_go(root: Path) -> Tuple[Optional[str], Optional[str]]:
+def _detect_from_go(root: Path) -> tuple[str | None, str | None]:
     if (root / "go.mod").exists():
         return "Go", None
     return None, None
 
 
-def _detect_from_dotnet(root: Path) -> Tuple[Optional[str], Optional[str]]:
+def _detect_from_dotnet(root: Path) -> tuple[str | None, str | None]:
     csproj = next(root.glob("*.csproj"), None)
     if csproj is None:
         return None, None
-    language: Optional[str] = "C#"
-    framework: Optional[str] = None
+    language: str | None = "C#"
+    framework: str | None = None
     program = root / "Program.cs"
     if program.exists():
         content = _read_text(program)
@@ -173,38 +178,46 @@ def _detect_from_dotnet(root: Path) -> Tuple[Optional[str], Optional[str]]:
     return language, framework
 
 
-def _detect_from_java(root: Path) -> Tuple[Optional[str], Optional[str]]:
-    if (root / "pom.xml").exists() or (root / "build.gradle").exists() or (root / "build.gradle.kts").exists():
-        language: Optional[str] = "Java"
-        framework: Optional[str] = None
-        content = _read_text(root / "pom.xml") + _read_text(root / "build.gradle") + _read_text(root / "build.gradle.kts")
+def _detect_from_java(root: Path) -> tuple[str | None, str | None]:
+    if (
+        (root / "pom.xml").exists()
+        or (root / "build.gradle").exists()
+        or (root / "build.gradle.kts").exists()
+    ):
+        language: str | None = "Java"
+        framework: str | None = None
+        content = (
+            _read_text(root / "pom.xml")
+            + _read_text(root / "build.gradle")
+            + _read_text(root / "build.gradle.kts")
+        )
         if _contains_any(content, ("spring-boot-starter", "springframework")):
             framework = "Spring Boot"
         return language, framework
     return None, None
 
 
-def _detect_from_php(root: Path) -> Tuple[Optional[str], Optional[str]]:
+def _detect_from_php(root: Path) -> tuple[str | None, str | None]:
     if (root / "composer.json").exists():
-        language: Optional[str] = "PHP"
-        framework: Optional[str] = None
+        language: str | None = "PHP"
+        framework: str | None = None
         if (root / "artisan").exists():
             framework = "Laravel"
         return language, framework
     return None, None
 
 
-def _detect_from_ruby(root: Path) -> Tuple[Optional[str], Optional[str]]:
+def _detect_from_ruby(root: Path) -> tuple[str | None, str | None]:
     if (root / "Gemfile").exists():
-        language: Optional[str] = "Ruby"
-        framework: Optional[str] = None
+        language: str | None = "Ruby"
+        framework: str | None = None
         if (root / "bin" / "rails").exists() or (root / "config" / "application.rb").exists():
             framework = "Rails"
         return language, framework
     return None, None
 
 
-def _detect_from_c_cpp(root: Path) -> Tuple[Optional[str], Optional[str]]:
+def _detect_from_c_cpp(root: Path) -> tuple[str | None, str | None]:
     if (root / "CMakeLists.txt").exists():
         return "C/C++", "CMake"
     for ext in (".c", ".cpp", ".cc", ".h", ".hpp"):
@@ -213,7 +226,7 @@ def _detect_from_c_cpp(root: Path) -> Tuple[Optional[str], Optional[str]]:
     return None, None
 
 
-def identify_language_and_framework(project_root: Path | str) -> tuple[str, Optional[str]]:
+def identify_language_and_framework(project_root: Path | str) -> tuple[str, str | None]:
     """Identify the primary programming language and, if possible, the framework.
 
     The detection uses simple heuristics based on common manifest files and
@@ -259,4 +272,3 @@ def identify_language_and_framework(project_root: Path | str) -> tuple[str, Opti
         return "JavaScript", None
 
     return "Unknown", None
-
