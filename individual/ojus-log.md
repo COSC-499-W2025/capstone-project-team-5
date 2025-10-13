@@ -61,3 +61,27 @@
   - Given the project requirements, we will divide tasks based on previous discussions
   - Doing more research w.r.t finalized requirements and continuing group Knowledge Transfers
 </details>
+
+
+---
+
+<details>
+  <summary><h3>Week 6</h3></summary>
+
+<img width="1117" height="642" alt="image" src="https://github.com/user-attachments/assets/e19ff0d6-1d69-42d1-b126-b5e1d9562169" />
+
+### What Went Well
+  - Completed workload distribution smoothly with team
+  - Created a new tool to extract skills (tools+ Software Eng practices)
+  - Tested and merged tool
+  - Reviewd PRs
+  - Researched into Tauri imnlementation
+
+  ### What Didn't Go Well
+  - No problems :)
+
+  ### Planning for Next Week
+  - Iterate over current iplementation of skills_detection.py tool
+  - Start working on integration of LLMs into skill extraction
+  - Review more PRs than this week
+</details>
