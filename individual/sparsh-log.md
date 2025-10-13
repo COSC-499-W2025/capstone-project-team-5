@@ -80,3 +80,15 @@ N/A
 - **DFD Contributions**: Provided considerable input and ideas during DFD discussion. 
 - **Project Board Contributions**: Created a few user stories to start project board tracking.
 
+## Week #6 (October 05 2025 - October 12 2025)
+<details>
+  <summary><h3>Evaluation</h3></summary>
+<img width="1108" height="625" alt="image" src="https://github.com/user-attachments/assets/fe99909d-563e-4efe-a40d-759b79a2f5d9" />
+
+</details>
+
+### Team Activities
+- **Work Distribution**: Worked with the team to discuss and distribute work amongst all of us.  
+
+### Personal Contributions
+- **Code Contributions**: Provided code changes and UTS for consent input. 
