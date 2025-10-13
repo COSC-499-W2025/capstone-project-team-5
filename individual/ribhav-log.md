@@ -72,7 +72,32 @@
 - Rather than working collaboratively, our workflow consisted of one person making an entire first draft by themself, and then everyone else chipping in and iterating on it.
 - Some trouble catching up on DFD concepts from COSC 310
 
-### Next Week's Plans
-- Dividing up work fom the confirmed requirements and adjusting our system architeture diagram if any changes need to be made.
-- Personally researching ways to mine data effectively and data analysis, and sharing findings with the team over our Discord server.
+---
+
+## Week 6 | October 5-10, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+ <img width="1640" height="946" alt="image" src="https://github.com/user-attachments/assets/6c23bd45-c8cf-49af-a4f2-0f55d99d51f6" />
+
+</details>
+
+### Task Progress this week
+
+This week was pretty smooth sailing. It was nice to sit together with the team and distribute tasks from the final requirements. We have a fair idea of what each of us will do and the review cycle is also going smoothly on the repository. Team synergy is growing and next week we plan on continuing working on our assigned requirements, while assisting each other :)
+
+
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Task Assignment  | ✅ Done        | N/A  |
+| Framework/Programming Language Detection  | ✅ Done   | PR merged with initial version  |
+
+### Next week's plans
+
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Explore Artifact extraction | ❌ Not Started       | Figure out how to extract different artifacts from a given folder |
+| Review PRs | ❌ Not Started   |  |
+| Learn about Tauri | ❌ Not Started   |  |
 
