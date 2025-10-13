@@ -20,7 +20,6 @@ Please use the provided folder structure for your project. You are free to organ
 Please use a branching workflow, and once an item is ready, do remember to issue a PR, review, and merge it into the master branch.
 Be sure to keep your docs and README.md up-to-date.
 
-
 # Development Setup
 ```bash
 # Install dependencies
@@ -38,3 +37,26 @@ uv run ruff check .
 # Auto Fix
 uv run ruff check . --fix
 ```
+
+# System Design Updates
+
+### System Architecture Diagram
+<img alt="System Architecture Diagram" src="https://github.com/user-attachments/assets/1b5df671-89ce-420e-88d3-80eecea96a50" />
+
+**Explanation of Changes:**  
+As we have yet to receive feedback for the System Architecture Diagram, we were unable to make any meaningful changes.
+
+---
+
+### 🔄 Data Flow Diagram
+<img alt="Data Flow Diagram" src="https://github.com/user-attachments/assets/d2d4167e-bb7d-4109-959b-76d81cb4a7dc" />
+
+**Explanation of Changes:**
+As we have yet to receive feedback for the Data Flow Diagram, we were unable to make any meaningful changes.
+
+---
+
+### 🧱 Work Breakdown Structure
+<img alt="Work Breakdown Structure" src="https://github.com/user-attachments/assets/3846483a-b278-44df-b119-1009ac6ddfce" />
+
+---
