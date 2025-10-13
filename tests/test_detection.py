@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import json
-
-import pytest
+from pathlib import Path
 
 from capstone_project_team_5.detection import identify_language_and_framework
 
@@ -15,16 +13,6 @@ def test_unknown_when_empty(tmp_path: Path) -> None:
 
 
 def test_detect_python_fastapi_from_pyproject(tmp_path: Path) -> None:
-    pyproject = {
-        "project": {
-            "name": "sample",
-            "version": "0.0.1",
-            "dependencies": [
-                "fastapi>=0.110",
-                "uvicorn",
-            ],
-        }
-    }
     (tmp_path / "pyproject.toml").write_text(
         """
         [project]
@@ -66,4 +54,3 @@ def test_detect_python_from_requirements(tmp_path: Path) -> None:
     language, framework = identify_language_and_framework(tmp_path)
     assert language == "Python"
     assert framework == "Flask"
-
