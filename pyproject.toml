@@ -7,7 +7,9 @@ authors = [
     { name = "Ronit", email = "butironit@gmail.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "easygui>=0.98.3",
+]
 
 [project.scripts]
 capstone-project-team-5 = "capstone_project_team_5:main"
