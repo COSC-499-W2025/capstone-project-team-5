@@ -143,7 +143,7 @@ Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
         """
         return [".git", "node_modules", "__pycache__"]
 
-    def _build_config_(self) -> dict[str, Any]:
+    def _build_config(self) -> dict[str, Any]:
         """Build a configuration dictionary matching UserConfig.to_dict() format.
 
         Returns:
