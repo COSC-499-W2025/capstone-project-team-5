@@ -7,7 +7,6 @@
 This week was fairly light in work, as we were meeting as a team for the first time, and brainstorming Project Requirements. This initial brainstorming was a collaborative effort. My specific contributions were to take the brainstorming notes, and write the foundational functional requirements, in a properly formatted list (i.e "The system shall ... ) in preparation for the class discussions on Wednesday. This was completed in a timely manner.
 </details>
 
-
 ## Week 4 | 21 September - 28 September 2025
 
 <details>
@@ -51,18 +50,37 @@ We got the System Architecture Diagram finished earlier in the week, which allow
   <summary><h3></h3></summary>
 <img alt="Screenshot 2025-10-12 094847" src="https://github.com/user-attachments/assets/b9a90c01-6745-4ca8-9f85-03c1179af6a2" />
 
-
 Last week was mostly spent on team meetings and assigning people to tasks. To do this, I drew up a revised Work Breakdown Structure after reviewing the finalized Milestone 1 requirements. Afterwards we held a team meeting to further hammer out the Work Breakdown Structure to come up with a distributed workload that the team was confident in. After this was achieved we moved onto initializing the project, and starting code contributions and reviews. Next sprint we plan to increase our frequency and volume of code contributions in order to establish a sustainable pace to complete all requirements for Milestone 1 within the deadline.
-
 
 ### Previous Week:
 | Task  | Status | Notes |
-| :---- | :------: | -------: |
+| :---- | :------ | :------- |
 | Revise WBS | Done | WBS has been finalized. |
 | Build Database | In Progress | Initial database schema has been created. |
 
 ### Next Week:
 | Task | Status | Notes |
-| :---- | :-----: | -------: |
+| :---- | :----- | :------- |
 | Build Database | In Progress | Expand database as needed. |
 | Start R13 Code | Not Yet Started | "Output all key information for a project." |
+</details>
+
+## Week 7 | 12 October- 19 October 2025
+
+<details>
+  <summary><h3></h3></summary>
+<img alt="Screenshot 2025-10-19 072935" src="https://github.com/user-attachments/assets/b4053925-8710-45cd-ad12-fba2e331e56f" />
+
+This past week included Quiz #1 and, for many members of the team, midterms in other classes. As a result we chose not to overload everyone, and instead focused on furthering code contributions in our given areas of responsibility. This adjustment works contrary to our plan of increasing our frequency and volume of code contributions, slightly, but it was a good adjustment for everyone's overall workload. I've started the code for Requirement 13: "Output all key information for a project." Next sprint appears to be lighter on my personal overall workload, and as such I plan to contribute more code and code reviews, sooner in the week. We have also identified a small issue with regards to GitHub branches where we have been merging our features into main, rather than the develop branch. We plan to amend this in the upcoming week.
+
+### Previous Week:
+| Task  | Status | Notes |
+| :---- | :------ | :------- |
+| Start R13 Code | Completed | "Output all key information for a project." |
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Reorganize GitHub Branches | Not Yet Started | Merge main into develop. |
+| Start R15 Code | Not Yet Started | "Retrieve previously generated portfolio information." |
+</details>
