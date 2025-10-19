@@ -20,12 +20,22 @@ class ConsentTool:
     Attributes:
         title: Title displayed on the main consent form dialog.
         consent_text: Main consent form text explaining file access permissions.
-        external_tools_consent_text: Consent text for external service integration.
+        external_services_consent_text: Consent text for external service integration.
         consent_given: Whether main consent has been given.
         use_external_services: Whether external services consent has been given.
         external_services: Dictionary of external service configurations.
         default_ignore_patterns: List of patterns to ignore during file analysis.
     """
+
+    # Available external services for integration
+    AVAILABLE_EXTERNAL_SERVICES: list[str] = [
+        "GitHub API",
+        "LinkedIn API",
+        "OpenAI/GPT",
+        "Google Cloud Services",
+        "AWS Services",
+        "Microsoft Azure",
+    ]
 
     def __init__(self) -> None:
         """Initialize the ConsentTool with default consent text and configuration."""
@@ -49,7 +59,7 @@ Please review and agree to the following:
 If you decline, core features will not work.
 Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
 
-        self.external_tools_consent_text: str = """
+        self.external_services_consent_text: str = """
 To enhance functionality, Zip2Job can integrate with external services.
 Please review and agree to the following:
 • Share derived summaries / metadata with selected services
@@ -116,7 +126,7 @@ Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
             True if user agrees to external services, False otherwise.
         """
         consent_given = self.get_user_consent(
-            self.external_tools_consent_text,
+            self.external_services_consent_text,
             "External Services Consent",
             ["Yes I agree", "No, Cancel"],
         )
@@ -152,15 +162,6 @@ Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
         Returns:
             List of selected service names.
         """
-        available_services = [
-            "GitHub API",
-            "LinkedIn API",
-            "OpenAI/GPT",
-            "Google Cloud Services",
-            "AWS Services",
-            "Microsoft Azure",
-        ]
-
         msg = """Select the external services you would like to integrate with Zip2Job:
 
 Note: Each service may have its own data policies and requirements.
@@ -169,7 +170,7 @@ You can select multiple services or none."""
         selected = eg.multchoicebox(
             msg=msg,
             title="Select External Services",
-            choices=available_services,
+            choices=self.AVAILABLE_EXTERNAL_SERVICES,
         )
 
         # multchoicebox returns None if user cancels, or a list of selected items
