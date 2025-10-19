@@ -16,7 +16,6 @@ class ProjectSummary:
 
     @staticmethod
     def summarize(project_name: str):
-
         if not DB_PATH.exists():
             raise FileNotFoundError(
                 f"Database not found at {DB_PATH}. "

@@ -52,31 +52,45 @@ def temp_db(tmp_path):
     """)
 
     # Insert a test project
-    cur.execute("""
+    cur.execute(
+        """
         INSERT INTO Project (name, description, language, framework, is_collaborative, start_date, end_date, importance_rank)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, ("Artifact Miner", "Testing project summary output", "Python", "Flask", 0, "2024-09-01", "2024-12-01", 1))
+    """,
+        (
+            "Artifact Miner",
+            "Testing project summary output",
+            "Python",
+            "Flask",
+            0,
+            "2024-09-01",
+            "2024-12-01",
+            1,
+        ),
+    )
     pid = cur.lastrowid
 
     # Artifacts
-    cur.executemany("INSERT INTO Artifact (project_id, path, type) VALUES (?,?,?)", [
-        (pid, "src/main.py", "code"),
-        (pid, "tests/test_main.py", "code"),
-        (pid, "docs/readme.md", "document")
-    ])
+    cur.executemany(
+        "INSERT INTO Artifact (project_id, path, type) VALUES (?,?,?)",
+        [
+            (pid, "src/main.py", "code"),
+            (pid, "tests/test_main.py", "code"),
+            (pid, "docs/readme.md", "document"),
+        ],
+    )
 
     # Contributions
-    cur.executemany("INSERT INTO Contribution (project_id, activity_type) VALUES (?,?)", [
-        (pid, "code"),
-        (pid, "document"),
-        (pid, "code")
-    ])
+    cur.executemany(
+        "INSERT INTO Contribution (project_id, activity_type) VALUES (?,?)",
+        [(pid, "code"), (pid, "document"), (pid, "code")],
+    )
 
     # Skills + link table
     cur.executemany("INSERT INTO Skill (name) VALUES (?)", [("Python",), ("Flask",)])
-    cur.executemany("INSERT INTO ProjectSkill (project_id, skill_id) VALUES (?,?)", [
-        (pid, 1), (pid, 2)
-    ])
+    cur.executemany(
+        "INSERT INTO ProjectSkill (project_id, skill_id) VALUES (?,?)", [(pid, 1), (pid, 2)]
+    )
 
     conn.commit()
     conn.close()
