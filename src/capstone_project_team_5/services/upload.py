@@ -1,47 +1,52 @@
+"""Zip file upload and processing service."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass, field
 from pathlib import Path
 from zipfile import BadZipFile, ZipFile
 
-
-class InvalidZipError(Exception):
-    """Raised when the provided file cannot be processed as a valid ZIP archive."""
-
-
-@dataclass(slots=True)
-class FileNode:
-    name: str
-    path: str
-
-
-@dataclass(slots=True)
-class DirectoryNode:
-    name: str
-    path: str
-    children: list[FileNode | DirectoryNode] = field(default_factory=list)
-
-
-@dataclass(slots=True)
-class ZipUploadResult:
-    filename: str
-    size_bytes: int
-    file_count: int
-    tree: DirectoryNode
+from capstone_project_team_5.models.upload import (
+    DirectoryNode,
+    FileNode,
+    InvalidZipError,
+    ZipUploadResult,
+)
 
 
 def _get_ignore_patterns() -> set[str]:
+    """Get default ignore patterns from ConsentTool.
+
+    Returns:
+        Set of directory/file patterns to ignore during processing.
+    """
     from capstone_project_team_5.consent_tool import ConsentTool
 
     return set(ConsentTool()._get_default_ignore_patterns())
 
 
 def _is_ignored(segments: list[str], ignore_patterns: set[str]) -> bool:
+    """Check if any segment in the path matches ignore patterns.
+
+    Args:
+        segments: List of path segments.
+        ignore_patterns: Set of patterns to ignore.
+
+    Returns:
+        True if any segment should be ignored.
+    """
     return any(part in ignore_patterns for part in segments)
 
 
 def _ensure_zip_file(path: Path) -> None:
+    """Validate that the given path is a valid zip file.
+
+    Args:
+        path: Path to validate.
+
+    Raises:
+        InvalidZipError: If file is not a valid zip or doesn't exist.
+    """
     if path.suffix.lower() != ".zip" or not path.is_file():
         raise InvalidZipError("Expected a .zip file")
     try:
@@ -52,8 +57,16 @@ def _ensure_zip_file(path: Path) -> None:
 
 
 def _build_tree(names: Iterable[str], ignore_patterns: set[str]) -> DirectoryNode:
-    root = DirectoryNode(name="", path="", children=[])
+    """Build directory tree from zip file entries.
 
+    Args:
+        names: List of file/directory names from zip archive.
+        ignore_patterns: Patterns to exclude from tree.
+
+    Returns:
+        Root DirectoryNode representing the tree structure.
+    """
+    root = DirectoryNode(name="", path="", children=[])
     nodes: dict[str, DirectoryNode] = {"": root}
 
     def _get_directory(path: str) -> DirectoryNode:
@@ -94,11 +107,35 @@ def _build_tree(names: Iterable[str], ignore_patterns: set[str]) -> DirectoryNod
                 _sort_children(child)
 
     _sort_children(root)
-
     return root
 
 
+def _count_files(node: DirectoryNode | FileNode) -> int:
+    """Recursively count all files in the tree.
+
+    Args:
+        node: Root node to count from.
+
+    Returns:
+        Total number of files.
+    """
+    if isinstance(node, FileNode):
+        return 1
+    return sum(_count_files(child) for child in node.children)
+
+
 def upload_zip(zip_path: Path | str) -> ZipUploadResult:
+    """Process a zip file and extract its structure.
+
+    Args:
+        zip_path: Path to the zip file.
+
+    Returns:
+        ZipUploadResult containing metadata and tree structure.
+
+    Raises:
+        InvalidZipError: If the file is not a valid zip archive.
+    """
     path = Path(zip_path)
     _ensure_zip_file(path)
 
@@ -108,18 +145,7 @@ def upload_zip(zip_path: Path | str) -> ZipUploadResult:
         names = archive.namelist()
 
     tree = _build_tree(names, ignore_patterns)
-
-    file_count = 0
-
-    def _count_files(node: DirectoryNode | FileNode) -> None:
-        nonlocal file_count
-        if isinstance(node, FileNode):
-            file_count += 1
-            return
-        for child in node.children:
-            _count_files(child)
-
-    _count_files(tree)
+    file_count = _count_files(tree)
 
     return ZipUploadResult(
         filename=path.name,

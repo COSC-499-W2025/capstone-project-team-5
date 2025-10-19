@@ -6,10 +6,12 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 
-from capstone_project_team_5.upload import DirectoryNode, FileNode, InvalidZipError, upload_zip
+from capstone_project_team_5.models import DirectoryNode, FileNode, InvalidZipError
+from capstone_project_team_5.services import upload_zip
 
 
 def _collect_file_paths(node: DirectoryNode | FileNode) -> set[str]:
+    """Helper to collect all file paths from a tree for assertions."""
     collected: set[str] = set()
 
     def _walk(current: DirectoryNode | FileNode) -> None:
@@ -24,6 +26,7 @@ def _collect_file_paths(node: DirectoryNode | FileNode) -> set[str]:
 
 
 def _create_zip(zip_path: Path, entries: Iterable[tuple[str, bytes]]) -> None:
+    """Helper to create test zip archives."""
     with ZipFile(zip_path, mode="w", compression=ZIP_DEFLATED) as archive:
         for relative_path, data in entries:
             archive.writestr(relative_path, data)
