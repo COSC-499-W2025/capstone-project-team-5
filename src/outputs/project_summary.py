@@ -3,8 +3,8 @@ Output all key information for a project.
 Author: Chris Hill
 """
 
-import sqlite3
 import json
+import sqlite3
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parents[2]

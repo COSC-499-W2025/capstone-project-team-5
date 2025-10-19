@@ -1,7 +1,7 @@
 import sqlite3
+
 import pytest
-import json
-from pathlib import Path
+
 import outputs.project_summary as ps
 
 
@@ -54,9 +54,18 @@ def temp_db(tmp_path):
     # Insert a test project
     cur.execute(
         """
-        INSERT INTO Project (name, description, language, framework, is_collaborative, start_date, end_date, importance_rank)
+        INSERT INTO Project (
+            name,
+            description,
+            language,
+            framework,
+            is_collaborative,
+            start_date,
+            end_date,
+            importance_rank
+        )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """,
+        """,
         (
             "Artifact Miner",
             "Testing project summary output",
@@ -68,6 +77,7 @@ def temp_db(tmp_path):
             1,
         ),
     )
+
     pid = cur.lastrowid
 
     # Artifacts
