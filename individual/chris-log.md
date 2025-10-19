@@ -69,7 +69,7 @@ Last week was mostly spent on team meetings and assigning people to tasks. To do
 
 <details>
   <summary><h3></h3></summary>
-
+<img alt="Screenshot 2025-10-19 072935" src="https://github.com/user-attachments/assets/b4053925-8710-45cd-ad12-fba2e331e56f" />
 
 This past week included Quiz #1 and, for many members of the team, midterms in other classes. As a result we chose not to overload everyone, and instead focused on furthering code contributions in our given areas of responsibility. This adjustment works contrary to our plan of increasing our frequency and volume of code contributions, slightly, but it was a good adjustment for everyone's overall workload. I've started the code for Requirement 13: "Output all key information for a project." Next sprint appears to be lighter on my personal overall workload, and as such I plan to contribute more code and code reviews, sooner in the week. We have also identified a small issue with regards to GitHub branches where we have been merging our features into main, rather than the develop branch. We plan to amend this in the upcoming week.
 
