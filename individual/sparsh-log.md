@@ -96,6 +96,8 @@ N/A
 ## Week #7 (October 12 2025 - October 19 2025)
 <details>
   <summary><h3>Evaluation</h3></summary>
+  
+<img width="662" height="706" alt="image" src="https://github.com/user-attachments/assets/225a3179-d099-4222-9071-e4b0f34121c5" />
 
 
 </details>
