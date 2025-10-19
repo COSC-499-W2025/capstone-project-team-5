@@ -48,12 +48,12 @@ def _ensure_zip_file(path: Path) -> None:
         InvalidZipError: If file is not a valid zip or doesn't exist.
     """
     if path.suffix.lower() != ".zip" or not path.is_file():
-        raise InvalidZipError("Expected a .zip file")
+        raise InvalidZipError(f"Expected a .zip file. Received: {path.name}")
     try:
         with ZipFile(path):
             pass
     except (BadZipFile, OSError) as exc:
-        raise InvalidZipError("Provided file is not a valid ZIP archive") from exc
+        raise InvalidZipError(f"{path.name} is not a valid ZIP archive") from exc
 
 
 def _build_tree(names: Iterable[str], ignore_patterns: set[str]) -> DirectoryNode:
