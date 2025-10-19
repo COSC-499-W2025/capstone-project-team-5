@@ -102,7 +102,7 @@ Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
             # Set default ignore patterns
             self.default_ignore_patterns = self._get_default_ignore_patterns()
             # Record the collected configuration
-            self.record_consent(self._build_config_())
+            self.record_consent(self._build_config())
             return True
 
         self.consent_given = False
@@ -123,9 +123,20 @@ Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
 
         if consent_given:
             self.use_external_services = True
-            # Store selected services (placeholder example)
-            self.external_services = {"service_name": "example_service"}
-            eg.msgbox("Thank you for agreeing. You may now use the application.", title="Welcome!")
+            # Allow user to select which external services to enable
+            selected_services = self._select_external_services()
+            if selected_services:
+                self.external_services = {service: True for service in selected_services}
+                eg.msgbox(
+                    f"Thank you for agreeing. Selected services: {', '.join(selected_services)}",
+                    title="Welcome!",
+                )
+            else:
+                self.external_services = {}
+                eg.msgbox(
+                    "No services selected. Proceeding without external integrations.",
+                    title="Welcome!",
+                )
             return True
 
         self.use_external_services = False
@@ -134,6 +145,35 @@ Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
             title="Notice",
         )
         return False
+
+    def _select_external_services(self) -> list[str]:
+        """Display a multi-choice dialog for selecting external services.
+
+        Returns:
+            List of selected service names.
+        """
+        available_services = [
+            "GitHub API",
+            "LinkedIn API",
+            "OpenAI/GPT",
+            "Google Cloud Services",
+            "AWS Services",
+            "Microsoft Azure",
+        ]
+
+        msg = """Select the external services you would like to integrate with Zip2Job:
+
+Note: Each service may have its own data policies and requirements.
+You can select multiple services or none."""
+
+        selected = eg.multchoicebox(
+            msg=msg,
+            title="Select External Services",
+            choices=available_services,
+        )
+
+        # multchoicebox returns None if user cancels, or a list of selected items
+        return selected if selected is not None else []
 
     def _get_default_ignore_patterns(self) -> list[str]:
         """Get default file/folder patterns to ignore during file analysis.
