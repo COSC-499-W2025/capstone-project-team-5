@@ -5,29 +5,22 @@ from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
-from capstone_project_team_5.upload import (
-    InvalidZipError,
-    upload_zip,
-)
+
+from capstone_project_team_5.upload import DirectoryNode, FileNode, InvalidZipError, upload_zip
 
 
-def _collect_file_paths(node: object) -> set[str]:
-    """Collect file paths from the upload tree for assertions."""
-    paths: set[str] = set()
+def _collect_file_paths(node: DirectoryNode | FileNode) -> set[str]:
+    collected: set[str] = set()
 
-    def _walk(current: object) -> None:
-        from capstone_project_team_5.upload import DirectoryNode, FileNode
-
+    def _walk(current: DirectoryNode | FileNode) -> None:
         if isinstance(current, FileNode):
-            paths.add(current.path)
+            collected.add(current.path)
             return
-
-        if isinstance(current, DirectoryNode):
-            for child in current.children:
-                _walk(child)
+        for child in current.children:
+            _walk(child)
 
     _walk(node)
-    return paths
+    return collected
 
 
 def _create_zip(zip_path: Path, entries: Iterable[tuple[str, bytes]]) -> None:
@@ -41,7 +34,7 @@ def test_upload_valid_zip_returns_tree_excluding_ignored(tmp_path: Path) -> None
     _create_zip(
         zip_path,
         entries=[
-            ("src/app.py", b"print('heyo')\n"),
+            ("src/app.py", b"print('hello')\n"),
             ("src/utils/helpers.py", b"def add(a, b): return a + b\n"),
             ("docs/readme.md", b"# Sample\n"),
             (".git/config", b"[core]\n"),
