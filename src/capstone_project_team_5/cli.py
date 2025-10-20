@@ -9,6 +9,7 @@ from capstone_project_team_5.consent_tool import ConsentTool
 from capstone_project_team_5.detection import identify_language_and_framework
 from capstone_project_team_5.models import InvalidZipError
 from capstone_project_team_5.services import upload_zip
+from capstone_project_team_5.skill_detection import extract_project_skills
 from capstone_project_team_5.utils import display_upload_result, prompt_for_zip_file
 
 
@@ -53,12 +54,17 @@ def run_cli() -> int:
                 archive.extractall(tmp_path)
 
             language, framework = identify_language_and_framework(tmp_path)
+            skills = extract_project_skills(tmp_path)
 
             print("\n📊 Analysis Summary")
             print("-" * 60)
             print(f"🧑‍💻 Language: {language}")
             print(f"🏗️ Framework: {framework or 'None detected'}")
-            # TODO: add skills and tools result
+            combined_skills = set(skills.get("tools", set())) | set(skills.get("practices", set()))
+            skills_list = ", ".join(sorted(combined_skills)) or "None detected"
+            tools = ", ".join(sorted(skills.get("tools", set()))) or "None detected"
+            print(f"🧠 Skills: {skills_list}")
+            print(f"🧰 Tools: {tools}")
     except Exception as exc:
         # Keep upload flow successful even if analysis fails.
         print(f"\nNote: Analysis step failed: {exc}")
