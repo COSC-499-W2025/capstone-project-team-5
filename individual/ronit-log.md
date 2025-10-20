@@ -2,7 +2,41 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-_Last Updated:_ October 12, 2025
+_Last Updated:_ October 19, 2025
+
+---
+
+## Week 7 | October 13-19, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+  <img width="1066" height="618" alt="image" src="https://github.com/user-attachments/assets/854e1fd0-9c6b-4512-8d87-5c8be30f7150" />
+
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Added pytest to GitHub Actions CI | ✅ Done |  |
+| Implemented zip upload + extraction + handling wrong format | ✅ Done | Added validation to reject incorrect upload formats |
+| Set up entrypoint to link existing functions | ✅ Done | Part of the application can now run in terminal (+GUI), not just isolated functions and tests |
+| Conducted code reviews | ✅ Done |  |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Integrate existing functions together | 🚧 In Progress | Focus on connecting components |
+| Set up proper database and integrate with existing functionality | ❌ Not Started | w/ team: DB schema design + integration work |
+| Continue code reviews | ❌ Not Started | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Define + implement zipped upload parsing spec (what to parse, output format, DB storage). | ✅ Done | Completed with extraction and validation |
+| Add validation to reject wrong upload formats. | ✅ Done | Implemented format validation |
+
+
 
 ---
 
