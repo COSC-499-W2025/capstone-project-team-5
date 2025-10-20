@@ -25,3 +25,13 @@ In the past cycle most of the time was spent on team meetings assinging people t
 | User Config | In progress     | Task is being planned and minimal code contributions have been made this sprint.|
 
 ![screenshot](week6_checklist.png)
+
+## Week 7 # (October 13 - 19)
+
+Time this week was spent coding, finishing a minor feature. No team meetings took place this week due to everyone busy with midterms. Looking to get back on track next week meeting with the team.
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| User Config | In progress     | Feature is mostly complete with room for it to be extended to in the future. |
+
+![screenshot](week7_checklist.png)
