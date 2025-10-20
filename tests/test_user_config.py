@@ -1,5 +1,6 @@
 from capstone_project_team_5.user_config import UserConfig
 
+
 def test_default_user_config() -> None:
     config = UserConfig()
     assert config.consent_given is False
@@ -7,24 +8,26 @@ def test_default_user_config() -> None:
     assert config.external_services == {}
     assert config.default_ignore_patterns == []
 
+
 def test_custom_user_config() -> None:
     config = UserConfig(
         consent_given=True,
         use_external_services=True,
         external_services={"openai": {"allowed": True}},
-        default_ignore_patterns=["*.log", "*.env"]
+        default_ignore_patterns=["*.log", "*.env"],
     )
     assert config.consent_given is True
     assert config.use_external_services is True
     assert config.external_services == {"openai": {"allowed": True}}
     assert config.default_ignore_patterns == ["*.log", "*.env"]
 
+
 def test_to_dict() -> None:
     config = UserConfig(
         consent_given=True,
         use_external_services=True,
         external_services={"openai": {"allowed": True}},
-        default_ignore_patterns=["*.log", "*.env"]
+        default_ignore_patterns=["*.log", "*.env"],
     )
     data = config.to_dict()
     assert data.get("consent_given") is True
@@ -32,12 +35,13 @@ def test_to_dict() -> None:
     assert data.get("external_services") == {"openai": {"allowed": True}}
     assert data.get("default_ignore_patterns") == ["*.log", "*.env"]
 
+
 def test_from_dict() -> None:
     data = {
         "consent_given": True,
         "use_external_services": True,
         "external_services": {"openai": {"allowed": True}},
-        "default_ignore_patterns": ["*.log", "*.env"]
+        "default_ignore_patterns": ["*.log", "*.env"],
     }
     config = UserConfig.from_dict(data)
     assert config.consent_given is True
@@ -45,12 +49,13 @@ def test_from_dict() -> None:
     assert config.external_services == {"openai": {"allowed": True}}
     assert config.default_ignore_patterns == ["*.log", "*.env"]
 
+
 def test_round_trip_dict_conversion() -> None:
     original = UserConfig(
         consent_given=True,
         use_external_services=True,
         external_services={"openai": {"allowed": True}},
-        default_ignore_patterns=["*.log"]
+        default_ignore_patterns=["*.log"],
     )
 
     recreated = UserConfig.from_dict(original.to_dict())

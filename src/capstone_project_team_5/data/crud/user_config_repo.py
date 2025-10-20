@@ -1,7 +1,10 @@
 import json
+
 from data.models.user_config_model import UserConfigModel
 from sqlalchemy import Session
+
 from capstone_project_team_5.user_config import UserConfig
+
 
 def load_user_config(session: Session) -> UserConfig:
     """
@@ -14,9 +17,10 @@ def load_user_config(session: Session) -> UserConfig:
             consent_given=record.consent_given,
             use_external_services=record.use_external_services,
             external_services=record.external_services,
-            default_ignore_patterns=record.default_ignore_patterns
+            default_ignore_patterns=record.default_ignore_patterns,
         )
-    return UserConfig() # return default if no config record exists
+    return UserConfig()  # return default if no config record exists
+
 
 def store_user_config(session: Session, config: UserConfig) -> None:
     """
@@ -27,10 +31,10 @@ def store_user_config(session: Session, config: UserConfig) -> None:
     if not record:
         record = UserConfigModel(user_config_id=1)
         session.add(record)
-    
+
     record.consent_given = config.consent_given
     record.use_external_services = config.use_external_services
     record.external_services = json.dumps(config.external_services)
     record.default_ignore_patterns = json.dumps(config.default_ignore_patterns)
-    
+
     session.commit()
