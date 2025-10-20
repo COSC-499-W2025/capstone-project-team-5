@@ -114,5 +114,4 @@ if __name__ == "__main__":
     try:
         ProjectSummary.display(name)
     except (ValueError, FileNotFoundError) as e:
-    print("Error:", e)
         print("Error:", e)
