@@ -4,6 +4,7 @@
   <summary><h3>Week 7 | October 12-19, 2025</h3></summary>
 
 ### Burnup Chart
+<img width="1076" height="593" alt="image" src="https://github.com/user-attachments/assets/8116fc9f-3cda-42b6-900d-00e04582e7d0" />
 
 
 ### Past Work
