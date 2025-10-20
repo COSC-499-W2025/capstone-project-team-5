@@ -1,6 +1,37 @@
 # Team Weekly Logs
 
 <details>
+  <summary><h3>Week 7 | October 12-19, 2025</h3></summary>
+
+### Burnup Chart
+
+
+### Past Work
+- Initial Python tooling setup with `uv`, `ruff`, `pytest`
+- CI/CD implementation
+- Framework/language detection implementation and improvements
+- Database Schema Created
+- User configuration and consent input features further modified
+- Code contributions and PR reviews going as per requirements
+
+### Updates on Previous To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Output key project information (R13) | ✅ Done | Logic Staged and to be merged post suggestion changes |
+| Framework/language detection | ✅ Done | Initial version merged |
+| Database schema | in progress | Initial schema created and updated , still requires further clarity and discussion |
+| User configuration | In Progress | More contributions made pending discussion over DB |
+
+### Upcoming Work
+- Connecting further modules of our project to test functionality
+- Database expansion/ Discussion
+- PR reviews and continued code contributions
+
+</details>
+
+---
+
+<details>
   <summary><h3>Week 6 | October 6-12, 2025</h3></summary>
 
 ### Burnup Chart
