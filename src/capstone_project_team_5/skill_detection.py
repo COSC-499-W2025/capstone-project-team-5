@@ -2,6 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from capstone_project_team_5.constants.skill_detection_constants import (
+    PRACTICES_FILE_NAMES,
+    PRACTICES_FILE_PATTERNS,
+    PRACTICES_PATH_PATTERNS,
+    TOOL_FILE_NAMES,
+    TOOL_FILE_PATTERNS,
+)
+
 
 class SkillDetector:
     @staticmethod
@@ -18,28 +26,16 @@ class SkillDetector:
         """
         tools = set()
 
-        if name == "dockerfile" or "docker-compose" in name:
-            tools.add("Docker")
-        if "pytest" in name or name == "pytest.ini":
-            tools.add("PyTest")
-        if name == "pyproject.toml" and "[tool.pytest" in SkillDetector._read_text(file_path):
-            tools.add("PyTest")
-        if "jest" in name:
-            tools.add("Jest")
-        if "cypress" in name:
-            tools.add("Cypress")
-        if name.endswith(".sql"):
-            tools.add("SQL")
-        if name == "uv.lock" or (name == "pyproject.toml" and (root / "uv.lock").exists()):
-            tools.add("uv")
-        if name == ".pre-commit-config.yaml":
-            tools.add("Pre-commit")
-        if name == "ruff.toml" or (
-            name == "pyproject.toml" and "[tool.ruff]" in SkillDetector._read_text(file_path)
-        ):
-            tools.add("Ruff")
-        if name.startswith("src-tauri") or name == "tauri.conf.json":
-            tools.add("Tauri")
+        # Check exact file names
+        for tool, file_names in TOOL_FILE_NAMES.items():
+            if name in file_names:
+                tools.add(tool)
+
+        # Check file patterns
+        for tool, patterns in TOOL_FILE_PATTERNS.items():
+            for pattern in patterns:
+                if pattern in name or name.endswith(pattern):
+                    tools.add(tool)
 
         return tools
 
@@ -50,63 +46,22 @@ class SkillDetector:
         """
         practices = set()
 
-        # Code quality practices
-        if name in (
-            ".flake8",
-            "pylintrc",
-            "mypy.ini",
-            "ruff.toml",
-            ".eslintrc",
-            "prettier.config.js",
-        ):
-            practices.add("Code Quality Enforcement")
-        if name == "ruff.toml" or (
-            name == "pyproject.toml" and "[tool.ruff]" in SkillDetector._read_text(file_path)
-        ):
-            practices.add("Code Quality Enforcement")
+        # Check exact file names
+        for practice, file_names in PRACTICES_FILE_NAMES.items():
+            if name in file_names:
+                practices.add(practice)
 
-        # Environment management
-        if name in ("requirements.txt", "poetry.lock", "Pipfile", ".nvmrc", ".tool-versions"):
-            practices.add("Environment Management")
+        # Check file patterns
+        for practice, patterns in PRACTICES_FILE_PATTERNS.items():
+            for pattern in patterns:
+                if pattern in name or name.startswith(pattern):
+                    practices.add(practice)
 
-        # Testing practices
-        if rel.startswith("tests") or "\\tests\\" in rel or "/tests/" in rel:
-            practices.add("Test-Driven Development (TDD)")
-            practices.add("Automated Testing")
-
-        # CI/CD
-        if ".github/workflows" in rel or ".github\\workflows" in rel or name == "gitlab-ci.yml":
-            practices.add("CI/CD")
-
-        # Documentation
-        if "docs" in rel or name.startswith("readme"):
-            practices.add("Documentation Discipline")
-
-        # API Design
-        if name in ("openapi.yaml", "swagger.json") or "/api/" in rel or "\\api\\" in rel:
-            practices.add("API Design")
-
-        # Architecture
-        if any(f in rel for f in ("src", "core", "domain", "modules")):
-            practices.add("Modular Architecture")
-
-        # Type Safety
-        if name.endswith(".py") and "def " in SkillDetector._read_text(file_path):
-            content = SkillDetector._read_text(file_path)
-            if "->" in content or ": " in content:
-                practices.add("Type Safety")
-
-        # Version Control
-        if name == ".gitignore" or ".git" in rel:
-            practices.add("Version Control (Git)")
-
-        # Code Review
-        if "pull_request_template" in name:
-            practices.add("Code Review")
-
-        # Team Collaboration
-        if "logs" in rel or "minutes" in rel:
-            practices.add("Team Collaboration")
+        # Check path patterns
+        for practice, patterns in PRACTICES_PATH_PATTERNS.items():
+            for pattern in patterns:
+                if pattern in rel or rel.startswith(pattern):
+                    practices.add(practice)
 
         return practices
 
@@ -130,30 +85,23 @@ class SkillDetector:
 
         return tools, practices
 
-    @classmethod
-    def analyze(cls, project_root: Path | str) -> dict[str, set[str]]:
-        """
-        Extracts project skills: tools and practices from the given project root directory.
-        """
-        root = Path(project_root)
-        skills = {
-            "tools": set(),
-            "practices": set(),
-        }
-
-        if not root.exists() or not root.is_dir():
-            return skills
-
-        # Scan project files for tools and practices
-        tools, practices = cls._scan_project_files(root)
-        skills["tools"].update(tools)
-        skills["practices"].update(practices)
-
-        return skills
-
 
 def extract_project_skills(project_root: Path | str) -> dict[str, set[str]]:
     """
     Extracts project skills: tools and practices from the given project root directory.
     """
-    return SkillDetector.analyze(project_root)
+    root = Path(project_root)
+    skills = {
+        "tools": set(),
+        "practices": set(),
+    }
+
+    if not root.exists() or not root.is_dir():
+        return skills
+
+    # Scan project files for tools and practices
+    tools, practices = SkillDetector._scan_project_files(root)
+    skills["tools"].update(tools)
+    skills["practices"].update(practices)
+
+    return skills
