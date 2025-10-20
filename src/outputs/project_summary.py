@@ -34,7 +34,8 @@ class ProjectSummary:
         """
         if not DB_PATH.exists():
             raise FileNotFoundError(
-                f"Database not found at {DB_PATH}. Ensure you have created artifact_miner.db inside the db/ folder."
+                "Database not found at {DB_PATH}. Ensure you have created"
+                "artifact_miner.db inside the db/ folder."
             )
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
