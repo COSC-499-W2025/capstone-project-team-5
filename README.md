@@ -19,3 +19,28 @@ Please use the provided folder structure for your project. You are free to organ
 
 Please use a branching workflow, and once an item is ready, do remember to issue a PR, review, and merge it into the master branch.
 Be sure to keep your docs and README.md up-to-date.
+
+## System Design Updates
+
+### System Architecture Diagram
+
+
+**Explanation of Changes:**  
+After feedback from the class discussions we added a direct connection between the data extraction and data analysis components to ensure that analysis is triggered automatically after data is extracted. Previously, data was only stored in the database without a defined process to initiate analysis, so this change establishes a clearer and more functional workflow. We also added a direct connection from the user to data analysis, skipping data extraction, in the event that a user wants to analyze data that has already been extracted.
+
+These changes were made before our intial submission, and we have not received any other feedback. Because of this, we did not make any changes from our initial submission to now.
+
+---
+
+### 🔄 Data Flow Diagram
+
+After feedback from the class discussions we reorganized the diagram to flow in a clockwise direction, reducing clutter and minimizing overlapping data flow arrows. Several data flow directions were corrected for accuracy, and the Analysis process was decomposed into smaller, more detailed subprocesses to better illustrate its internal operations.
+
+These changes were made before our intial submission, and we have not received any other feedback. Because of this, we did not make any changes from our initial submission to now.
+
+---
+
+### 🧱 Work Breakdown Structure (WBS)
+![Work Breakdown Structure](./images/work_breakdown_structure.png)
+
+---
