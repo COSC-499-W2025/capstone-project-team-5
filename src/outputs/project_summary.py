@@ -113,5 +113,6 @@ if __name__ == "__main__":
     name = input("Enter project name: ").strip()
     try:
         ProjectSummary.display(name)
-    except Exception as e:
+    except (ValueError, FileNotFoundError) as e:
+    print("Error:", e)
         print("Error:", e)
