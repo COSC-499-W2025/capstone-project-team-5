@@ -3,6 +3,8 @@
 **GitHub:** [@ojusharma](https://github.com/ojusharma)
 
 ---
+<details>
+  <summary><h3>September</summary>
 
 <details>
   <summary><h3>Week 3</summary>
@@ -40,9 +42,11 @@
   - Doing research and having group Knowledge Transfers
   - Meeting twice during the week
 </details>
+</details>
 
 ---
-
+<details>
+  <summary><h3>October</h3></summary>
 <details>
   <summary><h3>Week 5</h3></summary>
 
@@ -84,4 +88,28 @@
   - Iterate over current iplementation of skills_detection.py tool
   - Start working on integration of LLMs into skill extraction
   - Review more PRs than this week
+</details>
+
+---
+
+<details>
+  <summary><h3>Week 7</h3></summary>
+
+<img width="1085" height="639" alt="image" src="https://github.com/user-attachments/assets/bda81a30-5b62-4b5a-b044-4d89ee46b4a7" />
+
+### What Went Well
+  - Refactored skill detection tool to follow best practices
+  - Altered tests and merged changes
+  - Reviewed more PRs :)
+  - It was a midterm-heavy week for everyone so we spoke over Discord instead of doing a meeting. 
+
+  ### What Didn't Go Well
+  - All positive
+
+  ### Planning for Next Week
+  - Get more input on my tools, and plan ahead with the team
+  - Start working on integration of LLMs into skill extraction
+  - Review even more PRs 
+</details>
+
 </details>
