@@ -125,3 +125,52 @@ def test_project_summary(monkeypatch, temp_db):
     assert "document" in result["artifact_counts"]
     assert "Python" in result["skills"]
     assert "Flask" in result["skills"]
+
+
+def test_get_project_metadata(monkeypatch, temp_db):
+    """Test the _get_project_metadata helper returns the correct row."""
+    monkeypatch.setattr(ps, "DB_PATH", temp_db)
+    conn = ps.ProjectSummary._get_connection()
+    try:
+        cur = conn.cursor()
+        project = ps.ProjectSummary._get_project_metadata(cur, "Artifact Miner")
+        assert project["name"] == "Artifact Miner"
+        assert project["language"] == "Python"
+    finally:
+        conn.close()
+
+
+def test_artifact_and_contrib_counts(monkeypatch, temp_db):
+    """Test artifact and contribution count helpers."""
+    monkeypatch.setattr(ps, "DB_PATH", temp_db)
+    conn = ps.ProjectSummary._get_connection()
+    try:
+        cur = conn.cursor()
+        project = ps.ProjectSummary._get_project_metadata(cur, "Artifact Miner")
+        pid = project["id"]
+
+        artifact_counts = ps.ProjectSummary._get_artifact_counts(cur, pid)
+        # We inserted two 'code' artifacts and one 'document'
+        assert artifact_counts.get("code") == 2
+        assert artifact_counts.get("document") == 1
+
+        contrib_counts = ps.ProjectSummary._get_contrib_counts(cur, pid)
+        # We inserted two code contributions and one document
+        assert contrib_counts.get("code") == 2
+        assert contrib_counts.get("document") == 1
+    finally:
+        conn.close()
+
+
+def test_get_skills(monkeypatch, temp_db):
+    """Test the _get_skills helper returns all skill names for a project."""
+    monkeypatch.setattr(ps, "DB_PATH", temp_db)
+    conn = ps.ProjectSummary._get_connection()
+    try:
+        cur = conn.cursor()
+        project = ps.ProjectSummary._get_project_metadata(cur, "Artifact Miner")
+        pid = project["id"]
+        skills = ps.ProjectSummary._get_skills(cur, pid)
+        assert set(skills) == {"Python", "Flask"}
+    finally:
+        conn.close()
