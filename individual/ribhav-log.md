@@ -51,7 +51,7 @@
 
 ---
 
-## Week 5 | September 29-Odctober 3, 2025
+## Week 5 | September 29-October 3, 2025
 
 <details>
   <summary><h3>Evaluation</h3></summary>
@@ -100,4 +100,45 @@ This week was pretty smooth sailing. It was nice to sit together with the team a
 | Explore Artifact extraction | ❌ Not Started       | Figure out how to extract different artifacts from a given folder |
 | Review PRs | ❌ Not Started   |  |
 | Learn about Tauri | ❌ Not Started   |  |
+
+---
+
+## Week 6 | October 13-17, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1587" height="941" alt="image" src="https://github.com/user-attachments/assets/d19bdd4b-8e6d-47cc-8bbc-c44b2901c2a3" />
+
+
+</details>
+
+### Task Progress this week
+
+This week went by super quick, mainly because of midterms. I was able to piece together time to refactor framework/programming language detection to follow existing patterns in our codebase, and add it to our current cli-based POC. Team communication is still strong and everyone's doing a great job at covering their parts of the application, resulting in fast development. 
+
+
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Explore Artifact extraction | ❌ Not Started       | Figure out how to extract different artifacts from a given folder |
+| Review PRs | ✅ Done      |  |
+| Learn about Tauri | ⏳ In Progress      | Need to choose between the Tauri python plugin, or an API first approach. |
+| Refactor framework detection | ✅ Done   | |
+| Build POC | ✅ Done   | |
+
+
+### Next week's plans
+
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Review PRs | ❌ Not Started     |  |
+| Learn about Tauri | ⏳ In Progress      | Need to choose between the Tauri python plugin, or an API first approach. |
+| Explore Artifact extraction | ❌ Not Started       | Figure out how to extract different artifacts from a given folder |
+
+
+
+
+
+
+
 
