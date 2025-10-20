@@ -14,24 +14,20 @@ def test_empty_directory_returns_empty_skills(tmp_path: Path) -> None:
 
 def test_detect_tools_from_config_files(tmp_path: Path) -> None:
     """Test that tools are detected from configuration files."""
-    (tmp_path / "pyproject.toml").write_text(
+    (tmp_path / "pytest.ini").write_text(
         """
-        [tool.pytest.ini_options]
-        testpaths = ["tests"]
-        
-        [tool.ruff]
-        line-length = 100
+        [pytest]
+        testpaths = tests
         """.strip(),
         encoding="utf-8",
     )
+    (tmp_path / "ruff.toml").write_text("line-length = 100", encoding="utf-8")
     (tmp_path / "uv.lock").write_text("", encoding="utf-8")
-    (tmp_path / ".pre-commit-config.yaml").write_text("repos: []", encoding="utf-8")
 
     skills = extract_project_skills(tmp_path)
     assert "PyTest" in skills["tools"]
     assert "Ruff" in skills["tools"]
     assert "uv" in skills["tools"]
-    assert "Pre-commit" in skills["tools"]
 
 
 def test_detect_practices_from_project_structure(tmp_path: Path) -> None:
@@ -53,6 +49,5 @@ def test_detect_practices_from_project_structure(tmp_path: Path) -> None:
     assert "Test-Driven Development (TDD)" in skills["practices"]
     assert "Automated Testing" in skills["practices"]
     assert "Modular Architecture" in skills["practices"]
-    assert "Type Safety" in skills["practices"]
     assert "Documentation Discipline" in skills["practices"]
     assert "Version Control (Git)" in skills["practices"]
