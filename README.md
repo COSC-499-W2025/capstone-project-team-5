@@ -42,6 +42,6 @@ These changes were made before our intial submission, and we have not received a
 ---
 
 ### 🧱 Work Breakdown Structure (WBS)
-![Work Breakdown Structure](./images/work_breakdown_structure.png)
+<img alt="Workload Distribution" src="https://github.com/user-attachments/assets/573b7c83-1912-479d-a5e3-5a5bdacd3161" />
 
 ---
