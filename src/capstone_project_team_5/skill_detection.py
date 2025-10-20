@@ -20,9 +20,11 @@ class SkillDetector:
             return ""
 
     @staticmethod
-    def _detect_tools(file_path: Path, name: str, root: Path) -> set[str]:
+    def _detect_tools(name: str, root: Path) -> set[str]:
         """
         Detect development tools based on file name and content.
+
+        TODO: Unused parameters will be utilized when function logic is extended
         """
         tools = set()
 
@@ -43,6 +45,8 @@ class SkillDetector:
     def _detect_practices(file_path: Path, name: str, rel: str) -> set[str]:
         """
         Detect software development practices based on file structure and content.
+
+        TODO: Unused parameters will be utilized when function logic is extended
         """
         practices = set()
 
