@@ -12,6 +12,7 @@ DB_PATH = BASE_DIR / "db" / "artifact_miner.db"
 
 
 class ProjectSummary:
+
     """
     Aggregate and output key information about a single project.
 
@@ -21,6 +22,7 @@ class ProjectSummary:
 
     Methods are intentionally small to make unit testing straightforward.
     """
+
     @staticmethod
     def _get_connection():
         """Open a DB connection and configure row factory.
