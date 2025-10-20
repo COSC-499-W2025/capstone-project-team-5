@@ -12,9 +12,7 @@ DB_PATH = BASE_DIR / "db" / "artifact_miner.db"
 
 
 class ProjectSummary:
-
-    """
-    Aggregate and output key information about a single project.
+    """Aggregate and output key information about a single project.
 
     This class provides helper query methods and an orchestrator method
     (`summarize`) that returns a structured dictionary containing project
