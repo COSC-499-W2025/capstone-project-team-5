@@ -103,7 +103,7 @@ This week was pretty smooth sailing. It was nice to sit together with the team a
 
 ---
 
-## Week 6 | October 13-17, 2025
+## Week 7 | October 13-17, 2025
 
 <details>
   <summary><h3>Evaluation</h3></summary>
