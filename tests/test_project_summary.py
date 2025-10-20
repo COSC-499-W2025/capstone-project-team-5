@@ -174,3 +174,30 @@ def test_get_skills(monkeypatch, temp_db):
         assert set(skills) == {"Python", "Flask"}
     finally:
         conn.close()
+
+
+def test_missing_project_raises(monkeypatch, temp_db):
+    """If a project name is not present, summarize should raise ValueError."""
+    monkeypatch.setattr(ps, "DB_PATH", temp_db)
+    with pytest.raises(ValueError):
+        ps.ProjectSummary.summarize("Nonexistent Project")
+
+
+def test_empty_project_has_no_artifacts_or_skills(monkeypatch, tmp_path, temp_db):
+    """Create an empty project (no artifacts/contributions/skills) and verify counts are empty."""
+    # Use the temp_db file and insert an empty project into it
+    db_path = temp_db
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO Project (name, description) VALUES (?, ?)",
+        ("Empty Project", "No data"),
+    )
+    conn.commit()
+    conn.close()
+
+    monkeypatch.setattr(ps, "DB_PATH", db_path)
+    result = ps.ProjectSummary.summarize("Empty Project")
+    assert result["artifact_counts"] == {}
+    assert result["activity_counts"] == {}
+    assert result["skills"] == []
