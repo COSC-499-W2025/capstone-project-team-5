@@ -102,7 +102,7 @@ Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
             # Set default ignore patterns
             self.default_ignore_patterns = self._get_default_ignore_patterns()
             # Record the collected configuration
-            self.record_consent(self._build_config_())
+            self.record_consent(self._build_config())
             return True
 
         self.consent_given = False
