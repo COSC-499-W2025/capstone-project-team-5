@@ -92,3 +92,23 @@ N/A
 
 ### Personal Contributions
 - **Code Contributions**: Provided code changes and UTS for consent input. 
+
+## Week #7 (October 12 2025 - October 19 2025)
+<details>
+  <summary><h3>Evaluation</h3></summary>
+  
+<img width="662" height="706" alt="image" src="https://github.com/user-attachments/assets/225a3179-d099-4222-9071-e4b0f34121c5" />
+
+
+</details>
+
+### Team Activities
+- **Project Structure Discussion**: Reviewed PRs and provided any feedback/suggestions necessary.  
+
+It was a busy week for me due to heavy midterm load and I was unable to be as involved as I could be :(
+
+### Personal Contributions
+- **Code Contributions**: Provided further code changes and UTS for consent input, including a small new Feature
+
+### TODOs for NExt week 
+- **Parser Tool**: Provide input and code for further improving the Parser tool while distributing work amongst me and Ronit who will be working on this part of the tool.
