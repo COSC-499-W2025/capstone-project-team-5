@@ -11,6 +11,8 @@ def temp_db(tmp_path):
     # Populate it with minimal schema and test data.
     db_path = tmp_path / "test_artifact_miner.db"
     conn = sqlite3.connect(db_path)
+    # Ensure foreign key support for cascade behavior if used by code
+    conn.execute("PRAGMA foreign_keys = ON;")
     cur = conn.cursor()
 
     # Create tables
@@ -109,6 +111,7 @@ def temp_db(tmp_path):
 
 def test_project_summary(monkeypatch, temp_db):
     """Test ProjectSummary.summarize() using a temporary relative DB path."""
+    # ProjectSummary expects DB_PATH to be a Path-like; ensure we provide that
     monkeypatch.setattr(ps, "DB_PATH", temp_db)
 
     result = ps.ProjectSummary.summarize("Artifact Miner")
