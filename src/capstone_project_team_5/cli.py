@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import sys
+import tempfile
+from pathlib import Path
+from zipfile import ZipFile
 
 from capstone_project_team_5.consent_tool import ConsentTool
+from capstone_project_team_5.detection import identify_language_and_framework
 from capstone_project_team_5.models import InvalidZipError
 from capstone_project_team_5.services import upload_zip
 from capstone_project_team_5.utils import display_upload_result, prompt_for_zip_file
@@ -41,6 +45,23 @@ def run_cli() -> int:
         return 1
 
     display_upload_result(result)
+
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            with ZipFile(zip_path) as archive:
+                archive.extractall(tmp_path)
+
+            language, framework = identify_language_and_framework(tmp_path)
+
+            print("\n📊 Analysis Summary")
+            print("-" * 60)
+            print(f"🧑‍💻 Language: {language}")
+            print(f"🏗️ Framework: {framework or 'None detected'}")
+            # TODO: add skills and tools result
+    except Exception as exc:
+        # Keep upload flow successful even if analysis fails.
+        print(f"\nNote: Analysis step failed: {exc}")
     return 0
 
 
