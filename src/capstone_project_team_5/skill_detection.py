@@ -2,127 +2,92 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
-def _read_text(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8", errors="ignore")
-    except Exception:
-        return ""
-
-
-def _detect_tools(file_path: Path, name: str, root: Path) -> set[str]:
-    """
-    Detect development tools based on file name and content.
-    """
-    tools = set()
-
-    if name == "dockerfile" or "docker-compose" in name:
-        tools.add("Docker")
-    if "pytest" in name or name == "pytest.ini":
-        tools.add("PyTest")
-    if name == "pyproject.toml" and "[tool.pytest" in _read_text(file_path):
-        tools.add("PyTest")
-    if "jest" in name:
-        tools.add("Jest")
-    if "cypress" in name:
-        tools.add("Cypress")
-    if name.endswith(".sql"):
-        tools.add("SQL")
-    if name == "uv.lock" or (name == "pyproject.toml" and (root / "uv.lock").exists()):
-        tools.add("uv")
-    if name == ".pre-commit-config.yaml":
-        tools.add("Pre-commit")
-    if name == "ruff.toml" or (name == "pyproject.toml" and "[tool.ruff]" in _read_text(file_path)):
-        tools.add("Ruff")
-    if name.startswith("src-tauri") or name == "tauri.conf.json":
-        tools.add("Tauri")
-
-    return tools
+from capstone_project_team_5.constants.skill_detection_constants import (
+    PRACTICES_FILE_NAMES,
+    PRACTICES_FILE_PATTERNS,
+    PRACTICES_PATH_PATTERNS,
+    TOOL_FILE_NAMES,
+    TOOL_FILE_PATTERNS,
+)
 
 
-def _detect_practices(file_path: Path, name: str, rel: str) -> set[str]:
-    """
-    Detect software development practices based on file structure and content.
-    """
-    practices = set()
+class SkillDetector:
+    @staticmethod
+    def _read_text(path: Path) -> str:
+        try:
+            return path.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            return ""
 
-    # Code quality practices
-    if name in (
-        ".flake8",
-        "pylintrc",
-        "mypy.ini",
-        "ruff.toml",
-        ".eslintrc",
-        "prettier.config.js",
-    ):
-        practices.add("Code Quality Enforcement")
-    if name == "ruff.toml" or (name == "pyproject.toml" and "[tool.ruff]" in _read_text(file_path)):
-        practices.add("Code Quality Enforcement")
+    @staticmethod
+    def _detect_tools(file_path: Path, name: str, root: Path) -> set[str]:
+        """
+        Detect development tools based on file name and content.
 
-    # Environment management
-    if name in ("requirements.txt", "poetry.lock", "Pipfile", ".nvmrc", ".tool-versions"):
-        practices.add("Environment Management")
+        TODO: Unused parameters will be utilized when function logic is extended
+        """
+        tools = set()
 
-    # Testing practices
-    if rel.startswith("tests") or "\\tests\\" in rel or "/tests/" in rel:
-        practices.add("Test-Driven Development (TDD)")
-        practices.add("Automated Testing")
+        # Check exact file names
+        for tool, file_names in TOOL_FILE_NAMES.items():
+            if name in file_names:
+                tools.add(tool)
 
-    # CI/CD
-    if ".github/workflows" in rel or ".github\\workflows" in rel or name == "gitlab-ci.yml":
-        practices.add("CI/CD")
+        # Check file patterns
+        for tool, patterns in TOOL_FILE_PATTERNS.items():
+            for pattern in patterns:
+                if pattern in name or name.endswith(pattern):
+                    tools.add(tool)
 
-    # Documentation
-    if "docs" in rel or name.startswith("readme"):
-        practices.add("Documentation Discipline")
+        return tools
 
-    # API Design
-    if name in ("openapi.yaml", "swagger.json") or "/api/" in rel or "\\api\\" in rel:
-        practices.add("API Design")
+    @staticmethod
+    def _detect_practices(file_path: Path, name: str, rel: str) -> set[str]:
+        """
+        Detect software development practices based on file structure and content.
 
-    # Architecture
-    if any(f in rel for f in ("src", "core", "domain", "modules")):
-        practices.add("Modular Architecture")
+        TODO: Unused parameters will be utilized when function logic is extended
+        """
+        practices = set()
 
-    # Type Safety
-    if name.endswith(".py") and "def " in _read_text(file_path):
-        content = _read_text(file_path)
-        if "->" in content or ": " in content:
-            practices.add("Type Safety")
+        # Check exact file names
+        for practice, file_names in PRACTICES_FILE_NAMES.items():
+            if name in file_names:
+                practices.add(practice)
 
-    # Version Control
-    if name == ".gitignore" or ".git" in rel:
-        practices.add("Version Control (Git)")
+        # Check file patterns
+        for practice, patterns in PRACTICES_FILE_PATTERNS.items():
+            for pattern in patterns:
+                if pattern in name or name.startswith(pattern):
+                    practices.add(practice)
 
-    # Code Review
-    if "pull_request_template" in name:
-        practices.add("Code Review")
+        # Check path patterns
+        for practice, patterns in PRACTICES_PATH_PATTERNS.items():
+            for pattern in patterns:
+                if pattern in rel or rel.startswith(pattern):
+                    practices.add(practice)
 
-    # Team Collaboration
-    if "logs" in rel or "minutes" in rel:
-        practices.add("Team Collaboration")
+        return practices
 
-    return practices
+    @staticmethod
+    def _scan_project_files(root: Path) -> tuple[set[str], set[str]]:
+        """
+        Scan all files in the project to detect tools and practices.
+        """
+        tools = set()
+        practices = set()
 
+        for file_path in root.rglob("*"):
+            if not file_path.is_file():
+                continue
 
-def _scan_project_files(root: Path) -> tuple[set[str], set[str]]:
-    """
-    Scan all files in the project to detect tools and practices.
-    """
-    tools = set()
-    practices = set()
+            name = file_path.name.lower()
+            rel = str(file_path.relative_to(root)).lower()
 
-    for file_path in root.rglob("*"):
-        if not file_path.is_file():
-            continue
+            tools.update(SkillDetector._detect_tools(file_path, name, root))
+            practices.update(SkillDetector._detect_practices(file_path, name, rel))
 
-        name = file_path.name.lower()
-        rel = str(file_path.relative_to(root)).lower()
-
-        tools.update(_detect_tools(file_path, name, root))
-        practices.update(_detect_practices(file_path, name, rel))
-
-    return tools, practices
+        return tools, practices
 
 
 def extract_project_skills(project_root: Path | str) -> dict[str, set[str]]:
@@ -139,7 +104,7 @@ def extract_project_skills(project_root: Path | str) -> dict[str, set[str]]:
         return skills
 
     # Scan project files for tools and practices
-    tools, practices = _scan_project_files(root)
+    tools, practices = SkillDetector._scan_project_files(root)
     skills["tools"].update(tools)
     skills["practices"].update(practices)
 
