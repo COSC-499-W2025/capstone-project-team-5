@@ -11,8 +11,7 @@ except ModuleNotFoundError:
 
 
 class LanguageFrameworkDetector:
-    """Detector for primary language and framework.
-    """
+    """Detector for primary language and framework."""
 
     @staticmethod
     def _read_text(path: Path) -> str:
