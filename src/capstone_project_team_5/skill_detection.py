@@ -20,7 +20,7 @@ class SkillDetector:
             return ""
 
     @staticmethod
-    def _detect_tools(name: str, root: Path) -> set[str]:
+    def _detect_tools(file_path: Path, name: str, root: Path) -> set[str]:
         """
         Detect development tools based on file name and content.
 
