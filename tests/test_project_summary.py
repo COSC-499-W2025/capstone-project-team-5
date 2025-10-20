@@ -99,9 +99,13 @@ def temp_db(tmp_path):
     )
 
     # Skills + link table
-    cur.executemany("INSERT INTO Skill (name) VALUES (?)", [("Python",), ("Flask",)])
+    cur.execute("INSERT INTO Skill (name) VALUES (?)", ("Python",))
+    python_skill_id = cur.lastrowid
+    cur.execute("INSERT INTO Skill (name) VALUES (?)", ("Flask",))
+    flask_skill_id = cur.lastrowid
     cur.executemany(
-        "INSERT INTO ProjectSkill (project_id, skill_id) VALUES (?,?)", [(pid, 1), (pid, 2)]
+        "INSERT INTO ProjectSkill (project_id, skill_id) VALUES (?,?)",
+        [(pid, python_skill_id), (pid, flask_skill_id)],
     )
 
     conn.commit()
