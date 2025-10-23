@@ -1,4 +1,5 @@
-"""Read-only retrieval helpers for previously generated portfolio items.
+"""
+Read-only retrieval helpers for previously generated portfolio items.
 
 This module assumes a `PortfolioItem` table exists with the schema created by
 the storage component. It provides two convenience functions:
@@ -13,14 +14,15 @@ from __future__ import annotations
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 DB_PATH = BASE_DIR / "db" / "artifact_miner.db"
 
 
 def _get_conn() -> sqlite3.Connection:
-    """Open a SQLite connection configured for row access.
+    """
+    Open a SQLite connection configured for row access.
 
     Raises:
         FileNotFoundError: If the DB file does not exist at `DB_PATH`.
@@ -32,8 +34,9 @@ def _get_conn() -> sqlite3.Connection:
     return conn
 
 
-def get(item_id: int) -> Optional[Dict[str, Any]]:
-    """Retrieve a portfolio item by id.
+def get(item_id: int) -> dict[str, Any] | None:
+    """
+    Retrieve a portfolio item by id.
 
     Args:
         item_id: Primary key of the portfolio item.
@@ -59,8 +62,9 @@ def get(item_id: int) -> Optional[Dict[str, Any]]:
         conn.close()
 
 
-def list_all(limit: int | None = None) -> List[Dict[str, Any]]:
-    """List stored portfolio items in reverse chronological order.
+def list_all(limit: int | None = None) -> list[dict[str, Any]]:
+    """
+    List stored portfolio items in reverse chronological order.
 
     Args:
         limit: Optional maximum number of items to return.
@@ -75,7 +79,7 @@ def list_all(limit: int | None = None) -> List[Dict[str, Any]]:
         else:
             cur.execute(query)
         rows = cur.fetchall()
-        items: List[Dict[str, Any]] = []
+        items: list[dict[str, Any]] = []
         for row in rows:
             items.append(
                 {

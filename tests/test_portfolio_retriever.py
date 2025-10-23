@@ -9,7 +9,8 @@ import outputs.portfolio_retriever as pr
 
 @pytest.fixture
 def temp_db(tmp_path: Path):
-    """Create a temporary SQLite database with Project and PortfolioItem tables.
+    """
+    Create a temporary SQLite database with Project and PortfolioItem tables.
 
     Yields a Path to the DB file so tests can monkeypatch the module's DB_PATH.
     """
@@ -61,7 +62,10 @@ def temp_db(tmp_path: Path):
 
 
 def test_get_existing_and_list_all(monkeypatch, temp_db: Path):
-    """The retriever should return deserialized content and list items in reverse chronological order."""
+    """
+    The retriever should return deserialized content and list items in
+    reverse chronological order.
+    """
     # Ensure the module points at our temporary DB file (Path-like)
     monkeypatch.setattr(pr, "DB_PATH", temp_db)
 
@@ -92,7 +96,10 @@ def test_list_limit(monkeypatch, temp_db: Path):
 
 
 def test_missing_database_raises(monkeypatch, tmp_path: Path):
-    """If the DB file does not exist, _get_conn should raise FileNotFoundError via the public API."""
+    """
+    If the DB file does not exist, _get_conn should raise
+    FileNotFoundError via the public API.
+    """
     non_existent = tmp_path / "nope.db"
     monkeypatch.setattr(pr, "DB_PATH", non_existent)
     with pytest.raises(FileNotFoundError):
