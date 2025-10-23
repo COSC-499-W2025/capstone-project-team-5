@@ -6,6 +6,8 @@ import pytest
 @pytest.fixture
 def db_connection():
     conn = sqlite3.connect(":memory:")
+    # Return rows as sqlite3.Row so tests can access columns by name
+    conn.row_factory = sqlite3.Row
     # Enable foreign key support
     conn.execute("PRAGMA foreign_keys = ON;")
     with open("./db/artifact_miner_schema.sql") as f:
