@@ -131,3 +131,44 @@ def test_foreign_key_cascade_delete(db_connection):
     assert cursor.fetchone() is None
     cursor.execute("SELECT * FROM ProjectSkill WHERE project_id = ?", (project_id,))
     assert cursor.fetchone() is None
+
+
+def test_portfolioitem_insert_and_retrieve(db_connection):
+    cursor = db_connection.cursor()
+    # Insert a project to associate
+    cursor.execute("INSERT INTO Project (name, description) VALUES (?, ?)", ("PortProj", "pdesc"))
+    project_id = cursor.lastrowid
+    # Insert a portfolio item with JSON content
+    content = '{"summary": "Worked on X", "highlights": ["a","b"]}'
+    cursor.execute(
+        "INSERT INTO PortfolioItem (project_id, title, content) VALUES (?, ?, ?)",
+        (project_id, "Portfolio Entry 1", content),
+    )
+    db_connection.commit()
+
+    cursor.execute("SELECT * FROM PortfolioItem WHERE project_id = ?", (project_id,))
+    row = cursor.fetchone()
+    assert row is not None
+    assert row["title"] == "Portfolio Entry 1"
+    # content stored as text (JSON)
+    assert "Worked on X" in row["content"]
+
+
+def test_portfolioitem_project_delete_sets_null(db_connection):
+    cursor = db_connection.cursor()
+    # Insert project and portfolio item
+    cursor.execute("INSERT INTO Project (name, description) VALUES (?, ?)", ("PortProj2", "pdesc2"))
+    project_id = cursor.lastrowid
+    cursor.execute(
+        "INSERT INTO PortfolioItem (project_id, title, content) VALUES (?, ?, ?)",
+        (project_id, "Entry", '{"k": "v"}'),
+    )
+    db_connection.commit()
+    # Delete project
+    cursor.execute("DELETE FROM Project WHERE id = ?", (project_id,))
+    db_connection.commit()
+    # The portfolio item's project_id should be set to NULL due to ON DELETE SET NULL
+    cursor.execute("SELECT project_id FROM PortfolioItem WHERE title = ?", ("Entry",))
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] is None
