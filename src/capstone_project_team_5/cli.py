@@ -6,6 +6,7 @@ from pathlib import Path
 from zipfile import ZipFile
 
 from capstone_project_team_5.consent_tool import ConsentTool
+from capstone_project_team_5.contributor_analysis import analyze_contributors
 from capstone_project_team_5.detection import identify_language_and_framework
 from capstone_project_team_5.models import InvalidZipError
 from capstone_project_team_5.services import upload_zip
@@ -55,6 +56,7 @@ def run_cli() -> int:
 
             language, framework = identify_language_and_framework(tmp_path)
             skills = extract_project_skills(tmp_path)
+            contributors_data = analyze_contributors(tmp_path)
 
             print("\n📊 Analysis Summary")
             print("-" * 60)
@@ -65,6 +67,17 @@ def run_cli() -> int:
             tools = ", ".join(sorted(skills.get("tools", set()))) or "None detected"
             print(f"🧠 Skills: {skills_list}")
             print(f"🧰 Tools: {tools}")
+
+            # Display contributor information if repository is git-enabled
+            contributors = contributors_data.get("contributors", [])
+            if contributors:
+                print("\n👥 Contributors")
+                print("-" * 60)
+                for i, contrib in enumerate(contributors, 1):
+                    print(
+                        f"{i}. {contrib.name} ({contrib.email}) - "
+                        f"{contrib.commits} commits, {contrib.files_modified} files"
+                    )
     except Exception as exc:
         # Keep upload flow successful even if analysis fails.
         print(f"\nNote: Analysis step failed: {exc}")
