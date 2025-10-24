@@ -125,7 +125,7 @@ def _count_files(node: DirectoryNode | FileNode) -> int:
 
 
 def upload_zip(zip_path: Path | str) -> ZipUploadResult:
-    """Process a zip file and extract its structure.
+    """Process a zip file, extract its structure, and persist metadata.
 
     Args:
         zip_path: Path to the zip file.
@@ -136,6 +136,9 @@ def upload_zip(zip_path: Path | str) -> ZipUploadResult:
     Raises:
         InvalidZipError: If the file is not a valid zip archive.
     """
+    from capstone_project_team_5.data.db import get_session
+    from capstone_project_team_5.data.models import UploadRecord
+
     path = Path(zip_path)
     _ensure_zip_file(path)
 
@@ -147,9 +150,21 @@ def upload_zip(zip_path: Path | str) -> ZipUploadResult:
     tree = _build_tree(names, ignore_patterns)
     file_count = _count_files(tree)
 
-    return ZipUploadResult(
+    result = ZipUploadResult(
         filename=path.name,
         size_bytes=path.stat().st_size,
         file_count=file_count,
         tree=tree,
     )
+
+    # Persist upload metadata to database
+    with get_session() as session:
+        session.add(
+            UploadRecord(
+                filename=result.filename,
+                size_bytes=result.size_bytes,
+                file_count=result.file_count,
+            )
+        )
+
+    return result
