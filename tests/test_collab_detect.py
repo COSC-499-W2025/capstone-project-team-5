@@ -1,4 +1,4 @@
-import os
+import subprocess
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -9,16 +9,40 @@ from pypdf import PdfWriter
 from capstone_project_team_5.collab_detect import CollabDetector
 
 
-def test_git_repo():
-    """Tests root as a git repository using current directory."""
+def init_fake_repo(tmp_path: Path, authors: list[str]):
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", authors[0]], cwd=tmp_path, check=True)
 
-    repo_path = Path(os.getcwd())
+    for i, author in enumerate(authors):
+        file = tmp_path / f"file{i}.txt"
+        file.write_text(f"Hello {author}")
+        subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+        subprocess.run(
+            [
+                "git",
+                "commit",
+                "-m",
+                f"Add file {i}",
+                "--author",
+                f"{author} <{author}@example.com>",
+            ],
+            cwd=tmp_path,
+            check=True,
+        )
 
-    isCollab = CollabDetector.is_collaborative(repo_path)
-    numCollaborators = CollabDetector.number_of_collaborators(repo_path)
+
+def test_git_repo(tmp_path):
+    """Tests fake repo in tmp_path as a git repository."""
+
+    authors = ["Alice", "Bob", "Charlie"]
+    init_fake_repo(tmp_path, authors)
+
+    isCollab = CollabDetector.is_collaborative(tmp_path)
+    numCollaborators = CollabDetector.number_of_collaborators(tmp_path)
 
     assert isCollab is True
-    assert numCollaborators == 7
+    assert numCollaborators == len(authors)
 
 
 def test_file_ownsherip():

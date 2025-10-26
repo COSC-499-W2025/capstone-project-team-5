@@ -90,7 +90,7 @@ class CollabDetector:
 
         try:
             result = subprocess.run(
-                ["git", "shortlog", "-sc", "--all"],
+                ["git", "shortlog", "-sne", "--all"],
                 cwd=str(root),
                 capture_output=True,
                 text=True,
@@ -103,23 +103,22 @@ class CollabDetector:
             for line in output.splitlines():
                 if not line.strip():
                     continue
-
                 parts = line.strip().split("\t")
+                if len(parts) < 2:
+                    continue
+                author_info = parts[1]
 
-                if len(parts) != 2:
-                    parts = line.strip().split()
-
-                    if len(parts) < 2:
-                        continue
-
-                    name = " ".join(parts[1:])
+                if "<" in author_info and ">" in author_info:
+                    email = author_info[author_info.index("<") + 1 : author_info.index(">")].strip()
+                    if email not in ignore_list:
+                        print(email)
+                        authors.add(email)
                 else:
-                    name = parts[1]
+                    name = author_info.strip()
+                    if name not in ignore_list:
+                        authors.add(name)
 
-                if name and name not in ignore_list:
-                    authors.add(name)
-
-        except ValueError:
+        except subprocess.CalledProcessError:
             return authors
 
         return authors
