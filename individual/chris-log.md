@@ -101,12 +101,12 @@ I failed to complete one of the tasks I set out to do from last week's log. Alth
 ### Previous Week:
 | Task | Status | Notes |
 | :---- | :----- | :------- |
-| Reorganize GitHub Branches | In Progress | Merge main into develop. |
+| Reorganize GitHub Branches | Not Yet Started | Merge main into develop. |
 | Start R15 Code | Completed | "Retrieve previously generated portfolio information." |
 
 ### Next Week:
 | Task | Status | Notes |
 | :---- | :----- | :------- |
-| Reorganize GitHub Branches | Not Yet Started | Merge main into develop. |
+| Reorganize GitHub Branches | In Progress | Merge main into develop. |
 | Start R16 Code | Not Yet Started | "Retrieve previously generated resume item." |
 </details>
