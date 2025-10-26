@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from sqlalchemy import create_engine
-from sqlalchemy.engine import URL
+from sqlalchemy.engine import URL, Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 
@@ -41,7 +41,7 @@ def get_database_url() -> str:
     return URL.create("sqlite", database=str(db_path)).render_as_string(hide_password=False)
 
 
-def _get_engine():
+def _get_engine() -> Engine:
     global _engine
     if _engine is None:
         database_url = get_database_url()
