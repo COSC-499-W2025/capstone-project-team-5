@@ -166,7 +166,7 @@ class CollabDetector:
         """
 
         authors: set[str] = set()
-        ignore_list = {"Unkown", None, "python-docx"}
+        ignore_list = {"Unknown", None, "python-docx"}
 
         for file_path in root.rglob("*"):
             if not file_path.is_file():
