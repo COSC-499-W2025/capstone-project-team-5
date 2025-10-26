@@ -94,7 +94,7 @@ This past week included Quiz #1 and, for many members of the team, midterms in o
 
 <details>
   <summary><h3></h3></summary>
-
+<img alt="Screenshot 2025-10-26 093423" src="https://github.com/user-attachments/assets/632b8d6d-a569-4591-adfc-ca043d14583e" />
 
 I failed to complete one of the tasks I set out to do from last week's log. Although our intention was to reorganize GitHub branches by merging the main branch into the develop branch, code contributions came out sooner than that could be completed. We decided that it would be smoother to complete this week's code contributions, and merge the aforementioned branches first thing next week. I did start, and complete the code for Requirement 15: "Retrieve previously generated portfolio information." It has been implemented in such a way that it can be safely change in the future to accomodate our project as we see fit. Next week I plan on getting main merged into develop first thing and, once that is complete, I will start the code for Requirement 16: "Retrieve previously generated resume item."
 
