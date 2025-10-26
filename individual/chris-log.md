@@ -7,6 +7,7 @@
 This week was fairly light in work, as we were meeting as a team for the first time, and brainstorming Project Requirements. This initial brainstorming was a collaborative effort. My specific contributions were to take the brainstorming notes, and write the foundational functional requirements, in a properly formatted list (i.e "The system shall ... ) in preparation for the class discussions on Wednesday. This was completed in a timely manner.
 </details>
 
+
 ## Week 4 | 21 September - 28 September 2025
 
 <details>
@@ -19,6 +20,7 @@ This week we had a few members pull a late night on Tuesday, in preparation for 
 
 We got the System Architecture Diagram finished earlier in the week, which allowed us to focus on the Project Proposal this weekend. Next week I think we should replicate this by ensuring the Data Flow Diagram is completed in a similarly timely fashion, to avoid last minute scrambling over the weekend.
 </details>
+
 
 ## Week 5 | 28 September - 05 October 2025
 
@@ -44,6 +46,7 @@ We got the System Architecture Diagram finished earlier in the week, which allow
 - Ensure GitHub branches are organized and a system is in place to ensure smooth project workflow in the future
 </details>
 
+
 ## Week 6 | 05 October- 12 October 2025
 
 <details>
@@ -65,6 +68,7 @@ Last week was mostly spent on team meetings and assigning people to tasks. To do
 | Start R13 Code | Not Yet Started | "Output all key information for a project." |
 </details>
 
+
 ## Week 7 | 12 October- 19 October 2025
 
 <details>
@@ -83,4 +87,27 @@ This past week included Quiz #1 and, for many members of the team, midterms in o
 | :---- | :----- | :------- |
 | Reorganize GitHub Branches | Not Yet Started | Merge main into develop. |
 | Start R15 Code | Not Yet Started | "Retrieve previously generated portfolio information." |
+</details>
+
+
+## Week 8 | 12 October- 19 October 2025
+
+<details>
+  <summary><h3></h3></summary>
+<img alt="Screenshot 2025-10-19 072935" src="https://github.com/user-attachments/assets/b4053925-8710-45cd-ad12-fba2e331e56f" />
+
+I failed to complete one of the tasks I set out to do from last week's log. Although our intention was to reorganize GitHub branches by merging the main branch into the develop branch, code contributions came out sooner than that could be completed. We decided that it would be smoother to complete this week's code contributions, and merge the aforementioned branches first thing next week. I did start, and complete the code for Requirement 15: "Retrieve previously generated portfolio information." It has been implemented in such a way that it can be safely change in the future to accomodate our project as we see fit. Next week I plan on getting main merged into develop first thing and, once that is complete, I will start the code for Requirement 16: "Retrieve previously generated resume item."
+
+### Previous Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Reorganize GitHub Branches | In Progress | Merge main into develop. |
+| Start R15 Code | Completed | "Retrieve previously generated portfolio information." |
+</details>
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Reorganize GitHub Branches | Not Yet Started | Merge main into develop. |
+| Start R16 Code | Not Yet Started | "Retrieve previously generated resume item." |
 </details>
