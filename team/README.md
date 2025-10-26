@@ -19,7 +19,7 @@
 | --- | --- | --- |
 | Retrieve previously generated portfolio (R15) | ✅ Done | Logic staged and to be merged following code review |
 | Detect collaborative projects tool | ✅ Done | Logic staged and to be merged following code review|
-| Database schema | in progress | Initial schema created and updated , still requires monitoring and expansion as needed |
+| Database | in progress | Initial database and schema created; requires monitoring and expansion as needed |
 
 ### Upcoming Work
 - Sync main branch with develop branch
