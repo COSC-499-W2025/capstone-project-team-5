@@ -111,7 +111,6 @@ class CollabDetector:
                 if "<" in author_info and ">" in author_info:
                     email = author_info[author_info.index("<") + 1 : author_info.index(">")].strip()
                     if email not in ignore_list:
-                        print(email)
                         authors.add(email)
                 else:
                     name = author_info.strip()
