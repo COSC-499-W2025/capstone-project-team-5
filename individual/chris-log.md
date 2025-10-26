@@ -90,7 +90,7 @@ This past week included Quiz #1 and, for many members of the team, midterms in o
 </details>
 
 
-## Week 8 | 12 October- 19 October 2025
+## Week 8 | 19 October- 26 October 2025
 
 <details>
   <summary><h3></h3></summary>
