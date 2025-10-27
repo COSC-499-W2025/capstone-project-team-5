@@ -90,7 +90,7 @@ class CollabDetector:
 
         try:
             result = subprocess.run(
-                ["git", "shortlog", "-sne", "--all"],
+                ["git", "shortlog", "-sc", "--all"],
                 cwd=str(root),
                 capture_output=True,
                 text=True,
@@ -103,19 +103,22 @@ class CollabDetector:
             for line in output.splitlines():
                 if not line.strip():
                     continue
-                parts = line.strip().split("\t")
-                if len(parts) < 2:
-                    continue
-                author_info = parts[1]
 
-                if "<" in author_info and ">" in author_info:
-                    email = author_info[author_info.index("<") + 1 : author_info.index(">")].strip()
-                    if email not in ignore_list:
-                        authors.add(email)
+                parts = line.strip().split("\t")
+
+                if len(parts) == 2:
+                    name = parts[1].strip()
                 else:
-                    name = author_info.strip()
-                    if name not in ignore_list:
-                        authors.add(name)
+                    # if we cant split on a tab
+                    tokens = line.strip().split(maxsplit=1)
+                    if len(tokens) != 2:
+                        continue
+                    name = tokens[1].strip()
+
+                if name in ignore_list:
+                    continue
+
+                authors.add(name)
 
         except subprocess.CalledProcessError:
             return authors
@@ -159,6 +162,7 @@ class CollabDetector:
             # return whatever single user id we have
             return uids or gids
 
+    @staticmethod
     def _document_authors(root: Path) -> set[str]:
         """
         Scans document files (.docx, .pdf) under the root folder

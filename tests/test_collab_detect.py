@@ -12,9 +12,9 @@ from capstone_project_team_5.collab_detect import CollabDetector
 def init_fake_repo(tmp_path: Path, authors: list[str]):
     subprocess.run(["git", "init"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True)
-    subprocess.run(["git", "config", "user.name", authors[0]], cwd=tmp_path, check=True)
 
     for i, author in enumerate(authors):
+        subprocess.run(["git", "config", "user.name", author], cwd=tmp_path, check=True)
         file = tmp_path / f"file{i}.txt"
         file.write_text(f"Hello {author}")
         subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
@@ -45,7 +45,7 @@ def test_git_repo(tmp_path):
     assert numCollaborators == len(authors)
 
 
-def test_file_ownsherip():
+def test_file_ownership():
     """Simulates a non-git repo with files owned by different users."""
 
     # create mock file paths
@@ -66,8 +66,6 @@ def test_file_ownsherip():
     # patch Path.rglob to return these fake files
     with patch.object(Path, "rglob", return_value=[fake_file1, fake_file2, fake_file3]):
         owners = CollabDetector._file_ownership(Path("/fake/path"))
-
-    print("[DEBUG] Simulated file owners:", owners)
 
     assert owners == {1000, 2000}
     assert len(owners) == 2
