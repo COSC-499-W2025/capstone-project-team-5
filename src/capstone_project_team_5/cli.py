@@ -69,27 +69,32 @@ def run_cli() -> int:
             print(f"🧠 Skills: {skills_list}")
             print(f"🧰 Tools: {tools}")
             # AI-generated bullet points (always attempt; report reason on failure)
-            try:
-                ai_bullets = generate_bullet_points_from_analysis(
-                    language=language,
-                    framework=framework,
-                    skills=sorted(combined_skills),
-                    tools=sorted(skills.get("tools", set())),
-                    max_bullets=6,
-                )
+            if not consent_tool.use_external_services:
+                print("\n⚠️  External services consent not given; skipping AI bullet generation.")
+            elif "Gemini" not in consent_tool.external_services:
+                print("\n⚠️  Gemini not enabled in external services; skipping AI bullet generation.")
+            else:
+                try:
+                    ai_bullets = generate_bullet_points_from_analysis(
+                        language=language,
+                        framework=framework,
+                        skills=sorted(combined_skills),
+                        tools=sorted(skills.get("tools", set())),
+                        max_bullets=6,
+                    )
 
-                if ai_bullets:
-                    print("\nAI Bullet Points")
-                    print("-" * 60)
-                    for b in ai_bullets:
-                        print(f"- {b}")
-                else:
-                    print("\nAI Bullets: provider returned no content.")
-            except Exception as exc:
-                print(f"\nAI Bullets error: {exc}")
-                print("\n⚠️  Could not generate AI bullet points.")
-                print("Error: ", sys.exc_info()[1])
-                pass
+                    if ai_bullets:
+                        print("\nAI Bullet Points")
+                        print("-" * 60)
+                        for b in ai_bullets:
+                            print(f"- {b}")
+                    else:
+                        print("\nAI Bullets: provider returned no content.")
+                except Exception as exc:
+                    print(f"\nAI Bullets error: {exc}")
+                    print("\n⚠️  Could not generate AI bullet points.")
+                    print("Error: ", sys.exc_info()[1])
+                    pass
 
     except Exception as exc:
         # Keep upload flow successful even if analysis fails.
