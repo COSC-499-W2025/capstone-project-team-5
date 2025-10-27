@@ -6,9 +6,14 @@ This module provides a consent tool that manages user permissions for:
 - Data processing and storage
 """
 
+from __future__ import annotations
+
 from typing import Any
 
 import easygui as eg
+
+from capstone_project_team_5.data.db import get_session
+from capstone_project_team_5.data.models import ConsentRecord
 
 
 class ConsentTool:
@@ -30,6 +35,7 @@ class ConsentTool:
     # Available external services for integration
     AVAILABLE_EXTERNAL_SERVICES: list[str] = [
         "GitHub API",
+        "Gemini",
         "LinkedIn API",
         "OpenAI/GPT",
         "Google Cloud Services",
@@ -201,9 +207,6 @@ You can select multiple services or none."""
     def record_consent(self, user_config: dict[str, Any]) -> None:
         """Record user consent and configuration data.
 
-        This is a placeholder method for persisting consent data.
-        Implementation will be added once PR#39 is merged.
-
         Args:
             user_config: Dictionary containing UserConfig-compatible data with keys:
                 - consent_given: bool
@@ -211,9 +214,15 @@ You can select multiple services or none."""
                 - external_services: dict
                 - default_ignore_patterns: list[str]
         """
-        # TODO: Implement consent persistence once PR#39 is merged
-        # This will accept a UserConfig object or dict matching UserConfig.to_dict()
-        pass
+        with get_session() as session:
+            session.add(
+                ConsentRecord(
+                    consent_given=user_config["consent_given"],
+                    use_external_services=user_config["use_external_services"],
+                    external_services=user_config["external_services"],
+                    default_ignore_patterns=user_config["default_ignore_patterns"],
+                )
+            )
 
 
 if __name__ == "__main__":
