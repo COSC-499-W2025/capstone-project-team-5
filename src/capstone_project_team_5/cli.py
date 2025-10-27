@@ -7,6 +7,7 @@ from zipfile import ZipFile
 
 from capstone_project_team_5.consent_tool import ConsentTool
 from capstone_project_team_5.detection import identify_language_and_framework
+from capstone_project_team_5.file_walker import DirectoryWalker
 from capstone_project_team_5.models import InvalidZipError
 from capstone_project_team_5.services import upload_zip
 from capstone_project_team_5.services.llm import (
@@ -56,6 +57,9 @@ def run_cli() -> int:
             with ZipFile(zip_path) as archive:
                 archive.extractall(tmp_path)
 
+            # Walk the extracted directory
+            walk_result = DirectoryWalker.walk(tmp_path)
+
             language, framework = identify_language_and_framework(tmp_path)
             skills = extract_project_skills(tmp_path)
 
@@ -68,6 +72,13 @@ def run_cli() -> int:
             tools = ", ".join(sorted(skills.get("tools", set()))) or "None detected"
             print(f"🧠 Skills: {skills_list}")
             print(f"🧰 Tools: {tools}")
+
+            # Display file walk statistics
+            print("\n📂 File Analysis")
+            print("-" * 60)
+            summary = DirectoryWalker.get_summary(walk_result)
+            total_size = _format_bytes(summary["total_size_bytes"])
+            print(f"Total: {summary['total_files']} files ({total_size})")
             # AI-generated bullet points (always attempt; report reason on failure)
             if not consent_tool.use_external_services:
                 print("\n⚠️  External services consent not given; skipping AI bullet generation.")
@@ -102,6 +113,22 @@ def run_cli() -> int:
         # Keep upload flow successful even if analysis fails.
         print(f"\nNote: Analysis step failed: {exc}")
     return 0
+
+
+def _format_bytes(size: int) -> str:
+    """Format bytes into human-readable string.
+
+    Args:
+        size: Size in bytes.
+
+    Returns:
+        Formatted string (e.g., "1.5 KB", "2.3 MB").
+    """
+    for unit in ["B", "KB", "MB", "GB"]:
+        if size < 1024.0:
+            return f"{size:.1f} {unit}"
+        size /= 1024.0
+    return f"{size:.1f} TB"
 
 
 def main() -> int:
