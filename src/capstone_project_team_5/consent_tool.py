@@ -35,6 +35,7 @@ class ConsentTool:
     # Available external services for integration
     AVAILABLE_EXTERNAL_SERVICES: list[str] = [
         "GitHub API",
+        "Gemini",
         "LinkedIn API",
         "OpenAI/GPT",
         "Google Cloud Services",
