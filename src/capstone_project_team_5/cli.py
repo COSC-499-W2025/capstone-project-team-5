@@ -72,7 +72,9 @@ def run_cli() -> int:
             if not consent_tool.use_external_services:
                 print("\n⚠️  External services consent not given; skipping AI bullet generation.")
             elif "Gemini" not in consent_tool.external_services:
-                print("\n⚠️  Gemini not enabled in external services; skipping AI bullet generation.")
+                print(
+                    "\n⚠️  Gemini not enabled in external services; skipping AI bullet generation."
+                )
             else:
                 try:
                     ai_bullets = generate_bullet_points_from_analysis(
