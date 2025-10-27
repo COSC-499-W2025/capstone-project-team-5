@@ -112,4 +112,27 @@
   - Review even more PRs 
 </details>
 
+---
+
+<details>
+  <summary><h3>Week 8</h3></summary>
+
+<img width="1075" height="636" alt="image" src="https://github.com/user-attachments/assets/195e3566-e499-4a9b-818b-7cb00cfbb67d" />
+
+
+### What Went Well
+  - Skill detection: Added more mappings for skills (tools and practices) in the constants file
+  - Skill detection: Implemented suggested changes from last week (skipping certain files/dirs), removed redundant vars, improved docustrings, etc)
+  - Skill detection: Added more tests 🧪
+  - LLM Integration: Synced up w/ Ribhav to discuss our plan for the LLM integration tool. We decided it would be best for Ribhav to start with the foundation of the service, and I could built on it next week.
+  - Reviewed even more PRs :)
+
+  ### What Didn't Go Well
+  - All positive
+
+  ### Planning for Next Week
+  - Get started on LLM integration tool
+  - Review even more PRs :)
+</details>
+
 </details>
