@@ -1,14 +1,6 @@
 from __future__ import annotations
 
-# Gemini-only LLM helper, kept simple as requested.
-#
-# Exposes a minimal API used by the app:
-# - build_analysis_prompt(...)
-# - generate_bullet_points_from_analysis(...)
-#
-# It uses the official google-genai SDK and reads the API key from
-# GEMINI_API_KEY (or GOOGLE_API_KEY). The model can be customized via
-# LLM_MODEL and defaults to "gemini-2.5-flash".
+# Gemini-only LLM helper.
 import os
 from collections.abc import Sequence
 
