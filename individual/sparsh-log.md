@@ -117,7 +117,8 @@ It was a busy week for me due to heavy midterm load and I was unable to be as in
 ## Week #8 (October 19 2025 - October 26 2025)
 <details>
   <summary><h3>Evaluation</h3></summary>
-  
+  <img width="1114" height="645" alt="image" src="https://github.com/user-attachments/assets/873fd2d2-0bb3-466c-89f8-deabfb6c5094" />
+
 </details>
 
 ### Team Activities
