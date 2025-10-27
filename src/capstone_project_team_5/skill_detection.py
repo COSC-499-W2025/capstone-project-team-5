@@ -6,66 +6,114 @@ from capstone_project_team_5.constants.skill_detection_constants import (
     PRACTICES_FILE_NAMES,
     PRACTICES_FILE_PATTERNS,
     PRACTICES_PATH_PATTERNS,
+    SKIP_DIRS,
+    TOOL_DIRECTORY_PATTERNS,
+    TOOL_FILE_NAME_PATTERNS,
     TOOL_FILE_NAMES,
-    TOOL_FILE_PATTERNS,
+    TOOL_FILE_PATH_PATTERNS,
 )
 
 
 class SkillDetector:
     @staticmethod
-    def _read_text(path: Path) -> str:
-        try:
-            return path.read_text(encoding="utf-8", errors="ignore")
-        except Exception:
-            return ""
+    def _should_skip(path: Path) -> bool:
+        """
+        Check if a directory should be skipped during scanning.
+
+        Args:
+            path: Path to check
+        """
+        return path.name.lower() in SKIP_DIRS
 
     @staticmethod
-    def _detect_tools(file_path: Path, name: str, root: Path) -> set[str]:
+    def _detect_tools(file_name: str, rel_path: str) -> set[str]:
         """
-        Detect development tools based on file name and content.
+        Detect development tools based on file name and path.
 
-        TODO: Unused parameters will be utilized when function logic is extended
+        Args:
+            file_name: Original file name
+            rel_path: Relative path
+
+        Returns:
+            Set of detected tool names
         """
         tools = set()
 
+        file_name_lower = file_name.lower()
+        rel_path_lower = rel_path.lower()
+
         # Check exact file names
         for tool, file_names in TOOL_FILE_NAMES.items():
-            if name in file_names:
+            if file_name in file_names:
                 tools.add(tool)
 
-        # Check file patterns
-        for tool, patterns in TOOL_FILE_PATTERNS.items():
+        # Check file name patterns
+        for tool, patterns in TOOL_FILE_NAME_PATTERNS.items():
             for pattern in patterns:
-                if pattern in name or name.endswith(pattern):
+                if pattern in file_name_lower:
                     tools.add(tool)
+
+        # Check file path patterns
+        for tool, patterns in TOOL_FILE_PATH_PATTERNS.items():
+            for pattern in patterns:
+                if pattern.lower() in rel_path_lower:
+                    tools.add(tool)
+
+        # Check directory patterns
+        path_parts_lower = set(rel_path_lower.split("/"))
+        for tool, dir_names in TOOL_DIRECTORY_PATTERNS.items():
+            for dir_name in dir_names:
+                if "/" in dir_name:
+                    if rel_path_lower.startswith(dir_name):
+                        tools.add(tool)
+                        break
+                else:
+                    if dir_name in path_parts_lower:
+                        tools.add(tool)
+                        break
 
         return tools
 
     @staticmethod
-    def _detect_practices(file_path: Path, name: str, rel: str) -> set[str]:
+    def _detect_practices(file_name: str, rel_path: str) -> set[str]:
         """
-        Detect software development practices based on file structure and content.
+        Detect software development practices based on file name and path.
 
-        TODO: Unused parameters will be utilized when function logic is extended
+        Args:
+            file_name: Original file name
+            rel_path: Relative path
+
+        Returns:
+            Set of detected practice names
         """
         practices = set()
 
+        file_name_lower = file_name.lower()
+        rel_path_lower = rel_path.lower()
+
         # Check exact file names
         for practice, file_names in PRACTICES_FILE_NAMES.items():
-            if name in file_names:
+            if file_name_lower in file_names:
                 practices.add(practice)
 
         # Check file patterns
         for practice, patterns in PRACTICES_FILE_PATTERNS.items():
             for pattern in patterns:
-                if pattern in name or name.startswith(pattern):
+                if pattern in file_name_lower:
                     practices.add(practice)
 
         # Check path patterns
+        path_parts_lower = set(rel_path_lower.split("/"))
         for practice, patterns in PRACTICES_PATH_PATTERNS.items():
             for pattern in patterns:
-                if pattern in rel or rel.startswith(pattern):
-                    practices.add(practice)
+                if "/" in pattern:
+                    if rel_path_lower.startswith(pattern):
+                        practices.add(practice)
+                        break
+                else:
+                    if pattern in path_parts_lower:
+                        practices.add(practice)
+                        break
 
         return practices
 
@@ -73,26 +121,49 @@ class SkillDetector:
     def _scan_project_files(root: Path) -> tuple[set[str], set[str]]:
         """
         Scan all files in the project to detect tools and practices.
+
+        Args:
+            root: Root directory of the project
+
+        Returns:
+            Tuple of (tools, practices) sets
         """
         tools = set()
         practices = set()
 
-        for file_path in root.rglob("*"):
-            if not file_path.is_file():
-                continue
+        def scan_directory(directory: Path) -> None:
+            """Recursively scan directory, skipping excluded dirs."""
+            try:
+                for item in directory.iterdir():
+                    # Skip excluded directories
+                    if item.is_dir():
+                        if SkillDetector._should_skip(item):
+                            continue
+                        scan_directory(item)
+                    elif item.is_file():
+                        file_name = item.name
+                        rel_path = str(item.relative_to(root)).replace("\\", "/")
 
-            name = file_path.name.lower()
-            rel = str(file_path.relative_to(root)).lower()
+                        # Detect tools and practices
+                        tools.update(SkillDetector._detect_tools(file_name, rel_path))
+                        practices.update(SkillDetector._detect_practices(file_name, rel_path))
+            except PermissionError:
+                # TODO: Add logging in later PR
+                pass
 
-            tools.update(SkillDetector._detect_tools(file_path, name, root))
-            practices.update(SkillDetector._detect_practices(file_path, name, rel))
-
+        scan_directory(root)
         return tools, practices
 
 
 def extract_project_skills(project_root: Path | str) -> dict[str, set[str]]:
     """
     Extracts project skills: tools and practices from the given project root directory.
+
+    Args:
+        project_root: Path to the project root directory
+
+    Returns:
+        Dictionary with 'tools' and 'practices' keys containing sets of detected items
     """
     root = Path(project_root)
     skills = {
