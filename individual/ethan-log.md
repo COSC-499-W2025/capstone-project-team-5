@@ -26,7 +26,7 @@ In the past cycle most of the time was spent on team meetings assinging people t
 
 ![screenshot](week6_checklist.png)
 
-## Week 7 # (October 13 - 19)
+## Week #7 (October 13 - 19)
 
 Time this week was spent coding, finishing a minor feature. No team meetings took place this week due to everyone busy with midterms. Looking to get back on track next week meeting with the team.
 
@@ -35,3 +35,13 @@ Time this week was spent coding, finishing a minor feature. No team meetings too
 | User Config | In progress     | Feature is mostly complete with room for it to be extended to in the future. |
 
 ![screenshot](week7_checklist.png)
+
+## Week #8 (October 20 - 26)
+
+Time this week was spent coding, creating a new feature for collaborative project detection (requirement #7). The plan for next week is to look back and refactor any previous features that need updating as well as continuing to go down the list of requirements as planned. Next sprint starting requirement #10 extracting key contribution metrics.
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| Project Collaboration Detection | In progress | Feature is mostly complete with room for it to be refactored depending on needed implementation. |
+
+![screenshot](week8_checklist.png)
