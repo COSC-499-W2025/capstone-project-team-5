@@ -112,3 +112,21 @@ It was a busy week for me due to heavy midterm load and I was unable to be as in
 
 ### TODOs for NExt week 
 - **Parser Tool**: Provide input and code for further improving the Parser tool while distributing work amongst me and Ronit who will be working on this part of the tool.
+
+
+## Week #8 (October 19 2025 - October 26 2025)
+<details>
+  <summary><h3>Evaluation</h3></summary>
+  
+</details>
+
+### Team Activities
+- **PR Actions**: Reviewed PRs and provided any feedback/suggestions necessary.  
+- **Project work Discussion**: Discussed possible overlaps in functionality in working.
+
+
+### Personal Contributions
+- **Code Contributions**: Provided further code changes and UTS for our File parser with a dedicated walker which can be further modified to have a centralised walker instance. I initially worked and spent most of my time on collaborative vs individual projects , however it was assigned to someone else so I had to scrap my PR and work on the walker instead.
+
+### TODOs for NExt week 
+- **Parser Tool**:  Discuss Centralisation of File walker and look into any missing gaps in functionality to try and pickup some tasks.
