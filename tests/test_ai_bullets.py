@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+
 from capstone_project_team_5.services.ai_bullets import generate_ai_bullets_for_project
 
 
