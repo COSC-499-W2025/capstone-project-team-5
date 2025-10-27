@@ -135,6 +135,40 @@ This week went by super quick, mainly because of midterms. I was able to piece t
 | Learn about Tauri | ⏳ In Progress      | Need to choose between the Tauri python plugin, or an API first approach. |
 | Explore Artifact extraction | ❌ Not Started       | Figure out how to extract different artifacts from a given folder |
 
+## Week 8 | October 20-24, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1584" height="920" alt="image" src="https://github.com/user-attachments/assets/b97318d2-097d-4823-82ec-e70ffb3ea771" />
+                               
+</details>
+
+### Task Progress this week
+
+On a good pace. Things are starting to piece together and our tasks are becoming more linked, leading to more collaboration! 
+
+
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Explore Artifact extraction | ⏳ In Progress  | Figure out how to extract different artifacts from a given folder |
+| Review PRs | ✅ Done      |  |
+| Learn about Tauri | ⏳ In Progress      | Need to choose between the Tauri python plugin, or an API first approach. |
+| LLM Bullets | ✅ Done  | | 
+
+
+### Next week's plans
+
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Review PRs | ❌ Not Started     |  |
+| Learn about Tauri | ⏳ In Progress      | Need to choose between the Tauri python plugin, or an API first approach. |
+| Explore Artifact extraction | ⏳ In Progress       | Figure out how to extract different artifacts from a given folder |
+| Enhance bullet point generation for collaborative projects | ❌ Not Started | Build on top of Ethan's work from this week (W7) |
+
+
+
+
 
 
 
