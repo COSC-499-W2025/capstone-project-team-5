@@ -57,6 +57,7 @@ As we have yet to receive feedback for the Data Flow Diagram, we were unable to 
 ---
 
 ### 🧱 Work Breakdown Structure
-<img alt="Work Breakdown Structure" src="https://github.com/user-attachments/assets/3846483a-b278-44df-b119-1009ac6ddfce" />
+<img width="954" height="579" alt="image" src="https://github.com/user-attachments/assets/a1e60979-21ae-452b-a5d6-8191c3ccb35d" />
+
 
 ---
