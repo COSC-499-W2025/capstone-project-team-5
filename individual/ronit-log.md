@@ -2,7 +2,41 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-_Last Updated:_ October 19, 2025
+_Last Updated:_ October 26, 2025
+
+---
+
+## Week 8 | October 20-26, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1065" height="622" alt="image" src="https://github.com/user-attachments/assets/e2ab8833-c198-4586-95fd-62995ead7094" />
+
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Set up SQLite database | ✅ Done |  |
+| Refactored old config/CRUD operations | ✅ Done |  |
+| Implemented integration to store user consent in DB | ✅ Done |  |
+| Implemented integration to store metadata of zip upload | ✅ Done |  |
+| Researched extracting multiple projects from a single zip upload | 🚧 In Progress | Understanding how to identify and extract individual projects from uploaded archives |
+| Conducted code reviews | ✅ Done |  |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Complete extraction of projects from zip upload | ❌ Not Started | Implement logic to identify and extract multiple projects |
+| Persist extracted projects from the zip upload | ❌ Not Started | Store extracted project data in database |
+| Continue code reviews | ❌ Not Started | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Integrate existing functions together | 🚧 In Progress | Ongoing integration work |
+| Set up proper database and integrate with existing functionality | ✅ Done | SQLite DB setup complete with user consent and upload metadata storage |
+| Continue code reviews | ✅ Done | Ongoing task |
 
 ---
 
