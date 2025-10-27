@@ -8,8 +8,9 @@ from capstone_project_team_5.constants.skill_detection_constants import (
     PRACTICES_PATH_PATTERNS,
     SKIP_DIRS,
     TOOL_DIRECTORY_PATTERNS,
+    TOOL_FILE_NAME_PATTERNS,
     TOOL_FILE_NAMES,
-    TOOL_FILE_PATTERNS,
+    TOOL_FILE_PATH_PATTERNS,
 )
 
 
@@ -46,10 +47,16 @@ class SkillDetector:
             if file_name in file_names:
                 tools.add(tool)
 
-        # Check file patterns
-        for tool, patterns in TOOL_FILE_PATTERNS.items():
+        # Check file name patterns
+        for tool, patterns in TOOL_FILE_NAME_PATTERNS.items():
             for pattern in patterns:
                 if pattern in file_name_lower:
+                    tools.add(tool)
+
+        # Check file path patterns
+        for tool, patterns in TOOL_FILE_PATH_PATTERNS.items():
+            for pattern in patterns:
+                if pattern.lower() in rel_path_lower:
                     tools.add(tool)
 
         # Check directory patterns

@@ -98,7 +98,8 @@ TOOL_FILE_NAMES = {
         "composer.lock",
     },
     "Bundler": {
-        "GemfileGemfile.lock",
+        "Gemfile.lock",
+        "Gemfile",
         "gemfile",
         "gemfile.lock",
     },
@@ -152,7 +153,8 @@ TOOL_FILE_NAMES = {
     },
     "Make": {
         "Makefile",
-        "makefileGNUmakefile",
+        "makefile",
+        "GNUmakefile",
         "gnumakefile",
         "Makefile.am",
         "Makefile.in",
@@ -403,7 +405,7 @@ TOOL_FILE_NAMES = {
 # TOOL DETECTION - File name patterns
 # These are checked case-insensitively since they're patterns
 
-TOOL_FILE_PATTERNS = {
+TOOL_FILE_NAME_PATTERNS = {
     "Docker": {"docker-compose"},
     "SQL": {".sql"},
     "Terraform": {".tf"},
@@ -412,6 +414,14 @@ TOOL_FILE_PATTERNS = {
     "Go": {"_test.go"},
     "CloudFormation": {".template.json", ".template.yaml"},
     "Postman": {"postman_collection.json"},
+}
+
+# ============================================================================
+# TOOL DETECTION - File path patterns
+# These are checked case-insensitively since they're patterns
+
+TOOL_FILE_PATH_PATTERNS = {
+    "Dependabot": {".github/dependabot.yml"},
 }
 
 # ============================================================================
@@ -424,7 +434,6 @@ TOOL_DIRECTORY_PATTERNS = {
     "Prisma": {"prisma"},
     "GitHub Actions": {".github/workflows"},
     "CircleCI": {".circleci"},
-    "Dependabot": {".github/dependabot.yml"},
 }
 
 # ============================================================================
@@ -590,7 +599,6 @@ PRACTICES_PATH_PATTERNS = {
         "packages",
         "components",
     },
-    "Version Control (Git)": {".git"},
     "Team Collaboration": {"minutes"},
     "Database Migrations": {"migrations", "alembic", "db/migrate", "migrate"},
     "Database Seeding": {"seeds", "seeders", "fixtures", "db/seeds", "db/fixtures"},

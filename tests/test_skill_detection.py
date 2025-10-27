@@ -112,3 +112,11 @@ def test_practice_file_pattern_detection(tmp_path: Path) -> None:
     (tmp_path / "pull_request_template.md").write_text("# PR Template\n", encoding="utf-8")
     skills = extract_project_skills(tmp_path)
     assert "Code Review" in skills["practices"]
+
+
+def test_tool_file_path_pattern_detection(tmp_path: Path) -> None:
+    """Test that tool file path patterns (e.g., .github/dependabot.yml) are detected."""
+    (tmp_path / ".github" / "dependabot.yml").parent.mkdir(parents=True)
+    (tmp_path / ".github" / "dependabot.yml").write_text("version: 2\n", encoding="utf-8")
+    skills = extract_project_skills(tmp_path)
+    assert "Dependabot" in skills["tools"]
