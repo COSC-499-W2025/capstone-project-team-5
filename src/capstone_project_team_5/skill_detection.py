@@ -19,7 +19,8 @@ class SkillDetector:
         """
         Check if a directory should be skipped during scanning.
 
-        Case-insensitive check since directory names vary (Tests vs tests).
+        Args:
+            path: Path to check
         """
         return path.name.lower() in SKIP_DIRS
 
@@ -29,8 +30,8 @@ class SkillDetector:
         Detect development tools based on file name and path.
 
         Args:
-            file_name: Original file name (case-preserved)
-            rel_path: Relative path (case-preserved, with forward slashes)
+            file_name: Original file name
+            rel_path: Relative path
 
         Returns:
             Set of detected tool names
@@ -40,18 +41,18 @@ class SkillDetector:
         file_name_lower = file_name.lower()
         rel_path_lower = rel_path.lower()
 
-        # Check exact file names (CASE-SENSITIVE)
+        # Check exact file names
         for tool, file_names in TOOL_FILE_NAMES.items():
             if file_name in file_names:
                 tools.add(tool)
 
-        # Check file patterns (CASE-INSENSITIVE substring match)
+        # Check file patterns
         for tool, patterns in TOOL_FILE_PATTERNS.items():
             for pattern in patterns:
                 if pattern in file_name_lower:
                     tools.add(tool)
 
-        # Check directory patterns (CASE-INSENSITIVE)
+        # Check directory patterns
         path_parts_lower = set(rel_path_lower.split("/"))
         for tool, dir_names in TOOL_DIRECTORY_PATTERNS.items():
             for dir_name in dir_names:
@@ -71,12 +72,9 @@ class SkillDetector:
         """
         Detect software development practices based on file name and path.
 
-        Practices are detected case-insensitively to catch variations like
-        README, Readme, readme, etc.
-
         Args:
-            file_name: Original file name (case-preserved)
-            rel_path: Relative path (case-preserved, with forward slashes)
+            file_name: Original file name
+            rel_path: Relative path
 
         Returns:
             Set of detected practice names
@@ -86,18 +84,18 @@ class SkillDetector:
         file_name_lower = file_name.lower()
         rel_path_lower = rel_path.lower()
 
-        # Check exact file names (CASE-INSENSITIVE)
+        # Check exact file names
         for practice, file_names in PRACTICES_FILE_NAMES.items():
             if file_name_lower in file_names:
                 practices.add(practice)
 
-        # Check file patterns (CASE-INSENSITIVE substring match)
+        # Check file patterns
         for practice, patterns in PRACTICES_FILE_PATTERNS.items():
             for pattern in patterns:
                 if pattern in file_name_lower:
                     practices.add(practice)
 
-        # Check path patterns (CASE-INSENSITIVE)
+        # Check path patterns
         path_parts_lower = set(rel_path_lower.split("/"))
         for practice, patterns in PRACTICES_PATH_PATTERNS.items():
             for pattern in patterns:
@@ -136,11 +134,10 @@ class SkillDetector:
                             continue
                         scan_directory(item)
                     elif item.is_file():
-                        # Preserve original case for file name
                         file_name = item.name
                         rel_path = str(item.relative_to(root)).replace("\\", "/")
 
-                        # Detect tools and practices (case handling is internal)
+                        # Detect tools and practices
                         tools.update(SkillDetector._detect_tools(file_name, rel_path))
                         practices.update(SkillDetector._detect_practices(file_name, rel_path))
             except PermissionError:
