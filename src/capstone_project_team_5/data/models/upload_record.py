@@ -14,7 +14,6 @@ from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from capstone_project_team_5.data.db import Base
-from capstone_project_team_5.data.models.project import Project
 
 if TYPE_CHECKING:
     from capstone_project_team_5.data.models.project import Project
