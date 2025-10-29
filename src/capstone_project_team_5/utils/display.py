@@ -53,6 +53,18 @@ def display_upload_result(result: ZipUploadResult) -> None:
     print(f"   • Filename: {result.filename}")
     print(f"   • Size: {result.size_bytes:,} bytes")
     print(f"   • Files found: {result.file_count}")
+    print(f"   • Projects discovered: {len(result.projects)}")
+
+    if result.projects:
+        print("\n📁 Discovered Projects:")
+        print("-" * 60)
+        print(f"{'Name':<24} {'Path':<24} {'Git':<5} {'Files':<5}")
+        print("-" * 60)
+        for project in result.projects:
+            git_flag = "✓" if project.has_git_repo else "-"
+            rel_path = project.rel_path or "(root)"
+            print(f"{project.name:<24} {rel_path:<24} {git_flag:<5} {project.file_count:<5}")
+
     print("\n📂 Directory Structure:")
     print("-" * 60)
     print_tree(result.tree)
