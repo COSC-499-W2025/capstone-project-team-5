@@ -38,6 +38,16 @@ class DirectoryNode:
 
 
 @dataclass(slots=True)
+class DetectedProject:
+    """Metadata describing a project discovered within the uploaded ZIP."""
+
+    name: str
+    rel_path: str
+    has_git_repo: bool
+    file_count: int
+
+
+@dataclass(slots=True)
 class ZipUploadResult:
     """Result of a successful zip upload operation.
 
@@ -52,3 +62,4 @@ class ZipUploadResult:
     size_bytes: int
     file_count: int
     tree: DirectoryNode
+    projects: list[DetectedProject] = field(default_factory=list)
