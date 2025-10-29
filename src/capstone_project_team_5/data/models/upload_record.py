@@ -8,11 +8,16 @@ and file count for audit and analytics purposes.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from capstone_project_team_5.data.db import Base
+from capstone_project_team_5.data.models.project import Project
+
+if TYPE_CHECKING:
+    from capstone_project_team_5.data.models.project import Project
 
 
 class UploadRecord(Base):
@@ -34,4 +39,8 @@ class UploadRecord(Base):
     file_count: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+    )
+
+    projects: Mapped[list[Project]] = relationship(
+        "Project", back_populates="upload", cascade="all, delete-orphan"
     )
