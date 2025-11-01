@@ -12,26 +12,32 @@ These functions deliberately do not provide write access.
 from __future__ import annotations
 
 import json
-import sqlite3
-from pathlib import Path
+import os
 from typing import Any
 
-BASE_DIR = Path(__file__).resolve().parents[2]
-DB_PATH = BASE_DIR / "db" / "artifact_miner.db"
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Connection, Engine
+
+# Database URL environment variable (keeps module backend-agnostic)
+DB_ENV_VAR = "DATABASE_URL"
 
 
-def _get_conn() -> sqlite3.Connection:
-    """
-    Open a SQLite connection configured for row access.
+def _get_engine() -> Engine:
+    """Create and return a SQLAlchemy Engine using DATABASE_URL.
 
     Raises:
-        FileNotFoundError: If the DB file does not exist at `DB_PATH`.
+        RuntimeError: if DATABASE_URL is not set in the environment.
     """
-    if not DB_PATH.exists():
-        raise FileNotFoundError(f"Database not found at {DB_PATH}")
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    url = os.environ.get(DB_ENV_VAR)
+    if not url:
+        raise RuntimeError(f"Environment variable {DB_ENV_VAR} is not set")
+    return create_engine(url)
+
+
+def _get_conn() -> Connection:
+    """Return a SQLAlchemy Connection. Caller must close it."""
+    engine = _get_engine()
+    return engine.connect()
 
 
 def get(item_id: int) -> dict[str, Any] | None:
@@ -44,12 +50,12 @@ def get(item_id: int) -> dict[str, Any] | None:
     Returns:
         Optional[Dict[str, Any]]: Deserialized item (or None if not found).
     """
-    conn = _get_conn()
+    conn: Connection = _get_conn()
     try:
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM PortfolioItem WHERE id = ?", (item_id,))
-        row = cur.fetchone()
-        if not row:
+        sql = text("SELECT * FROM PortfolioItem WHERE id = :id")
+        res = conn.execute(sql, {"id": item_id})
+        row = res.mappings().fetchone()
+        if row is None:
             return None
         return {
             "id": row["id"],
@@ -69,18 +75,17 @@ def list_all(limit: int | None = None) -> list[dict[str, Any]]:
     Args:
         limit: Optional maximum number of items to return.
     """
-    conn = _get_conn()
+    conn: Connection = _get_conn()
     try:
-        cur = conn.cursor()
-        query = "SELECT * FROM PortfolioItem ORDER BY created_at DESC"
-        if limit:
-            query += " LIMIT ?"
-            cur.execute(query, (limit,))
+        base_sql = "SELECT * FROM PortfolioItem ORDER BY created_at DESC"
+        if limit is not None:
+            sql = text(base_sql + " LIMIT :limit")
+            res = conn.execute(sql, {"limit": limit})
         else:
-            cur.execute(query)
-        rows = cur.fetchall()
+            res = conn.execute(text(base_sql))
+
         items: list[dict[str, Any]] = []
-        for row in rows:
+        for row in res.mappings().all():
             items.append(
                 {
                     "id": row["id"],
