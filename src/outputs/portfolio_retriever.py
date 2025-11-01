@@ -13,10 +13,10 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine, Connection
+from sqlalchemy.engine import Connection, Engine
 
 # Database URL environment variable (keeps module backend-agnostic)
 DB_ENV_VAR = "DATABASE_URL"
@@ -40,7 +40,7 @@ def _get_conn() -> Connection:
     return engine.connect()
 
 
-def get(item_id: int) -> Optional[Dict[str, Any]]:
+def get(item_id: int) -> dict[str, Any] | None:
     """
     Retrieve a portfolio item by id.
 
@@ -68,7 +68,7 @@ def get(item_id: int) -> Optional[Dict[str, Any]]:
         conn.close()
 
 
-def list_all(limit: Optional[int] = None) -> List[Dict[str, Any]]:
+def list_all(limit: int | None = None) -> list[dict[str, Any]]:
     """
     List stored portfolio items in reverse chronological order.
 
@@ -84,7 +84,7 @@ def list_all(limit: Optional[int] = None) -> List[Dict[str, Any]]:
         else:
             res = conn.execute(text(base_sql))
 
-        items: List[Dict[str, Any]] = []
+        items: list[dict[str, Any]] = []
         for row in res.mappings().all():
             items.append(
                 {

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import OperationalError
 
 import outputs.portfolio_retriever as pr
 
@@ -49,7 +50,8 @@ def temp_db(tmp_path: Path):
         # Insert two portfolio items with JSON content and timestamps
         conn.execute(
             text(
-                "INSERT INTO PortfolioItem (project_id, title, content, created_at) VALUES (:pid, :title, :content, :created_at)"
+                "INSERT INTO PortfolioItem (project_id, title, content, created_at) "
+                "VALUES (:pid, :title, :content, :created_at)"
             ),
             {
                 "pid": 1,
@@ -60,7 +62,8 @@ def temp_db(tmp_path: Path):
         )
         conn.execute(
             text(
-                "INSERT INTO PortfolioItem (project_id, title, content, created_at) VALUES (:pid, :title, :content, :created_at)"
+                "INSERT INTO PortfolioItem (project_id, title, content, created_at) "
+                "VALUES (:pid, :title, :content, :created_at)"
             ),
             {
                 "pid": 1,
@@ -116,5 +119,5 @@ def test_missing_database_raises(monkeypatch, tmp_path: Path):
     """
     non_existent = tmp_path / "nope.db"
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{non_existent.as_posix()}")
-    with pytest.raises(Exception):
+    with pytest.raises(OperationalError):
         pr.get(1)

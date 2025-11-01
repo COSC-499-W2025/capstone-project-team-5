@@ -1,7 +1,7 @@
 from pathlib import Path
-from sqlalchemy import create_engine, text
 
 import pytest
+from sqlalchemy import create_engine, text
 
 import outputs.project_summary as ps
 
@@ -28,7 +28,9 @@ def temp_db(tmp_path):
         # Insert a test project
         res = conn.execute(
             text(
-                "INSERT INTO Project (name, description, language, framework, is_collaborative, start_date, end_date, importance_rank) VALUES (:name, :desc, :lang, :fw, :collab, :start, :end, :rank)"
+                "INSERT INTO Project (name, description, language, framework, "
+                "is_collaborative, start_date, end_date, importance_rank) "
+                "VALUES (:name, :desc, :lang, :fw, :collab, :start, :end, :rank)"
             ),
             {
                 "name": "Artifact Miner",

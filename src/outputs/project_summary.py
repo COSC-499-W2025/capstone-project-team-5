@@ -5,10 +5,10 @@ Author: Chris Hill
 
 import json
 import os
-from typing import Any, Dict, List
+from typing import Any
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine, Connection
+from sqlalchemy.engine import Connection, Engine
 
 # Database URL should be provided via the environment variable DATABASE_URL.
 # Example values:
@@ -57,7 +57,7 @@ class ProjectSummary:
         return engine.connect()
 
     @classmethod
-    def _get_project_metadata(cls, conn: Connection, project_name: str) -> Dict[str, Any] | None:
+    def _get_project_metadata(cls, conn: Connection, project_name: str) -> dict[str, Any] | None:
         project_sql = text(
             """
             SELECT id, name, description, is_collaborative, start_date, end_date,
@@ -70,7 +70,7 @@ class ProjectSummary:
         return res.mappings().fetchone()
 
     @classmethod
-    def _get_artifact_counts(cls, conn: Connection, pid: int) -> Dict[str, int]:
+    def _get_artifact_counts(cls, conn: Connection, pid: int) -> dict[str, int]:
         artifacts_sql = text(
             """
             SELECT type, COUNT(*) AS count
@@ -83,7 +83,7 @@ class ProjectSummary:
         return {row["type"]: row["count"] for row in res.mappings().all()}
 
     @classmethod
-    def _get_contrib_counts(cls, conn: Connection, pid: int) -> Dict[str, int]:
+    def _get_contrib_counts(cls, conn: Connection, pid: int) -> dict[str, int]:
         contrib_sql = text(
             """
             SELECT activity_type, COUNT(*) AS count
@@ -96,7 +96,7 @@ class ProjectSummary:
         return {row["activity_type"]: row["count"] for row in res.mappings().all()}
 
     @classmethod
-    def _get_skills(cls, conn: Connection, pid: int) -> List[str]:
+    def _get_skills(cls, conn: Connection, pid: int) -> list[str]:
         skills_sql = text(
             """
             SELECT Skill.name
@@ -109,7 +109,7 @@ class ProjectSummary:
         return [row["name"] for row in res.mappings().all()]
 
     @classmethod
-    def summarize(cls, project_name: str) -> Dict[str, Any]:
+    def summarize(cls, project_name: str) -> dict[str, Any]:
         """Return a structured summary for the given project name.
 
         This method orchestrates smaller helpers that execute individual
@@ -127,7 +127,7 @@ class ProjectSummary:
             contrib_counts = cls._get_contrib_counts(conn, pid)
             skills = cls._get_skills(conn, pid)
 
-            summary: Dict[str, Any] = {
+            summary: dict[str, Any] = {
                 "project_name": project["name"],
                 "description": project["description"],
                 "collaboration": "collaborative" if project["is_collaborative"] else "individual",
