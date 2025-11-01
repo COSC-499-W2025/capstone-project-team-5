@@ -56,14 +56,22 @@ def temp_db(tmp_path):
         # Contributions
         conn.execute(
             text("INSERT INTO Contribution (project_id, activity_type) VALUES (:pid, :atype)"),
-            [{"pid": pid, "atype": "code"}, {"pid": pid, "atype": "document"}, {"pid": pid, "atype": "code"}],
+            [
+                {"pid": pid, "atype": "code"},
+                {"pid": pid, "atype": "document"},
+                {"pid": pid, "atype": "code"},
+            ],
         )
 
         # Skills + link table
         res_py = conn.execute(text("INSERT INTO Skill (name) VALUES (:name)"), {"name": "Python"})
-        python_skill_id = int(res_py.lastrowid or conn.execute(text("SELECT last_insert_rowid()")).scalar())
+        python_skill_id = int(
+            res_py.lastrowid or conn.execute(text("SELECT last_insert_rowid()")).scalar()
+        )
         res_fl = conn.execute(text("INSERT INTO Skill (name) VALUES (:name)"), {"name": "Flask"})
-        flask_skill_id = int(res_fl.lastrowid or conn.execute(text("SELECT last_insert_rowid()")).scalar())
+        flask_skill_id = int(
+            res_fl.lastrowid or conn.execute(text("SELECT last_insert_rowid()")).scalar()
+        )
         conn.execute(
             text("INSERT INTO ProjectSkill (project_id, skill_id) VALUES (:pid, :sid)"),
             [{"pid": pid, "sid": python_skill_id}, {"pid": pid, "sid": flask_skill_id}],
@@ -153,7 +161,10 @@ def test_empty_project_has_no_artifacts_or_skills(monkeypatch, tmp_path, temp_db
     # Insert an empty project using SQLAlchemy so the module sees it
     engine = create_engine(temp_db)
     with engine.begin() as conn:
-        conn.execute(text("INSERT INTO Project (name, description) VALUES (:name, :desc)"), {"name": "Empty Project", "desc": "No data"})
+        conn.execute(
+            text("INSERT INTO Project (name, description) VALUES (:name, :desc)"),
+            {"name": "Empty Project", "desc": "No data"},
+        )
 
     monkeypatch.setenv("DATABASE_URL", temp_db)
     result = ps.ProjectSummary.summarize("Empty Project")

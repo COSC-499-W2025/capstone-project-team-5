@@ -15,8 +15,7 @@ from sqlalchemy.engine import Engine, Connection
 # - postgresql+psycopg2://user:pass@localhost/dbname
 # - mysql+pymysql://user:pass@localhost/dbname
 DB_ENV_VAR = "DATABASE_URL"
-
-
+ 
 
 def _get_engine() -> Engine:
     """Return a SQLAlchemy Engine using the URL found in the environment.
