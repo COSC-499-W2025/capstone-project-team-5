@@ -1,100 +1,37 @@
+"""Portfolio retriever convenience wrapper.
+
+This module provides a tiny, stable public surface for retrieving previously
+generated portfolio entries. It intentionally delegates to the shared
+`ItemRetriever` implementation to avoid duplicating connection and
+deserialization logic while keeping a discoverable module name for callers.
+
+API
+- get(item_id: int) -> dict | None
+    Retrieve a single portfolio item by primary key. Returns a dictionary with
+    keys: ``id``, ``project_id``, ``title``, ``content`` (deserialized JSON),
+    and ``created_at``, or ``None`` if not found.
+
+- list_all(limit: int | None = None) -> list[dict]
+    Return a list of portfolio items ordered by ``created_at`` descending. If
+    ``limit`` is provided, only that many items are returned.
+
+Notes
+- This wrapper preserves the historical import path
+    ``outputs.portfolio_retriever`` so existing callers do not need to change.
+- For shared retrieval logic see :mod:`outputs.item_retriever`.
 """
-Read-only retrieval helpers for previously generated portfolio items.
 
-This module assumes a `PortfolioItem` table exists with the schema created by
-the storage component. It provides two convenience functions:
- - get(item_id) -> Optional[dict]
- - list_all(limit=None) -> List[dict]
-
-These functions deliberately do not provide write access.
-"""
-
-from __future__ import annotations
-
-import json
-import os
-from typing import Any
-
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Connection, Engine
-
-# Database URL environment variable (keeps module backend-agnostic)
-DB_ENV_VAR = "DATABASE_URL"
+from .item_retriever import ItemRetriever
 
 
-def _get_engine() -> Engine:
-    """Create and return a SQLAlchemy Engine using DATABASE_URL.
-
-    Raises:
-        RuntimeError: if DATABASE_URL is not set in the environment.
-    """
-    url = os.environ.get(DB_ENV_VAR)
-    if not url:
-        raise RuntimeError(f"Environment variable {DB_ENV_VAR} is not set")
-    return create_engine(url)
+_retriever = ItemRetriever("GeneratedItem", kind="portfolio")
 
 
-def _get_conn() -> Connection:
-    """Return a SQLAlchemy Connection. Caller must close it."""
-    engine = _get_engine()
-    return engine.connect()
+def get(item_id: int) -> dict | None:
+        """Return a portfolio item by id (delegates to ItemRetriever)."""
+        return _retriever.get(item_id)
 
 
-def get(item_id: int) -> dict[str, Any] | None:
-    """
-    Retrieve a portfolio item by id.
-
-    Args:
-        item_id: Primary key of the portfolio item.
-
-    Returns:
-        Optional[Dict[str, Any]]: Deserialized item (or None if not found).
-    """
-    conn: Connection = _get_conn()
-    try:
-        sql = text("SELECT * FROM PortfolioItem WHERE id = :id")
-        res = conn.execute(sql, {"id": item_id})
-        row = res.mappings().fetchone()
-        if row is None:
-            return None
-        return {
-            "id": row["id"],
-            "project_id": row["project_id"],
-            "title": row["title"],
-            "content": json.loads(row["content"]),
-            "created_at": row["created_at"],
-        }
-    finally:
-        conn.close()
-
-
-def list_all(limit: int | None = None) -> list[dict[str, Any]]:
-    """
-    List stored portfolio items in reverse chronological order.
-
-    Args:
-        limit: Optional maximum number of items to return.
-    """
-    conn: Connection = _get_conn()
-    try:
-        base_sql = "SELECT * FROM PortfolioItem ORDER BY created_at DESC"
-        if limit is not None:
-            sql = text(base_sql + " LIMIT :limit")
-            res = conn.execute(sql, {"limit": limit})
-        else:
-            res = conn.execute(text(base_sql))
-
-        items: list[dict[str, Any]] = []
-        for row in res.mappings().all():
-            items.append(
-                {
-                    "id": row["id"],
-                    "project_id": row["project_id"],
-                    "title": row["title"],
-                    "content": json.loads(row["content"]),
-                    "created_at": row["created_at"],
-                }
-            )
-        return items
-    finally:
-        conn.close()
+def list_all(limit: int | None = None) -> list[dict]:
+        """List portfolio items (delegates to ItemRetriever)."""
+        return _retriever.list_all(limit)

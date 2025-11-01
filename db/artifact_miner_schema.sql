@@ -48,15 +48,20 @@ CREATE TABLE ProjectSkill (
 );
 
 
--- Portfolio items: stored generated portfolio / résumé entries
-CREATE TABLE IF NOT EXISTS PortfolioItem (
+-- Consolidated generated items table used for portfolio/resume entries.
+-- The `kind` column distinguishes logical item types (e.g. 'portfolio',
+-- 'resume'). Using a single table simplifies querying and allows a
+-- single retriever implementation to filter by kind.
+CREATE TABLE IF NOT EXISTS GeneratedItem (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER,
+    kind TEXT NOT NULL,
     title TEXT NOT NULL,
     content TEXT NOT NULL, -- JSON-serialized content
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES Project(id) ON DELETE SET NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_portfolio_project ON PortfolioItem(project_id);
-CREATE INDEX IF NOT EXISTS idx_portfolio_created_at ON PortfolioItem(created_at);
+CREATE INDEX IF NOT EXISTS idx_generateditem_kind ON GeneratedItem(kind);
+CREATE INDEX IF NOT EXISTS idx_generateditem_project ON GeneratedItem(project_id);
+CREATE INDEX IF NOT EXISTS idx_generateditem_created_at ON GeneratedItem(created_at);
