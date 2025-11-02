@@ -12,48 +12,32 @@ These functions deliberately do not provide write access.
 from __future__ import annotations
 
 import json
-import os
 from typing import Any
 
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Connection, Engine
+from sqlalchemy import text
 
-# Database URL environment variable (keeps module backend-agnostic)
-DB_ENV_VAR = "DATABASE_URL"
+# Reuse application's DB infrastructure
+from capstone_project_team_5.data.db import get_session
 
 
-def _get_engine() -> Engine:
-    """Create and return a SQLAlchemy Engine using DATABASE_URL.
+def _get_connection():
+    """Return the module-level session context manager.
 
-    Raises:
-        RuntimeError: if DATABASE_URL is not set in the environment.
+    This mirrors the helper pattern used in `ProjectSummary` and provides a
+    single place to change session wiring for this module.
     """
-    url = os.environ.get(DB_ENV_VAR)
-    if not url:
-        raise RuntimeError(f"Environment variable {DB_ENV_VAR} is not set")
-    return create_engine(url)
-
-
-def _get_conn() -> Connection:
-    """Return a SQLAlchemy Connection. Caller must close it."""
-    engine = _get_engine()
-    return engine.connect()
+    return get_session()
 
 
 def get(item_id: int) -> dict[str, Any] | None:
-    """
-    Retrieve a portfolio item by id.
+    """Retrieve a portfolio item by its primary key from PortfolioItem table.
 
-    Args:
-        item_id: Primary key of the portfolio item.
-
-    Returns:
-        Optional[Dict[str, Any]]: Deserialized item (or None if not found).
+    Returns a dict with keys: id, project_id, title, content (deserialized),
+    created_at, or None if the item does not exist.
     """
-    conn: Connection = _get_conn()
-    try:
+    with _get_connection() as session:
         sql = text("SELECT * FROM PortfolioItem WHERE id = :id")
-        res = conn.execute(sql, {"id": item_id})
+        res = session.execute(sql, {"id": item_id})
         row = res.mappings().fetchone()
         if row is None:
             return None
@@ -64,25 +48,20 @@ def get(item_id: int) -> dict[str, Any] | None:
             "content": json.loads(row["content"]),
             "created_at": row["created_at"],
         }
-    finally:
-        conn.close()
 
 
 def list_all(limit: int | None = None) -> list[dict[str, Any]]:
-    """
-    List stored portfolio items in reverse chronological order.
+    """List stored portfolio items ordered by created_at DESC.
 
-    Args:
-        limit: Optional maximum number of items to return.
+    If `limit` is provided only that many items are returned.
     """
-    conn: Connection = _get_conn()
-    try:
+    with _get_connection() as session:
         base_sql = "SELECT * FROM PortfolioItem ORDER BY created_at DESC"
         if limit is not None:
             sql = text(base_sql + " LIMIT :limit")
-            res = conn.execute(sql, {"limit": limit})
+            res = session.execute(sql, {"limit": limit})
         else:
-            res = conn.execute(text(base_sql))
+            res = session.execute(text(base_sql))
 
         items: list[dict[str, Any]] = []
         for row in res.mappings().all():
@@ -96,5 +75,3 @@ def list_all(limit: int | None = None) -> list[dict[str, Any]]:
                 }
             )
         return items
-    finally:
-        conn.close()

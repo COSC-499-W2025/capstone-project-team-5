@@ -2,14 +2,15 @@ import json
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
+import capstone_project_team_5.data.db as app_db
 import outputs.portfolio_retriever as pr
 
 
 @pytest.fixture
-def temp_db(tmp_path: Path):
+def temp_db(tmp_path: Path, monkeypatch):
     """Create a temporary SQLite database using SQLAlchemy and populate it.
 
     Yields a SQLAlchemy-compatible SQLite URL (string) pointing to the
@@ -18,7 +19,13 @@ def temp_db(tmp_path: Path):
     """
     db_path = tmp_path / "test_portfolio.db"
     sqlite_url = f"sqlite:///{db_path.as_posix()}"
-    engine = create_engine(sqlite_url)
+
+    # Tell the application to use the temp DB and reset cached engine/session
+    monkeypatch.setenv("DB_URL", sqlite_url)
+    app_db._engine = None
+    app_db._SessionLocal = None
+
+    engine = app_db._get_engine()
 
     ddl = """
     CREATE TABLE Project (
@@ -81,8 +88,11 @@ def test_get_existing_and_list_all(monkeypatch, temp_db: str):
     The retriever should return deserialized content and list items in
     reverse chronological order.
     """
-    # Configure the module to use our temporary DB via DATABASE_URL
-    monkeypatch.setenv("DATABASE_URL", temp_db)
+    # Configure the module to use our temporary DB via DB_URL
+    monkeypatch.setenv("DB_URL", temp_db)
+    # Ensure the app db picks up the test DB
+    app_db._engine = None
+    app_db._SessionLocal = None
 
     # Get first item (id=1)
     item1 = pr.get(1)
@@ -100,12 +110,16 @@ def test_get_existing_and_list_all(monkeypatch, temp_db: str):
 
 
 def test_get_nonexistent_returns_none(monkeypatch, temp_db: str):
-    monkeypatch.setenv("DATABASE_URL", temp_db)
+    monkeypatch.setenv("DB_URL", temp_db)
+    app_db._engine = None
+    app_db._SessionLocal = None
     assert pr.get(9999) is None
 
 
 def test_list_limit(monkeypatch, temp_db: str):
-    monkeypatch.setenv("DATABASE_URL", temp_db)
+    monkeypatch.setenv("DB_URL", temp_db)
+    app_db._engine = None
+    app_db._SessionLocal = None
     items = pr.list_all(limit=1)
     assert len(items) == 1
 
@@ -118,6 +132,8 @@ def test_missing_database_raises(monkeypatch, tmp_path: Path):
     assert that an exception (OperationalError or similar) is raised.
     """
     non_existent = tmp_path / "nope.db"
-    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{non_existent.as_posix()}")
+    monkeypatch.setenv("DB_URL", f"sqlite:///{non_existent.as_posix()}")
+    app_db._engine = None
+    app_db._SessionLocal = None
     with pytest.raises(OperationalError):
         pr.get(1)
