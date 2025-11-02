@@ -14,12 +14,11 @@ class LLMService:
     def __init__(self, provider: LLMProvider | None = None) -> None:
         """Initialize LLM service with a specific provider.
         Args:
-            provider: LLM provider instance. If None, uses get_llm_provider().
+            provider: LLM provider instance
         """
-        self.provider = provider or LLMService.get_default_llm_provider_from_env()
+        self.provider = provider or LLMService._get_default_llm_provider_from_env()
 
-    @staticmethod
-    def get_default_llm_provider_from_env() -> LLMProvider:
+    def _get_default_llm_provider_from_env() -> LLMProvider:
         """Get the configured LLM provider.
 
         Returns:
@@ -47,15 +46,27 @@ class LLMService:
         """
         return f"System instruction:\n{system_instructions}\n\nUser content:\n{user_content}"
 
-    def generate_llm_response(self, system_instructions: str, user_content: str) -> str:
+    def generate_llm_response(
+        self,
+        system_instructions: str,
+        user_content: str,
+        temperature: float = 0.7,
+        max_tokens: int | None = None,
+        seed: int | None = None,
+    ) -> str:
         """Build a prompt and send it to the LLM in one step.
 
         Args:
             system_instructions: System-level instructions.
-            user_content: User content or context.
+            user_content: User content.
+            temperature: Controls randomness (0.0-2.0). Lower = more deterministic.
+            max_tokens: Maximum response length. None = provider default.
+            seed: Random seed for reproducibility (if supported by provider).
+            **kwargs: Additional provider-specific options.
 
         Returns:
             The text response from the LLM.
         """
         prompt = self.build_prompt(system_instructions, user_content)
-        return self.provider.send_prompt(prompt)
+        config = self.provider.generate_llm_config(temperature, max_tokens, seed)
+        return self.provider.send_prompt(prompt, config)
