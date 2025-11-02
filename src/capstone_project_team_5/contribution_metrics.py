@@ -126,7 +126,10 @@ class ContributionMetrics:
                 if not stat:
                     continue
 
-                created_at = stat.st_birthtime
+                created_at = getattr(stat, "st_birthtime", None)
+                if created_at is None:
+                    created_at = stat.st_ctime
+
                 modified_at = stat.st_mtime
 
                 if created_at:
