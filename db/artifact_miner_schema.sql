@@ -46,3 +46,17 @@ CREATE TABLE ProjectSkill (
     FOREIGN KEY (project_id) REFERENCES Project(id) ON DELETE CASCADE,
     FOREIGN KEY (skill_id) REFERENCES Skill(id) ON DELETE CASCADE
 );
+
+
+-- Portfolio items: stored generated portfolio / résumé entries
+CREATE TABLE IF NOT EXISTS PortfolioItem (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL, -- JSON-serialized content
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES Project(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_portfolio_project ON PortfolioItem(project_id);
+CREATE INDEX IF NOT EXISTS idx_portfolio_created_at ON PortfolioItem(created_at);

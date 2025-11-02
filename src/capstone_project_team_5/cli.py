@@ -7,8 +7,12 @@ from zipfile import ZipFile
 
 from capstone_project_team_5.consent_tool import ConsentTool
 from capstone_project_team_5.detection import identify_language_and_framework
+from capstone_project_team_5.file_walker import DirectoryWalker
 from capstone_project_team_5.models import InvalidZipError
 from capstone_project_team_5.services import upload_zip
+from capstone_project_team_5.services.llm import (
+    generate_bullet_points_from_analysis,
+)
 from capstone_project_team_5.skill_detection import extract_project_skills
 from capstone_project_team_5.utils import display_upload_result, prompt_for_zip_file
 
@@ -53,6 +57,9 @@ def run_cli() -> int:
             with ZipFile(zip_path) as archive:
                 archive.extractall(tmp_path)
 
+            # Walk the extracted directory
+            walk_result = DirectoryWalker.walk(tmp_path)
+
             language, framework = identify_language_and_framework(tmp_path)
             skills = extract_project_skills(tmp_path)
 
@@ -65,10 +72,63 @@ def run_cli() -> int:
             tools = ", ".join(sorted(skills.get("tools", set()))) or "None detected"
             print(f"🧠 Skills: {skills_list}")
             print(f"🧰 Tools: {tools}")
+
+            # Display file walk statistics
+            print("\n📂 File Analysis")
+            print("-" * 60)
+            summary = DirectoryWalker.get_summary(walk_result)
+            total_size = _format_bytes(summary["total_size_bytes"])
+            print(f"Total: {summary['total_files']} files ({total_size})")
+            # AI-generated bullet points (always attempt; report reason on failure)
+            if not consent_tool.use_external_services:
+                print("\n⚠️  External services consent not given; skipping AI bullet generation.")
+            elif "Gemini" not in consent_tool.external_services:
+                print(
+                    "\n⚠️  Gemini not enabled in external services; skipping AI bullet generation."
+                )
+            else:
+                try:
+                    ai_bullets = generate_bullet_points_from_analysis(
+                        language=language,
+                        framework=framework,
+                        skills=sorted(combined_skills),
+                        tools=sorted(skills.get("tools", set())),
+                        max_bullets=6,
+                    )
+
+                    if ai_bullets:
+                        print("\nAI Bullet Points")
+                        print("-" * 60)
+                        for b in ai_bullets:
+                            print(f"- {b}")
+                    else:
+                        print("\nAI Bullets: provider returned no content.")
+                except Exception as exc:
+                    print(f"\nAI Bullets error: {exc}")
+                    print("\n⚠️  Could not generate AI bullet points.")
+                    print("Error: ", sys.exc_info()[1])
+                    pass
+
     except Exception as exc:
         # Keep upload flow successful even if analysis fails.
         print(f"\nNote: Analysis step failed: {exc}")
     return 0
+
+
+def _format_bytes(size: int) -> str:
+    """Format bytes into human-readable string.
+
+    Args:
+        size: Size in bytes.
+
+    Returns:
+        Formatted string (e.g., "1.5 KB", "2.3 MB").
+    """
+    for unit in ["B", "KB", "MB", "GB"]:
+        if size < 1024.0:
+            return f"{size:.1f} {unit}"
+        size /= 1024.0
+    return f"{size:.1f} TB"
 
 
 def main() -> int:
