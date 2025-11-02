@@ -4,11 +4,9 @@ Author: Chris Hill
 """
 
 import json
-import os
 from typing import Any
 
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from capstone_project_team_5.data.db import get_session
