@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-# Gemini-only LLM helper.
-import os
+# LLM helper using provider pattern
 from collections.abc import Sequence
 
-from google import genai
-
-
-class LLMError(RuntimeError):
-    """Raised when Gemini cannot be used or fails."""
+from capstone_project_team_5.services.llm_providers import LLMError
+from capstone_project_team_5.services.llm_service import LLMService
 
 
 def _normalize_bullets(text: str) -> list[str]:
@@ -50,7 +46,7 @@ def generate_bullet_points_from_analysis(
     tools: Sequence[str] | None = None,
     max_bullets: int = 5,
 ) -> list[str]:
-    """Call Gemini to produce resume-ready STAR bullets.
+    """Call LLM to produce resume-ready STAR bullets.
 
     The prompt aims for ATS-friendly, STAR-format bullets with strict formatting:
     - 4–6 bullets (capped by max_bullets)
@@ -60,11 +56,10 @@ def generate_bullet_points_from_analysis(
     - Mention only provided technologies; do not invent metrics or tools
     - Output lines prefixed with "- " only
     """
-    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-    if not api_key:
-        raise LLMError("Missing GEMINI_API_KEY/GOOGLE_API_KEY for Gemini")
-
-    model = os.environ.get("LLM_MODEL", "gemini-2.5-flash")
+    try:
+        llm_service = LLMService()
+    except RuntimeError as e:
+        raise LLMError(f"Failed to initialize LLM service: {e}") from e
 
     tools_set = set(tools or [])
     skills_set = set(skills or [])
@@ -99,17 +94,16 @@ def generate_bullet_points_from_analysis(
         "Output: return only '- ' prefixed bullets, with the result or impact last."
     )
 
-    prompt = f"System instruction:\n{system_rules}\n\nUser content:\n{user_context}"
+    # Generate response using LLM service
+    try:
+        text = llm_service.generate_llm_response(
+            system_instructions=system_rules,
+            user_content=user_context,
+            temperature=0.7,
+            max_tokens=None,
+            seed=None,
+        )
+    except Exception as e:
+        raise LLMError(f"LLM API call failed: {e}") from e
 
-    client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(model=model, contents=prompt)
-    text = (response.text or "").strip()
     return _normalize_bullets(text)
-
-
-# Backward-compat shim to avoid import errors if referenced elsewhere.
-def load_config_from_env() -> dict | None:  # pragma: no cover - minimal shim
-    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-    if not api_key:
-        return None
-    return {"provider": "gemini", "model": os.environ.get("LLM_MODEL", "gemini-2.5-flash")}

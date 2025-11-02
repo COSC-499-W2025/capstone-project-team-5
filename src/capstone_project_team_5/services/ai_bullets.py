@@ -4,7 +4,8 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from capstone_project_team_5.detection import identify_language_and_framework
-from capstone_project_team_5.services.llm import LLMError, generate_bullet_points_from_analysis
+from capstone_project_team_5.services.llm import generate_bullet_points_from_analysis
+from capstone_project_team_5.services.llm_providers import LLMError
 from capstone_project_team_5.skill_detection import extract_project_skills
 
 

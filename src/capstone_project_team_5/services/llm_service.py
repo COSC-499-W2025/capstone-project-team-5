@@ -4,6 +4,7 @@ import os
 
 from capstone_project_team_5.services.llm_providers import (
     GeminiProvider,
+    LLMError,
     LLMProvider,
 )
 
@@ -18,6 +19,7 @@ class LLMService:
         """
         self.provider = provider or LLMService._get_default_llm_provider_from_env()
 
+    @staticmethod
     def _get_default_llm_provider_from_env() -> LLMProvider:
         """Get the configured LLM provider.
 
@@ -32,7 +34,7 @@ class LLMService:
         # elif provider_name == "openai":
         #     return OpenAIProvider()
         else:
-            raise RuntimeError(f"Unknown LLM provider: {provider_name}.")
+            raise LLMError(f"Unknown LLM provider: {provider_name}.")
 
     def build_prompt(self, system_instructions: str, user_content: str) -> str:
         """Construct a full prompt with system and user parts.
@@ -62,7 +64,6 @@ class LLMService:
             temperature: Controls randomness (0.0-2.0). Lower = more deterministic.
             max_tokens: Maximum response length. None = provider default.
             seed: Random seed for reproducibility (if supported by provider).
-            **kwargs: Additional provider-specific options.
 
         Returns:
             The text response from the LLM.

@@ -3,7 +3,16 @@ from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 
+from dotenv import load_dotenv
+
 """LLM provider implementations."""
+
+# Load environment variables for LLM API keys (GEMINI_API_KEY, LLM_MODEL, etc.)
+load_dotenv()
+
+
+class LLMError(RuntimeError):
+    """Raised when LLM service cannot be used or fails."""
 
 
 class LLMProvider(ABC):
@@ -20,7 +29,7 @@ class LLMProvider(ABC):
         Args:
             temperature: Controls randomness
             max_tokens: Maximum response length
-            seed: Random seed for reproducibilit
+            seed: Random seed for reproducibility
 
         Returns:
             Configuration dictionary with common parameters
@@ -53,12 +62,15 @@ class GeminiProvider(LLMProvider):
     """Gemini implementation."""
 
     def __init__(self) -> None:
-        """Initialize Gemini provider with API key from environment."""
+        """Initialize Gemini provider with API key from environment.
+
+        Note: Environment variables are loaded via load_dotenv() at package initialization.
+        """
         from google import genai
 
-        self.api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        self.api_key = os.environ.get("GEMINI_API_KEY")
         if not self.api_key:
-            raise RuntimeError("Missing GEMINI_API_KEY or GOOGLE_API_KEY environment variable")
+            raise LLMError("Missing GEMINI_API_KEY environment variable")
 
         self.model = os.environ.get("LLM_MODEL", "gemini-2.0-flash-exp")
         self.client = genai.Client(api_key=self.api_key)
@@ -94,4 +106,4 @@ class GeminiProvider(LLMProvider):
             )
             return (response.text or "").strip()
         except Exception as e:
-            raise RuntimeError(f"Gemini API call failed: {e}") from e
+            raise LLMError(f"Gemini API call failed: {e}") from e
