@@ -45,3 +45,14 @@ Time this week was spent coding, creating a new feature for collaborative projec
 | Project Collaboration Detection | In progress | Feature is mostly complete with room for it to be refactored depending on needed implementation. |
 
 ![screenshot](week8_checklist.png)
+
+## Week #9 (October 27 - November 2)
+
+Time this week was spent coding a new feature for extracting key contrtibution metrics from a project (requirement #10). The feature is complete and ready to be merged. As all assigned requirements are completed next week will be spent refactoring previous work and integrating all features into the main program.
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| Key Contribution Metrics | Completed | Feature is complete and approved ready to be merged. |
+| Refactoring| In progress | Refactoring any part of code base where it is needed. |
+
+![screenshot](Week9_checklist.png)
