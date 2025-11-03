@@ -151,12 +151,11 @@ def get_weekly_activity(repo: Path | str, weeks: int = 12) -> dict[str, list[int
             continue
         author, ts = line.split("|", 1)
         try:
-            dt = datetime.datetime.fromtimestamp(int(ts))
+            dt = datetime.datetime.fromtimestamp(int(ts), tz=datetime.UTC)
         except ValueError:
             continue
         commits_by_author[author].append(dt)
-
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(datetime.UTC)
     start = now - datetime.timedelta(weeks=weeks)
 
     weekly: dict[str, list[int]] = {}
@@ -235,7 +234,7 @@ def get_weekly_activity_window(
             continue
         author, ts = line.split("|", 1)
         try:
-            t = datetime.datetime.fromtimestamp(int(ts))
+            t = datetime.datetime.fromtimestamp(int(ts), tz=datetime.UTC)
         except ValueError:
             continue
         monday = _week_monday(t.date())
