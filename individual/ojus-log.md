@@ -136,3 +136,75 @@
 </details>
 
 </details>
+
+---
+<details>
+  <summary><h3>November</h3></summary>
+<details>
+  <summary><h3>Week 9</h3></summary>
+  
+<img width="1095" height="637" alt="image" src="https://github.com/user-attachments/assets/cf136a63-30d8-47e4-9e48-fb2e8cc79ae3" />
+
+### What Went Well
+  - Centralized LLM Service: Created service from scratch and integrated it into existing code
+  - Reviewed PRs
+  - Implemented requested changes on my PRs
+  - Had a discussion with Ribhav (as our tools have simmilar behaviour) about the LLM integration and how it would work with our tools
+  - Skill Detetctor: Moved the LLM integration for this tool to next week as I worked on creating a centralized LLM service 
+
+  ### What Didn't Go Well
+  - All good
+
+  ### Planning for Next Week
+  - Work on the LLM integration for the Skill Detetcor (finally)
+  - Review more PRs :)
+</details>
+
+
+---
+
+<details>
+  <summary><h3>Week X</h3></summary>
+
+### What Went Well
+  - 
+
+  ### What Didn't Go Well
+  - 
+
+  ### Planning for Next Week
+  - 
+</details>
+
+---
+
+<details>
+  <summary><h3>Week X</h3></summary>
+
+### What Went Well
+  - 
+
+  ### What Didn't Go Well
+  - 
+
+  ### Planning for Next Week
+  - 
+</details>
+
+---
+
+<details>
+  <summary><h3>Week X</h3></summary>
+
+### What Went Well
+  - 
+
+  ### What Didn't Go Well
+  - 
+
+  ### Planning for Next Week
+  - 
+</details>
+
+</details>
+
