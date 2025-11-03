@@ -23,23 +23,29 @@ def test_generate_ai_bullets_for_project_with_gemini(
             self.text = text
 
     class _FakeModels:
-        def generate_content(self, *, model: str, contents: str) -> _FakeResp:  # type: ignore[override]
+        def generate_content(
+            self, *, model: str, contents: str, config: dict | None = None
+        ) -> _FakeResp:  # type: ignore[override]
             return _FakeResp("- A\n- B\n- C")
 
     class _FakeClient:
         def __init__(self, api_key: str) -> None:  # noqa: D401 - simple stub
             self.models = _FakeModels()
 
-    import google.genai as _genai
+    from google import genai
 
-    monkeypatch.setattr(_genai, "Client", _FakeClient, raising=True)
+    monkeypatch.setattr(genai, "Client", _FakeClient, raising=True)
 
     bullets = generate_ai_bullets_for_project(tmp_path, max_bullets=3)
     assert bullets == ["A", "B", "C"]
 
 
-def test_generate_ai_bullets_returns_empty_when_no_env(tmp_path: Path) -> None:
+def test_generate_ai_bullets_returns_empty_when_no_env(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     (tmp_path / "README.md").write_text("Hello", encoding="utf-8")
+    # Clear any API key that might be set in the environment
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     # No GEMINI_API_KEY set; orchestrator should return [] because llm raises
     bullets = generate_ai_bullets_for_project(tmp_path)
     assert bullets == []
