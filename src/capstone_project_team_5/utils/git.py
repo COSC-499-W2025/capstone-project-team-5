@@ -1,3 +1,5 @@
+"""Git related utilities."""
+
 from __future__ import annotations
 
 import datetime
@@ -36,6 +38,11 @@ class AuthorContribution:
 # ---------------------------------------------------------------------------
 # Git Execution
 # ---------------------------------------------------------------------------
+
+
+def is_git_repo(path: Path) -> bool:
+    """Return True when ``path`` contains a Git repository."""
+    return path.joinpath(".git").is_dir()
 
 
 def run_git(repo: Path | str, *args: str) -> str:
@@ -268,6 +275,7 @@ def render_weekly_activity_chart_for_range(
 __all__ = [
     "NumstatEntry",
     "AuthorContribution",
+    "is_git_repo",
     "run_git",
     "parse_numstat",
     "get_author_contributions",
