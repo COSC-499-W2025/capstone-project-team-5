@@ -131,3 +131,22 @@ It was a busy week for me due to heavy midterm load and I was unable to be as in
 
 ### TODOs for NExt week 
 - **Parser Tool**:  Discuss Centralisation of File walker and look into any missing gaps in functionality to try and pickup some tasks.
+
+## Week #9 (October 26 2025 - November 02 2025)
+<details>
+  <summary><h3>Evaluation</h3></summary>
+  <img width="1082" height="629" alt="image" src="https://github.com/user-attachments/assets/7f51e2db-8445-4814-9a9a-91b36439018b" />
+
+
+</details>
+
+### Team Activities
+- **PR Actions**: Reviewed PRs and provided any feedback/suggestions necessary.  
+- **Project work Discussion**: Discussed about suggested migration srom sqllite to sqlalchemy which will impact my PR.
+
+
+### Personal Contributions
+- **Code Contributions**: Provided further code changes and UTS for getting rid of existing portfolio/resumee entries if a user wishes to.
+### TODOs for Next week 
+- **Sql Migration**:  modify this week's PR to better reflect and work with the latest suggested infra for db.
+- **Multithreading** Look into multithreading and wherever possible implement it without breaking existing functionality.
