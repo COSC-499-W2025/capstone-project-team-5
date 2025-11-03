@@ -116,6 +116,7 @@ I failed to complete one of the tasks I set out to do from last week's log. Alth
 
 <details>
   <summary><h3></h3></summary>
+<img alt="Screenshot 2025-11-02 205756" src="https://github.com/user-attachments/assets/01bed67e-7e74-4c92-9cb6-989ca65d6314" />
 
 
 This week I started work on syncing our main branch with develop, but ran into some issues that I couldn't figure out so that has been left as a work in progress. I've written the code to cover Requirement 16 :"Retrieve previously generated resume item." I realized that the code was very similar to Requirement 15, and so I refactored that into an item retriever module with wrappers for retrieving portfolio items, and resume items. This approach is much cleaner, and allows for scalability. The group has also agreed to use SQL Alchemy, rather than sqlite, and so I refactored my old code to accomodate this change. As a result, my work on Requirement 16 will need to be refactored before I can submit a PR for it.
