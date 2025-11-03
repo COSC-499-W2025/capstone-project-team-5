@@ -2,7 +2,38 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-_Last Updated:_ October 26, 2025
+_Last Updated:_ November 2, 2025
+
+---
+
+## Week 9 | October 27-November 2, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1087" height="638" alt="image" src="https://github.com/user-attachments/assets/38ea944b-44b2-4d73-a610-87acb776fbee" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Refactored upload pipeline to support multiple projects in single ZIP | ✅ Done | |
+| Created new `Project` ORM model with cascade delete | ✅ Done | Linked to `UploadRecord` via one-to-many relationship |
+| Updated CLI to display discovered projects table | ✅ Done | Shows name, path, Git presence, file count |
+| Wrote comprehensive tests for multi-project support | ✅ Done | 5 test cases covering various scenarios |
+| Conducted code reviews | ✅ Done |  |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Implement project ranking based on contributions | ❌ Not Started |  |
+| Continue code reviews | ❌ Not Started | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Complete extraction of projects from zip upload | ✅ Done | Implemented multi-project discovery and extraction |
+| Persist extracted projects from the zip upload | ✅ Done | Projects now persisted to database with proper linkage |
+| Continue code reviews | ✅ Done | Ongoing task |
 
 ---
 
