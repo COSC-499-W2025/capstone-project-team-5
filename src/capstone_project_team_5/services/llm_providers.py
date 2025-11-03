@@ -77,7 +77,7 @@ class GeminiProvider(LLMProvider):
 
     def generate_llm_config(
         self,
-        temperature: float,
+        temperature: float | None,
         max_tokens: int | None,
         seed: int | None,
     ) -> dict:

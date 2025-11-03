@@ -58,7 +58,7 @@ def generate_bullet_points_from_analysis(
     """
     try:
         llm_service = LLMService()
-    except RuntimeError as e:
+    except Exception as e:
         raise LLMError(f"Failed to initialize LLM service: {e}") from e
 
     tools_set = set(tools or [])

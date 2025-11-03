@@ -173,7 +173,7 @@ def test_llm_service_generate_llm_response_integration_with_gemini(
             assert "System instruction:" in contents
             assert "User content:" in contents
             # Verify config has Gemini-specific mapping
-            assert "max_output_tokens" in config or "max_output_tokens" not in config
+            assert "max_output_tokens" in config
             return _FakeResponse("Integration test response")
 
     class _FakeClient:
