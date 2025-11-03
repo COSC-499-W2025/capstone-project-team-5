@@ -47,7 +47,7 @@ We got the System Architecture Diagram finished earlier in the week, which allow
 </details>
 
 
-## Week 6 | 05 October- 12 October 2025
+## Week 6 | 05 October - 12 October 2025
 
 <details>
   <summary><h3></h3></summary>
@@ -69,7 +69,7 @@ Last week was mostly spent on team meetings and assigning people to tasks. To do
 </details>
 
 
-## Week 7 | 12 October- 19 October 2025
+## Week 7 | 12 October - 19 October 2025
 
 <details>
   <summary><h3></h3></summary>
@@ -90,7 +90,7 @@ This past week included Quiz #1 and, for many members of the team, midterms in o
 </details>
 
 
-## Week 8 | 19 October- 26 October 2025
+## Week 8 | 19 October - 26 October 2025
 
 <details>
   <summary><h3></h3></summary>
@@ -109,4 +109,28 @@ I failed to complete one of the tasks I set out to do from last week's log. Alth
 | :---- | :----- | :------- |
 | Reorganize GitHub Branches | In Progress | Merge main into develop. |
 | Start R16 Code | Not Yet Started | "Retrieve previously generated resume item." |
+</details>
+
+
+## Week 9 | 26 October- 02 November 2025
+
+<details>
+  <summary><h3></h3></summary>
+<img alt="Screenshot 2025-11-02 205756" src="https://github.com/user-attachments/assets/01bed67e-7e74-4c92-9cb6-989ca65d6314" />
+
+
+This week I started work on syncing our main branch with develop, but ran into some issues that I couldn't figure out so that has been left as a work in progress. I've written the code to cover Requirement 16 :"Retrieve previously generated resume item." I realized that the code was very similar to Requirement 15, and so I refactored that into an item retriever module with wrappers for retrieving portfolio items, and resume items. This approach is much cleaner, and allows for scalability. The group has also agreed to use SQL Alchemy, rather than sqlite, and so I refactored my old code to accomodate this change. As a result, my work on Requirement 16 will need to be refactored before I can submit a PR for it.
+
+### Previous Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Reorganize GitHub Branches | In Progress | Merge main into develop. |
+| Start R16 Code | Completed | "Retrieve previously generated resume item." |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Reorganize GitHub Branches | In Progress | Merge main into develop. |
+| Refactor R16 Code | Not Yet Started | Restructure to work with SQL Alchemy |
 </details>
