@@ -166,8 +166,35 @@ On a good pace. Things are starting to piece together and our tasks are becoming
 | Explore Artifact extraction | ⏳ In Progress       | Figure out how to extract different artifacts from a given folder |
 | Enhance bullet point generation for collaborative projects | ❌ Not Started | Build on top of Ethan's work from this week (W7) |
 
+## Week 9 | October 27-31, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="644" height="687" alt="image" src="https://github.com/user-attachments/assets/3bb7bdd5-f87e-498c-8e28-ee74a5eefbbf" />
+
+                               
+</details>
+
+### Task Progress this week
+
+Had a nice discussion with Ojus about how we can use LLMs in our platform. Made some interesting discoveries related to how we can use local git logs to infer contributions by different team members.
+
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Review PRs | ✅ Done     |  |
+| Learn about Tauri | ⏳ In Progress      | Need to choose between the Tauri python plugin, or an API first approach. |
+| Explore Artifact extraction | ⏳ In Progress       | Added some functions to git.py to evalulate contributions |
+| Enhance bullet point generation for collaborative projects | ❌ Not Started | Build on top of Ethan's work from this week (W7) |
 
 
+### Next week's plans
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Review PRs | ❌ Not Started    |  |
+| Learn about Tauri | ⏳ In Progress      | Need to choose between the Tauri python plugin, or an API first approach. |
+| Explore Artifact extraction | ⏳ In Progress       | Added some functions to git.py to evalulate contributions |
+| Enhance bullet point generation for collaborative projects | ❌ Not Started | Build on top of Ethan's work from this week (W7) |
 
 
 
