@@ -30,7 +30,7 @@ def _make_result(zip_path: Path, projects: list[DetectedProject]) -> ZipUploadRe
     return ZipUploadResult(
         filename=zip_path.name,
         size_bytes=zip_path.stat().st_size,
-        file_count=len(projects),
+        file_count=sum(project.file_count for project in projects),
         tree=DirectoryNode(name="", path="", children=[]),
         projects=projects,
     )
