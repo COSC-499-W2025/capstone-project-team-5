@@ -252,7 +252,6 @@ def _emit_ai_bullet_points(
         except Exception as exc:  # pragma: no cover - defensive logging
             print(f"\nAI Bullets error: {exc}")
             print("\n⚠️  Could not generate AI bullet points.")
-            print("Error: ", sys.exc_info()[1])
         return warning_printed
 
     if not warning_printed and ai_warning is not None:
