@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import os
+import re
 
 from capstone_project_team_5.services.llm_providers import (
     GeminiProvider,
@@ -71,3 +73,26 @@ class LLMService:
         prompt = self.build_prompt(system_instructions, user_content)
         config = self.provider.generate_llm_config(temperature, max_tokens, seed)
         return self.provider.send_prompt(prompt, config)
+
+    @staticmethod
+    def extract_json_from_response(response: str) -> dict:
+        """Extract JSON object from LLM response string.
+
+        Args:
+            response: The LLM response string containing JSON.
+        Returns:
+            Parsed JSON object as a dictionary.
+        """
+        # Regex to find JSON object
+        json_pattern = r"\{(?:[^{}]|(?R))*\}"
+        match = re.search(json_pattern, response, re.DOTALL)
+
+        if not match:
+            raise LLMError("No JSON object found in the LLM response.")
+
+        json_str = match.group(0)
+
+        try:
+            return json.loads(json_str)
+        except Exception as e:
+            raise LLMError(f"Failed to parse JSON from LLM response: {e}") from e
