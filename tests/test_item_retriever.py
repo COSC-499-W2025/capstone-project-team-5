@@ -2,8 +2,8 @@ import json
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, text
-from sqlalchemy.exc import OperationalError
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, Text, String, ForeignKey, select
+from sqlalchemy.exc import OperationalError, NoSuchTableError
 
 from outputs.item_retriever import ItemRetriever
 
@@ -28,87 +28,75 @@ def temp_db(tmp_path: Path):
     sqlite_url = f"sqlite:///{db_path.as_posix()}"
     engine = create_engine(sqlite_url)
 
-    ddl = """
-    CREATE TABLE Project (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        description TEXT
-    );
+    # Use SQLAlchemy Core table definitions instead of raw DDL strings
+    md = MetaData()
+    project_tbl = Table(
+        "Project",
+        md,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("name", Text, nullable=False),
+        Column("description", Text),
+    )
 
-    CREATE TABLE GeneratedItem (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        project_id INTEGER,
-        kind TEXT NOT NULL,
-        title TEXT NOT NULL,
-        content TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY (project_id) REFERENCES Project(id) ON DELETE SET NULL
-    );
-    """
+    gen_item_tbl = Table(
+        "GeneratedItem",
+        md,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("project_id", Integer, ForeignKey("Project.id")),
+        Column("kind", Text, nullable=False),
+        Column("title", Text, nullable=False),
+        Column("content", Text, nullable=False),
+        Column("created_at", Text, nullable=False),
+    )
 
-    # Use SQLAlchemy connection/transaction to create tables and insert data
+    md.create_all(engine)
+
+    # Insert rows using Core insert() so we avoid raw SQL in tests
     with engine.begin() as conn:
-        # SQLite DBAPI doesn't allow executing multiple statements at once
-        for stmt in (s.strip() for s in ddl.split(";") if s.strip()):
-            conn.execute(text(stmt))
+        res = conn.execute(project_tbl.insert().values(name="Artifact Miner", description="Test project for item retriever"))
+        # Retrieve inserted project id
+        pid = conn.execute(select(project_tbl.c.id).where(project_tbl.c.name == "Artifact Miner")).scalar_one()
+
+        # Insert portfolio items
         conn.execute(
-            text("INSERT INTO Project (name, description) VALUES (:name, :desc)"),
-            {"name": "Artifact Miner", "desc": "Test project for item retriever"},
-        )
-        # Insert two generated items of kind 'portfolio'
-        conn.execute(
-            text(
-                "INSERT INTO GeneratedItem (project_id, kind, title, content, created_at) "
-                "VALUES (:pid, :kind, :title, :content, :created_at)"
-            ),
-            {
-                "pid": 1,
-                "kind": "portfolio",
-                "title": "First Item",
-                "content": json.dumps({"summary": "first", "score": 1}),
-                "created_at": "2024-10-01T12:00:00",
-            },
-        )
-        conn.execute(
-            text(
-                "INSERT INTO GeneratedItem (project_id, kind, title, content, created_at) "
-                "VALUES (:pid, :kind, :title, :content, :created_at)"
-            ),
-            {
-                "pid": 1,
-                "kind": "portfolio",
-                "title": "Second Item",
-                "content": json.dumps({"summary": "second", "score": 2}),
-                "created_at": "2024-10-02T12:00:00",
-            },
+            gen_item_tbl.insert(),
+            [
+                {
+                    "project_id": pid,
+                    "kind": "portfolio",
+                    "title": "First Item",
+                    "content": json.dumps({"summary": "first", "score": 1}),
+                    "created_at": "2024-10-01T12:00:00",
+                },
+                {
+                    "project_id": pid,
+                    "kind": "portfolio",
+                    "title": "Second Item",
+                    "content": json.dumps({"summary": "second", "score": 2}),
+                    "created_at": "2024-10-02T12:00:00",
+                },
+            ],
         )
 
-        # Insert two generated items of kind 'resume'
+        # Insert resume items
         conn.execute(
-            text(
-                "INSERT INTO GeneratedItem (project_id, kind, title, content, created_at) "
-                "VALUES (:pid, :kind, :title, :content, :created_at)"
-            ),
-            {
-                "pid": 1,
-                "kind": "resume",
-                "title": "Resume Item One",
-                "content": json.dumps({"name": "Alice", "experience": 5}),
-                "created_at": "2024-11-01T09:00:00",
-            },
-        )
-        conn.execute(
-            text(
-                "INSERT INTO GeneratedItem (project_id, kind, title, content, created_at) "
-                "VALUES (:pid, :kind, :title, :content, :created_at)"
-            ),
-            {
-                "pid": 1,
-                "kind": "resume",
-                "title": "Resume Item Two",
-                "content": json.dumps({"name": "Bob", "experience": 7}),
-                "created_at": "2024-11-02T09:00:00",
-            },
+            gen_item_tbl.insert(),
+            [
+                {
+                    "project_id": pid,
+                    "kind": "resume",
+                    "title": "Resume Item One",
+                    "content": json.dumps({"name": "Alice", "experience": 5}),
+                    "created_at": "2024-11-01T09:00:00",
+                },
+                {
+                    "project_id": pid,
+                    "kind": "resume",
+                    "title": "Resume Item Two",
+                    "content": json.dumps({"name": "Bob", "experience": 7}),
+                    "created_at": "2024-11-02T09:00:00",
+                },
+            ],
         )
 
     yield sqlite_url
@@ -196,8 +184,8 @@ def test_missing_database_raises(monkeypatch, tmp_path: Path):
     # Accept either behavior to keep the test robust during refactors.
     try:
         res = retriever.get(1)
-    except OperationalError:
-        # DB missing -> operational error is acceptable
+    except (OperationalError, NoSuchTableError):
+        # DB missing -> operational error or reflection failure is acceptable
         pass
     else:
         # If no exception, ensure result is None (no rows)
