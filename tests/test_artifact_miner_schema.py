@@ -148,7 +148,9 @@ def test_portfolioitem_insert_and_retrieve(db_connection):
     )
     db_connection.commit()
 
-    cursor.execute("SELECT * FROM GeneratedItem WHERE project_id = ? AND kind = ?", (project_id, "portfolio"))
+    cursor.execute(
+        "SELECT * FROM GeneratedItem WHERE project_id = ? AND kind = ?", (project_id, "portfolio")
+    )
     row = cursor.fetchone()
     assert row is not None
     assert row["title"] == "Portfolio Entry 1"

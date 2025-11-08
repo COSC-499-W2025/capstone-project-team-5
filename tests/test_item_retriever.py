@@ -2,7 +2,17 @@ import json
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, Text, String, ForeignKey, select
+from sqlalchemy import (
+    create_engine,
+    MetaData,
+    Table,
+    Column,
+    Integer,
+    Text,
+    String,
+    ForeignKey,
+    select,
+)
 from sqlalchemy.exc import OperationalError, NoSuchTableError
 
 from outputs.item_retriever import ItemRetriever
@@ -53,9 +63,15 @@ def temp_db(tmp_path: Path):
 
     # Insert rows using Core insert() so we avoid raw SQL in tests
     with engine.begin() as conn:
-        res = conn.execute(project_tbl.insert().values(name="Artifact Miner", description="Test project for item retriever"))
+        res = conn.execute(
+            project_tbl.insert().values(
+                name="Artifact Miner", description="Test project for item retriever"
+            )
+        )
         # Retrieve inserted project id
-        pid = conn.execute(select(project_tbl.c.id).where(project_tbl.c.name == "Artifact Miner")).scalar_one()
+        pid = conn.execute(
+            select(project_tbl.c.id).where(project_tbl.c.name == "Artifact Miner")
+        ).scalar_one()
 
         # Insert portfolio items
         conn.execute(

@@ -28,10 +28,10 @@ _retriever = ItemRetriever("GeneratedItem", kind="portfolio")
 
 
 def get(item_id: int) -> dict | None:
-        """Return a portfolio item by id (delegates to ItemRetriever)."""
-        return _retriever.get(item_id)
+    """Return a portfolio item by id (delegates to ItemRetriever)."""
+    return _retriever.get(item_id)
 
 
 def list_all(limit: int | None = None) -> list[dict]:
-        """List portfolio items (delegates to ItemRetriever)."""
-        return _retriever.list_all(limit)
+    """List portfolio items (delegates to ItemRetriever)."""
+    return _retriever.list_all(limit)

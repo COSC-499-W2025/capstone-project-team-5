@@ -73,9 +73,11 @@ class ProjectSummary:
     def _get_artifact_counts(cls, session: Session, pid: int) -> dict[str, int]:
         engine = session.get_bind()
         artifact_tbl = _get_table("Artifact", engine)
-        stmt = select(artifact_tbl.c.type, func.count().label("count")).where(
-            artifact_tbl.c.project_id == pid
-        ).group_by(artifact_tbl.c.type)
+        stmt = (
+            select(artifact_tbl.c.type, func.count().label("count"))
+            .where(artifact_tbl.c.project_id == pid)
+            .group_by(artifact_tbl.c.type)
+        )
         res = session.execute(stmt)
         return {row["type"]: row["count"] for row in res.mappings().all()}
 
@@ -83,9 +85,11 @@ class ProjectSummary:
     def _get_contrib_counts(cls, session: Session, pid: int) -> dict[str, int]:
         engine = session.get_bind()
         contrib_tbl = _get_table("Contribution", engine)
-        stmt = select(
-            contrib_tbl.c.activity_type, func.count().label("count")
-        ).where(contrib_tbl.c.project_id == pid).group_by(contrib_tbl.c.activity_type)
+        stmt = (
+            select(contrib_tbl.c.activity_type, func.count().label("count"))
+            .where(contrib_tbl.c.project_id == pid)
+            .group_by(contrib_tbl.c.activity_type)
+        )
         res = session.execute(stmt)
         return {row["activity_type"]: row["count"] for row in res.mappings().all()}
 
@@ -94,9 +98,13 @@ class ProjectSummary:
         engine = session.get_bind()
         skill_tbl = _get_table("Skill", engine)
         projectskill_tbl = _get_table("ProjectSkill", engine)
-        stmt = select(skill_tbl.c.name).select_from(
-            skill_tbl.join(projectskill_tbl, projectskill_tbl.c.skill_id == skill_tbl.c.id)
-        ).where(projectskill_tbl.c.project_id == pid)
+        stmt = (
+            select(skill_tbl.c.name)
+            .select_from(
+                skill_tbl.join(projectskill_tbl, projectskill_tbl.c.skill_id == skill_tbl.c.id)
+            )
+            .where(projectskill_tbl.c.project_id == pid)
+        )
         res = session.execute(stmt)
         return [row["name"] for row in res.mappings().all()]
 
