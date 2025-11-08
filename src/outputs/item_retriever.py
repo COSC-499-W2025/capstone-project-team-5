@@ -15,29 +15,24 @@ import json
 import os
 from typing import Any
 
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Connection, Engine
+from sqlalchemy import text, Table, MetaData, select
+from sqlalchemy.orm import Session
 
-# Environment variable used to locate the DB URL (SQLAlchemy connection string)
-DB_ENV_VAR = "DATABASE_URL"
-
-
-def _get_engine() -> Engine:
-    """Return a SQLAlchemy Engine using the URL found in the environment.
-
-    Raises:
-        RuntimeError: if the environment variable is not set.
-    """
-    url = os.environ.get(DB_ENV_VAR)
-    if not url:
-        raise RuntimeError(f"Environment variable {DB_ENV_VAR} is not set")
-    return create_engine(url)
+from capstone_project_team_5.data.db import get_session, _get_engine
 
 
-def _get_conn() -> Connection:
-    """Open and return a SQLAlchemy Connection. Caller must close it."""
-    engine = _get_engine()
-    return engine.connect()
+# Simple cache for reflected Table objects keyed by (engine id, table name).
+_TABLE_CACHE: dict[tuple[int, str], Table] = {}
+
+
+def _get_table(name: str, bind) -> Table:
+    key = (id(bind), name)
+    if key in _TABLE_CACHE:
+        return _TABLE_CACHE[key]
+    md = MetaData()
+    tbl = Table(name, md, autoload_with=bind)
+    _TABLE_CACHE[key] = tbl
+    return tbl
 
 
 class ItemRetriever:
@@ -64,16 +59,17 @@ class ItemRetriever:
 
     def get(self, item_id: int) -> dict[str, Any] | None:
         """Retrieve a single row by primary key and deserialize the `content` JSON."""
-        conn = _get_conn()
-        try:
+        with get_session() as session:
+            engine = session.get_bind()
+            table = _get_table(self.table_name, engine)
             if self.kind is not None:
-                sql = text(
-                    f"SELECT * FROM {self.table_name} WHERE {self.id_col} = :id AND kind = :kind"
+                stmt = select(table).where(
+                    table.c[self.id_col] == item_id, table.c.kind == self.kind
                 )
-                res = conn.execute(sql, {"id": item_id, "kind": self.kind})
             else:
-                sql = text(f"SELECT * FROM {self.table_name} WHERE {self.id_col} = :id")
-                res = conn.execute(sql, {"id": item_id})
+                stmt = select(table).where(table.c[self.id_col] == item_id)
+
+            res = session.execute(stmt)
             row = res.mappings().fetchone()
             if row is None:
                 return None
@@ -84,28 +80,20 @@ class ItemRetriever:
                 "content": json.loads(row["content"]),
                 "created_at": row["created_at"],
             }
-        finally:
-            conn.close()
 
     def list_all(self, limit: int | None = None) -> list[dict[str, Any]]:
         """List rows ordered by created timestamp (descending)."""
-        conn = _get_conn()
-        try:
+        with get_session() as session:
+            engine = session.get_bind()
+            table = _get_table(self.table_name, engine)
+            stmt = select(table)
             if self.kind is not None:
-                base_sql = f"SELECT * FROM {self.table_name} WHERE kind = :kind ORDER BY {self.created_col} DESC"
-                if limit is not None:
-                    sql = text(base_sql + " LIMIT :limit")
-                    res = conn.execute(sql, {"kind": self.kind, "limit": limit})
-                else:
-                    res = conn.execute(text(base_sql), {"kind": self.kind})
-            else:
-                base_sql = f"SELECT * FROM {self.table_name} ORDER BY {self.created_col} DESC"
-                if limit is not None:
-                    sql = text(base_sql + " LIMIT :limit")
-                    res = conn.execute(sql, {"limit": limit})
-                else:
-                    res = conn.execute(text(base_sql))
+                stmt = stmt.where(table.c.kind == self.kind)
+            stmt = stmt.order_by(table.c[self.created_col].desc())
+            if limit is not None:
+                stmt = stmt.limit(limit)
 
+            res = session.execute(stmt)
             items: list[dict[str, Any]] = []
             for row in res.mappings().all():
                 items.append(
@@ -118,5 +106,3 @@ class ItemRetriever:
                     }
                 )
             return items
-        finally:
-            conn.close()

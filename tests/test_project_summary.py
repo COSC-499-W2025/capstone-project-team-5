@@ -6,6 +6,14 @@ from sqlalchemy import create_engine, text
 import outputs.project_summary as ps
 
 
+def _reset_app_db():
+    """Reset the app DB engine/session cache so tests can control DATABASE_URL."""
+    import capstone_project_team_5.data.db as app_db
+
+    app_db._engine = None
+    app_db._SessionLocal = None
+
+
 @pytest.fixture
 def temp_db(tmp_path):
     # Create a temporary SQLite database.
@@ -86,7 +94,8 @@ def test_project_summary(monkeypatch, temp_db):
     """Test ProjectSummary.summarize() using a temporary relative DB path."""
     # Point the module to the temporary sqlite DB via DATABASE_URL
     # temp_db is a DB URL when using the SQLAlchemy-driven fixture
-    monkeypatch.setenv("DATABASE_URL", temp_db)
+    monkeypatch.setenv("DB_URL", temp_db)
+    _reset_app_db()
 
     result = ps.ProjectSummary.summarize("Artifact Miner")
 
@@ -103,23 +112,21 @@ def test_project_summary(monkeypatch, temp_db):
 
 def test_get_project_metadata(monkeypatch, temp_db):
     """Test the _get_project_metadata helper returns the correct row."""
-    monkeypatch.setenv("DATABASE_URL", temp_db)
+    monkeypatch.setenv("DB_URL", temp_db)
+    _reset_app_db()
 
-    conn = ps.ProjectSummary._get_connection()
-    try:
+    with ps.ProjectSummary._get_connection() as conn:
         project = ps.ProjectSummary._get_project_metadata(conn, "Artifact Miner")
         assert project["name"] == "Artifact Miner"
         assert project["language"] == "Python"
-    finally:
-        conn.close()
 
 
 def test_artifact_and_contrib_counts(monkeypatch, temp_db):
     """Test artifact and contribution count helpers."""
-    monkeypatch.setenv("DATABASE_URL", temp_db)
+    monkeypatch.setenv("DB_URL", temp_db)
+    _reset_app_db()
 
-    conn = ps.ProjectSummary._get_connection()
-    try:
+    with ps.ProjectSummary._get_connection() as conn:
         project = ps.ProjectSummary._get_project_metadata(conn, "Artifact Miner")
         pid = project["id"]
 
@@ -132,27 +139,24 @@ def test_artifact_and_contrib_counts(monkeypatch, temp_db):
         # We inserted two code contributions and one document
         assert contrib_counts.get("code") == 2
         assert contrib_counts.get("document") == 1
-    finally:
-        conn.close()
 
 
 def test_get_skills(monkeypatch, temp_db):
     """Test the _get_skills helper returns all skill names for a project."""
-    monkeypatch.setenv("DATABASE_URL", temp_db)
+    monkeypatch.setenv("DB_URL", temp_db)
+    _reset_app_db()
 
-    conn = ps.ProjectSummary._get_connection()
-    try:
+    with ps.ProjectSummary._get_connection() as conn:
         project = ps.ProjectSummary._get_project_metadata(conn, "Artifact Miner")
         pid = project["id"]
         skills = ps.ProjectSummary._get_skills(conn, pid)
         assert set(skills) == {"Python", "Flask"}
-    finally:
-        conn.close()
 
 
 def test_missing_project_raises(monkeypatch, temp_db):
     """If a project name is not present, summarize should raise ValueError."""
-    monkeypatch.setenv("DATABASE_URL", temp_db)
+    monkeypatch.setenv("DB_URL", temp_db)
+    _reset_app_db()
     with pytest.raises(ValueError):
         ps.ProjectSummary.summarize("Nonexistent Project")
 
@@ -168,7 +172,8 @@ def test_empty_project_has_no_artifacts_or_skills(monkeypatch, tmp_path, temp_db
             {"name": "Empty Project", "desc": "No data"},
         )
 
-    monkeypatch.setenv("DATABASE_URL", temp_db)
+    monkeypatch.setenv("DB_URL", temp_db)
+    _reset_app_db()
     result = ps.ProjectSummary.summarize("Empty Project")
     assert result["artifact_counts"] == {}
     assert result["activity_counts"] == {}
