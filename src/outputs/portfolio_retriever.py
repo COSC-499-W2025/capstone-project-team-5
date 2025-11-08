@@ -23,7 +23,6 @@ Notes
 
 from .item_retriever import ItemRetriever
 
-
 _retriever = ItemRetriever("GeneratedItem", kind="portfolio")
 
 

@@ -12,14 +12,11 @@ class to avoid duplicating connection and deserialization logic.
 from __future__ import annotations
 
 import json
-import os
 from typing import Any
 
-from sqlalchemy import text, Table, MetaData, select
-from sqlalchemy.orm import Session
+from sqlalchemy import MetaData, Table, select
 
-from capstone_project_team_5.data.db import get_session, _get_engine
-
+from capstone_project_team_5.data.db import get_session
 
 # Simple cache for reflected Table objects keyed by (engine id, table name).
 _TABLE_CACHE: dict[tuple[int, str], Table] = {}

@@ -11,7 +11,6 @@ These functions deliberately do not provide write access.
 
 from .item_retriever import ItemRetriever
 
-
 _retriever = ItemRetriever("GeneratedItem", kind="resume")
 
 

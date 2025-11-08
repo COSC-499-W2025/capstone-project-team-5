@@ -6,11 +6,10 @@ Author: Chris Hill
 import json
 from typing import Any
 
-from sqlalchemy import Table, MetaData, select, func
+from sqlalchemy import MetaData, Table, func, select
 from sqlalchemy.orm import Session
 
 from capstone_project_team_5.data.db import get_session
-
 
 # Simple cache for reflected Table objects keyed by (engine id, table name).
 _TABLE_CACHE: dict[tuple[int, str], Table] = {}

@@ -3,17 +3,16 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import (
-    create_engine,
+    Column,
+    ForeignKey,
+    Integer,
     MetaData,
     Table,
-    Column,
-    Integer,
     Text,
-    String,
-    ForeignKey,
+    create_engine,
     select,
 )
-from sqlalchemy.exc import OperationalError, NoSuchTableError
+from sqlalchemy.exc import NoSuchTableError, OperationalError
 
 from outputs.item_retriever import ItemRetriever
 
@@ -63,7 +62,7 @@ def temp_db(tmp_path: Path):
 
     # Insert rows using Core insert() so we avoid raw SQL in tests
     with engine.begin() as conn:
-        res = conn.execute(
+        conn.execute(
             project_tbl.insert().values(
                 name="Artifact Miner", description="Test project for item retriever"
             )
