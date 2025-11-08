@@ -4,36 +4,12 @@ Author: Chris Hill
 """
 
 import json
-import os
 from typing import Any
 
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Connection, Engine
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
-# Database URL should be provided via the environment variable DATABASE_URL.
-# Example values:
-# - postgresql+psycopg2://user:pass@localhost/dbname
-# - mysql+pymysql://user:pass@localhost/dbname
-DB_ENV_VAR = "DATABASE_URL"
-
-
-def _get_engine() -> Engine:
-    """Return a SQLAlchemy Engine using the URL found in the environment.
-
-    The database URL must be provided via the ``DATABASE_URL`` environment
-    variable. This keeps the module backend-agnostic and avoids any direct
-    references to a specific DB driver or file path.
-
-    Raises:
-        RuntimeError: if the environment variable is not set.
-    """
-    url = os.environ.get(DB_ENV_VAR)
-    if not url:
-        raise RuntimeError(
-            f"Environment variable {DB_ENV_VAR} is not set. "
-            "Set DATABASE_URL to your database connection URL (e.g. postgresql://...)."
-        )
-    return create_engine(url)
+from capstone_project_team_5.data.db import get_session
 
 
 class ProjectSummary:
@@ -47,17 +23,17 @@ class ProjectSummary:
     """
 
     @staticmethod
-    def _get_connection() -> Connection:
-        """Return a SQLAlchemy Connection (Engine.connect()).
+    def _get_connection() -> Session:
+        """Return a SQLAlchemy Session context manager from the application.
 
-        The caller is responsible for closing the returned connection (it is
-        typically used as a context manager).
+        Use the shared `get_session()` to provide consistent session
+        configuration (transactions, expire_on_commit, etc.). Callers should
+        use this as a context manager: `with cls._get_connection() as session:`
         """
-        engine = _get_engine()
-        return engine.connect()
+        return get_session()
 
     @classmethod
-    def _get_project_metadata(cls, conn: Connection, project_name: str) -> dict[str, Any] | None:
+    def _get_project_metadata(cls, conn: Session, project_name: str) -> dict[str, Any] | None:
         project_sql = text(
             """
             SELECT id, name, description, is_collaborative, start_date, end_date,
@@ -70,7 +46,7 @@ class ProjectSummary:
         return res.mappings().fetchone()
 
     @classmethod
-    def _get_artifact_counts(cls, conn: Connection, pid: int) -> dict[str, int]:
+    def _get_artifact_counts(cls, conn: Session, pid: int) -> dict[str, int]:
         artifacts_sql = text(
             """
             SELECT type, COUNT(*) AS count
@@ -83,7 +59,7 @@ class ProjectSummary:
         return {row["type"]: row["count"] for row in res.mappings().all()}
 
     @classmethod
-    def _get_contrib_counts(cls, conn: Connection, pid: int) -> dict[str, int]:
+    def _get_contrib_counts(cls, conn: Session, pid: int) -> dict[str, int]:
         contrib_sql = text(
             """
             SELECT activity_type, COUNT(*) AS count
@@ -96,7 +72,7 @@ class ProjectSummary:
         return {row["activity_type"]: row["count"] for row in res.mappings().all()}
 
     @classmethod
-    def _get_skills(cls, conn: Connection, pid: int) -> list[str]:
+    def _get_skills(cls, conn: Session, pid: int) -> list[str]:
         skills_sql = text(
             """
             SELECT Skill.name
@@ -116,16 +92,15 @@ class ProjectSummary:
         queries. Splitting responsibilities improves readability and
         makes unit testing each database query easier.
         """
-        conn = cls._get_connection()
-        try:
-            project = cls._get_project_metadata(conn, project_name)
+        with cls._get_connection() as session:
+            project = cls._get_project_metadata(session, project_name)
             if project is None:
                 raise ValueError(f"Project '{project_name}' not found in database.")
 
             pid = project["id"]
-            artifact_counts = cls._get_artifact_counts(conn, pid)
-            contrib_counts = cls._get_contrib_counts(conn, pid)
-            skills = cls._get_skills(conn, pid)
+            artifact_counts = cls._get_artifact_counts(session, pid)
+            contrib_counts = cls._get_contrib_counts(session, pid)
+            skills = cls._get_skills(session, pid)
 
             summary: dict[str, Any] = {
                 "project_name": project["name"],
@@ -148,8 +123,6 @@ class ProjectSummary:
             }
 
             return summary
-        finally:
-            conn.close()
 
     @classmethod
     def display(cls, project_name: str) -> None:
