@@ -46,9 +46,7 @@ def delete_portfolio_items_by_project(project_id: int) -> int:
         int: The number of portfolio items deleted.
     """
     with get_session() as session:
-        items = session.query(PortfolioItem).filter(
-            PortfolioItem.project_id == project_id
-        ).all()
+        items = session.query(PortfolioItem).filter(PortfolioItem.project_id == project_id).all()
         count = len(items)
 
         for item in items:
