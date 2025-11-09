@@ -6,7 +6,9 @@ from collections.abc import Sequence
 from pathlib import Path
 from zipfile import ZipFile
 
+from capstone_project_team_5.collab_detect import CollabDetector
 from capstone_project_team_5.consent_tool import ConsentTool
+from capstone_project_team_5.contribution_metrics import ContributionMetrics
 from capstone_project_team_5.detection import identify_language_and_framework
 from capstone_project_team_5.file_walker import DirectoryWalker
 from capstone_project_team_5.models import InvalidZipError
@@ -109,18 +111,29 @@ def _display_project_analyses(
         combined_skills = tools | practices
         summary = DirectoryWalker.get_summary(walk_result)
         total_size = _format_bytes(summary["total_size_bytes"])
+        collab_summary = CollabDetector.collaborator_summary(project_path)
+        collaborators = CollabDetector.format_collaborators(collab_summary)
+        project_duration = ContributionMetrics.get_project_duration(project_path)[1]
+        contribution_metrics = ContributionMetrics.get_project_contribution_metrics(project_path)
 
         if analyzed == 0:
             print("\n📊 Project Analysis")
         print("-" * 60)
         print(f"📁 Project: {project.name}")
         print(f"Path: {project.rel_path}")
+        print(f"📅 Project Duration: {project_duration}")
+        print(collaborators)
         print(f"🧑‍💻 Language: {language}")
         print(f"🏗️ Framework: {framework or 'None detected'}")
         skills_list = ", ".join(sorted(combined_skills)) or "None detected"
         tools_list = ", ".join(sorted(tools)) or "None detected"
         print(f"🧠 Skills: {skills_list}")
         print(f"🧰 Tools: {tools_list}")
+        print(
+            ContributionMetrics.format_contribution_metrics(
+                contribution_metrics[0], contribution_metrics[1]
+            )
+        )
 
         print("\n📂 File Analysis")
         print("-" * 60)
@@ -152,15 +165,26 @@ def _display_root_analysis(extract_root: Path, consent_tool: ConsentTool) -> Non
     practices = set(skills.get("practices", set()))
     combined_skills = tools | practices
     ai_allowed, ai_warning = _ai_bullet_permission(consent_tool)
+    collab_summary = CollabDetector.collaborator_summary(extract_root)
+    collaborators = CollabDetector.format_collaborators(collab_summary)
+    project_duration = ContributionMetrics.get_project_duration(extract_root)[1]
+    contribution_metrics = ContributionMetrics.get_project_contribution_metrics(extract_root)
 
     print("\n📊 Analysis Summary")
     print("-" * 60)
+    print(f"📅 Project Duration: {project_duration}")
+    print(collaborators)
     print(f"🧑‍💻 Language: {language}")
     print(f"🏗️ Framework: {framework or 'None detected'}")
     skills_list = ", ".join(sorted(combined_skills)) or "None detected"
     tools_list = ", ".join(sorted(tools)) or "None detected"
     print(f"🧠 Skills: {skills_list}")
     print(f"🧰 Tools: {tools_list}")
+    print(
+        ContributionMetrics.format_contribution_metrics(
+            contribution_metrics[0], contribution_metrics[1]
+        )
+    )
 
     print("\n📂 File Analysis")
     print("-" * 60)

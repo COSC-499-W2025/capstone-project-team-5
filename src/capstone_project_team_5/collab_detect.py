@@ -1,8 +1,9 @@
-import subprocess
 from pathlib import Path
 
 from docx import Document
 from pypdf import PdfReader
+
+from capstone_project_team_5.utils.git_helper import is_git_repo, run_git_command
 
 
 class CollabDetector:
@@ -10,6 +11,62 @@ class CollabDetector:
     Detects if a given project is an individual or a collaborative project
     and finds the number of contributors.
     """
+
+    @staticmethod
+    def collaborator_summary(root: Path) -> tuple[int, set[str]]:
+        """
+        Returns a summary of collaboration for the given project.
+        Returns the number of collaborators found and their identities
+        if possbile.
+
+        Args:
+            root: Project root directory.
+
+        Returns:
+            tuple: Number of collaborators and their identities.
+        """
+
+        if is_git_repo(root=root):
+            git_authors = CollabDetector._git_authors(root=root)
+            return len(git_authors), git_authors
+
+        doc_authors = CollabDetector._document_authors(root=root)
+        if doc_authors:
+            return len(doc_authors), doc_authors
+
+        ownership_ids = CollabDetector._file_ownership(root=root)
+        if ownership_ids:
+            str_uids = {str(uid) for uid in ownership_ids}
+            return len(str_uids), str_uids
+
+        return 1, {"Unknown"}
+
+    @staticmethod
+    def format_collaborators(summary: tuple[int, set[str]]) -> str:
+        """
+        Returns a nicely formatted string for CLI display.
+
+        Args:
+            summary: Tuple (num_collaborators, identities).
+
+        Returns:
+            str: Human-readable formatted summary.
+        """
+
+        num, identities = summary
+
+        if not identities:
+            return "👤 No collaborators detected."
+
+        names = sorted(identities)
+
+        if len(names) == 1 and ("Unknown" in names or names[0].isdigit()):
+            return "👤 Single contributor (identity unknown)."
+
+        names_list = ", ".join(names)
+        plural = "collaborator" if num == 1 else "collaborators"
+
+        return f"👥 {num} {plural} detected: {names_list}"
 
     @staticmethod
     def number_of_collaborators(root: Path) -> int:
@@ -57,19 +114,6 @@ class CollabDetector:
         return CollabDetector.number_of_collaborators(root) > 1
 
     @staticmethod
-    def _is_git_repository(root: Path) -> bool:
-        """Helper function for _git_authors"""
-        try:
-            result = subprocess.run(
-                ["git", "-C", str(root), "rev-parse", "--is-inside-work-tree"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            return result.returncode == 0
-        except (OSError, ValueError):
-            return False
-
-    @staticmethod
     def _git_authors(root: Path) -> set[str]:
         """
         Returns the set of authors working on a project if root is a git repository.
@@ -85,20 +129,17 @@ class CollabDetector:
         authors: set[str] = set()
 
         # check if root is a repo
-        if not CollabDetector._is_git_repository(root):
+        if not is_git_repo(root=root):
             return authors
 
         try:
-            result = subprocess.run(
-                ["git", "shortlog", "-sc", "--all"],
-                cwd=str(root),
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                check=True,
-            )
+            git_command = "shortlog -sc --all"
+            result = run_git_command(command=git_command, root=root)
 
-            output = result.stdout.strip()
+            if result == "":
+                return authors
+
+            output = result.strip()
 
             for line in output.splitlines():
                 if not line.strip():
@@ -120,7 +161,7 @@ class CollabDetector:
 
                 authors.add(name)
 
-        except subprocess.CalledProcessError:
+        except Exception:
             return authors
 
         return authors

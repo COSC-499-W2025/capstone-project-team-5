@@ -40,9 +40,12 @@ def test_git_repo(tmp_path):
 
     isCollab = CollabDetector.is_collaborative(tmp_path)
     numCollaborators = CollabDetector.number_of_collaborators(tmp_path)
+    summary = CollabDetector.collaborator_summary(tmp_path)
 
     assert isCollab is True
     assert numCollaborators == len(authors)
+    assert summary[0] == len(authors)
+    assert summary[1] == {"Alice", "Bob", "Charlie"}
 
 
 def test_file_ownership():
@@ -66,9 +69,12 @@ def test_file_ownership():
     # patch Path.rglob to return these fake files
     with patch.object(Path, "rglob", return_value=[fake_file1, fake_file2, fake_file3]):
         owners = CollabDetector._file_ownership(Path("/fake/path"))
+        summary = CollabDetector.collaborator_summary(Path("/fake/path"))
 
     assert owners == {1000, 2000}
     assert len(owners) == 2
+    assert summary[0] == 2
+    assert summary[1] == {"1000", "2000"}
 
 
 def test_document_authors():
@@ -94,6 +100,9 @@ def test_document_authors():
 
         authors = CollabDetector._document_authors(tmp_path)
         numAuthors = CollabDetector.number_of_collaborators(tmp_path)
+        summary = CollabDetector.collaborator_summary(tmp_path)
 
         assert authors == {"John", "Bob", "Charlie"}
         assert numAuthors == 3
+        assert summary[0] == 3
+        assert summary[1] == {"John", "Bob", "Charlie"}

@@ -78,7 +78,9 @@ def test_git_metrics(tmp_path: Path):
 
     init_mock_git_repo(tmp_path)
 
-    metrics = ContributionMetrics.get_project_contribution_metrics(tmp_path)
+    result = ContributionMetrics.get_project_contribution_metrics(tmp_path)
+    metrics = result[0]
+    source = result[1]
 
     assert metrics["code"] == 3
     assert metrics["test"] == 2
@@ -86,6 +88,7 @@ def test_git_metrics(tmp_path: Path):
     assert metrics["design"] == 1
     assert metrics["devops"] == 2
     assert metrics["data"] == 1
+    assert source == "based on Git commits"
 
 
 def test_non_git_metrics(tmp_path: Path):
@@ -106,7 +109,11 @@ def test_non_git_metrics(tmp_path: Path):
             full_path.parent.mkdir(parents=True, exist_ok=True)
             full_path.write_text(f"Dummy content for {category} file")
 
-    metrics = ContributionMetrics._get_non_git_contribution_metrics(tmp_path)
+    result = ContributionMetrics.get_project_contribution_metrics(tmp_path)
+    metrics = result[0]
+    source = result[1]
 
     for category, files in files_by_category.items():
         assert metrics[category] == len(files)
+
+    assert source == "based on file counts"
