@@ -7,24 +7,8 @@ data or artifacts that may be shared across multiple reports.
 
 from __future__ import annotations
 
-import sqlite3
-from pathlib import Path
-
-
-def _get_db_path() -> Path:
-    """Get the path to the artifact_miner database."""
-    base_dir = Path(__file__).resolve().parents[3]
-    return base_dir / "db" / "artifact_miner.db"
-
-
-def _get_connection() -> sqlite3.Connection:
-    """Open a connection to the artifact_miner database."""
-    db_path = _get_db_path()
-    if not db_path.exists():
-        raise FileNotFoundError(f"Database not found at {db_path}")
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    return conn
+from capstone_project_team_5.data.db import get_session
+from capstone_project_team_5.data.models.portfolio_item import PortfolioItem
 
 
 def delete_portfolio_item(item_id: int) -> bool:
@@ -39,21 +23,13 @@ def delete_portfolio_item(item_id: int) -> bool:
     Returns:
         bool: True if the item was deleted, False if it didn't exist.
     """
-    conn = _get_connection()
-    try:
-        cur = conn.cursor()
-
-        # Check if the item exists
-        cur.execute("SELECT id FROM PortfolioItem WHERE id = ?", (item_id,))
-        if cur.fetchone() is None:
+    with get_session() as session:
+        item = session.query(PortfolioItem).filter(PortfolioItem.id == item_id).first()
+        if item is None:
             return False
 
-        # Delete the portfolio item
-        cur.execute("DELETE FROM PortfolioItem WHERE id = ?", (item_id,))
-        conn.commit()
+        session.delete(item)
         return True
-    finally:
-        conn.close()
 
 
 def delete_portfolio_items_by_project(project_id: int) -> int:
@@ -69,22 +45,16 @@ def delete_portfolio_items_by_project(project_id: int) -> int:
     Returns:
         int: The number of portfolio items deleted.
     """
-    conn = _get_connection()
-    try:
-        cur = conn.cursor()
+    with get_session() as session:
+        items = session.query(PortfolioItem).filter(
+            PortfolioItem.project_id == project_id
+        ).all()
+        count = len(items)
 
-        # Count items before deletion
-        cur.execute("SELECT COUNT(*) FROM PortfolioItem WHERE project_id = ?", (project_id,))
-        count = cur.fetchone()[0]
-
-        # Delete all portfolio items for this project
-        if count > 0:
-            cur.execute("DELETE FROM PortfolioItem WHERE project_id = ?", (project_id,))
-            conn.commit()
+        for item in items:
+            session.delete(item)
 
         return count
-    finally:
-        conn.close()
 
 
 def clear_all_portfolio_items() -> int:
@@ -97,19 +67,11 @@ def clear_all_portfolio_items() -> int:
     Returns:
         int: The number of portfolio items deleted.
     """
-    conn = _get_connection()
-    try:
-        cur = conn.cursor()
+    with get_session() as session:
+        items = session.query(PortfolioItem).all()
+        count = len(items)
 
-        # Count items before deletion
-        cur.execute("SELECT COUNT(*) FROM PortfolioItem")
-        count = cur.fetchone()[0]
-
-        # Delete all portfolio items
-        if count > 0:
-            cur.execute("DELETE FROM PortfolioItem")
-            conn.commit()
+        for item in items:
+            session.delete(item)
 
         return count
-    finally:
-        conn.close()
