@@ -56,3 +56,13 @@ Time this week was spent coding a new feature for extracting key contrtibution m
 | Refactoring| In progress | Refactoring any part of code base where it is needed. |
 
 ![screenshot](Week9_checklist.png)
+
+## Week #10 (November 3 - November 9)
+
+This week time was spent in team meetings on monday discussing what is needed going forward as well as coding. Some features from previous weeks were not yet implemented in the main program. This week I refactored contribution metrics and collaboration detection features and added them into the main program. Next week is reading week so I don't know the exact plans for this next sprint.
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| Refactoring| Done | Refactored previous features and added to main program CLI. |
+
+![screenshot](Week10_checklist.png)
