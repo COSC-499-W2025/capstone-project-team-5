@@ -104,6 +104,24 @@ class GeminiProvider(LLMProvider):
             response = self.client.models.generate_content(
                 model=self.model, contents=prompt, config=config
             )
+            # Error handling for None response
+            if response.text is None:
+                error_details = []
+                if hasattr(response, "prompt_feedback"):
+                    error_details.append(f"prompt_feedback={response.prompt_feedback}")
+                if hasattr(response, "candidates") and response.candidates:
+                    candidate = response.candidates[0]
+                    if hasattr(candidate, "finish_reason"):
+                        error_details.append(f"finish_reason={candidate.finish_reason}")
+
+                error_msg = "Gemini returned None response"
+                if error_details:
+                    error_msg += f": {', '.join(error_details)}"
+
+                raise LLMError(error_msg)
+
             return (response.text or "").strip()
+        except LLMError:
+            raise  # re-throwing LLM error
         except Exception as e:
             raise LLMError(f"Gemini API call failed: {e}") from e
