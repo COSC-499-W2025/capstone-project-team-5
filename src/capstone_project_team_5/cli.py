@@ -13,7 +13,7 @@ from capstone_project_team_5.services import upload_zip
 from capstone_project_team_5.services.llm import (
     generate_bullet_points_from_analysis,
 )
-from capstone_project_team_5.skill_detection import extract_project_skills
+from capstone_project_team_5.skill_detection import extract_project_tools_practices
 from capstone_project_team_5.utils import display_upload_result, prompt_for_zip_file
 
 
@@ -61,7 +61,7 @@ def run_cli() -> int:
             walk_result = DirectoryWalker.walk(tmp_path)
 
             language, framework = identify_language_and_framework(tmp_path)
-            skills = extract_project_skills(tmp_path)
+            skills = extract_project_tools_practices(tmp_path)
 
             print("\n📊 Analysis Summary")
             print("-" * 60)

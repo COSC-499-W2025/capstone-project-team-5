@@ -26,7 +26,7 @@ class SkillDetector:
         return path.name.lower() in SKIP_DIRS
 
     @staticmethod
-    def _detect_tools(file_name: str, rel_path: str) -> set[str]:
+    def _detect_tools_locally(file_name: str, rel_path: str) -> set[str]:
         """
         Detect development tools based on file name and path.
 
@@ -75,7 +75,7 @@ class SkillDetector:
         return tools
 
     @staticmethod
-    def _detect_practices(file_name: str, rel_path: str) -> set[str]:
+    def _detect_practices_locally(file_name: str, rel_path: str) -> set[str]:
         """
         Detect software development practices based on file name and path.
 
@@ -118,7 +118,7 @@ class SkillDetector:
         return practices
 
     @staticmethod
-    def _scan_project_files(root: Path) -> tuple[set[str], set[str]]:
+    def _detect_tools_practices_locally(root: Path) -> tuple[set[str], set[str]]:
         """
         Scan all files in the project to detect tools and practices.
 
