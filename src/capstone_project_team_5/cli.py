@@ -15,7 +15,7 @@ from capstone_project_team_5.services import upload_zip
 from capstone_project_team_5.services.llm import (
     generate_bullet_points_from_analysis,
 )
-from capstone_project_team_5.skill_detection import extract_project_skills
+from capstone_project_team_5.skill_detection import extract_project_tools_practices
 from capstone_project_team_5.utils import display_upload_result, prompt_for_zip_file
 
 
@@ -103,7 +103,7 @@ def _display_project_analyses(
             continue
 
         language, framework = identify_language_and_framework(project_path)
-        skills = extract_project_skills(project_path)
+        skills = extract_project_tools_practices(project_path)
         tools = set(skills.get("tools", set()))
         practices = set(skills.get("practices", set()))
         combined_skills = tools | practices
@@ -147,7 +147,7 @@ def _display_root_analysis(extract_root: Path, consent_tool: ConsentTool) -> Non
 
     walk_result = DirectoryWalker.walk(extract_root)
     language, framework = identify_language_and_framework(extract_root)
-    skills = extract_project_skills(extract_root)
+    skills = extract_project_tools_practices(extract_root)
     tools = set(skills.get("tools", set()))
     practices = set(skills.get("practices", set()))
     combined_skills = tools | practices

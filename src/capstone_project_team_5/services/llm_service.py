@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import os
+import re
 
 from capstone_project_team_5.services.llm_providers import (
     GeminiProvider,
@@ -71,3 +73,29 @@ class LLMService:
         prompt = self.build_prompt(system_instructions, user_content)
         config = self.provider.generate_llm_config(temperature, max_tokens, seed)
         return self.provider.send_prompt(prompt, config)
+
+    @staticmethod
+    def extract_json_from_response(response: str) -> dict | list:
+        """Extract and parse JSON from an LLM response.
+        Args:
+            response: Raw LLM response text
+
+        Returns:
+            Parsed JSON as a dictionary or list
+
+        """
+        # TODO: Improve JSON extraction to handle more edge cases in future PR
+        response = response.strip()
+
+        json_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", response, re.DOTALL)
+        if json_match:
+            response = json_match.group(1).strip()
+        else:
+            json_match = re.search(r"[\{\[].*[\}\]]", response, re.DOTALL)
+            if json_match:
+                response = json_match.group(0)
+
+        try:
+            return json.loads(response)
+        except json.JSONDecodeError as e:
+            raise LLMError(f"Failed to parse JSON from LLM response: {e}.") from e

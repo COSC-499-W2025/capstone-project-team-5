@@ -6,7 +6,7 @@ from pathlib import Path
 from capstone_project_team_5.detection import identify_language_and_framework
 from capstone_project_team_5.services.llm import generate_bullet_points_from_analysis
 from capstone_project_team_5.services.llm_providers import LLMError
-from capstone_project_team_5.skill_detection import extract_project_skills
+from capstone_project_team_5.skill_detection import extract_project_tools_practices
 
 
 def generate_ai_bullets_for_project(project_root: Path | str, *, max_bullets: int = 6) -> list[str]:
@@ -18,7 +18,7 @@ def generate_ai_bullets_for_project(project_root: Path | str, *, max_bullets: in
     """
     root = Path(project_root)
     language, framework = identify_language_and_framework(root)
-    skills_map = extract_project_skills(root)
+    skills_map = extract_project_tools_practices(root)
     tools: Sequence[str] = sorted(skills_map.get("tools", set()))
     practices: Sequence[str] = sorted(skills_map.get("practices", set()))
     combined = sorted(set(tools) | set(practices))
