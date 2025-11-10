@@ -139,7 +139,7 @@ This week I started work on syncing our main branch with develop, but ran into s
 
 <details>
   <summary><h3></h3></summary>
-
+<img alt="Screenshot 2025-11-09 191148" src="https://github.com/user-attachments/assets/fda32c4b-08ff-409a-bc5c-36250f1ce5b6" />
 
 
 This week I've finalized refactoring all code, including code for Requirement 16, to work with SQL Alchemy. Next week is reading week, so work will be light. Since all, or most, of the requirements have been covered, I intend to reasses where we're at, and discuss as a group, how to proceed. We may have the code for each requirement, but we need to ensure that all of the code is integrated properly into the overall program.
