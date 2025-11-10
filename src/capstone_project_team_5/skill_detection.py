@@ -207,7 +207,7 @@ class SkillDetector:
         return "\n".join(tree_lines)
 
     @staticmethod
-    def _generate_llm_call_config(directory_tree: str) -> tuple[str, str]:
+    def _generate_llm_call_config(directory_tree: str) -> tuple[str, str, float, int]:
         """
         Create system instructions and user content for LLM call.
 
@@ -216,7 +216,7 @@ class SkillDetector:
         Returns:
             Tuple of (system_instructions, user_content, temperature, max_tokens)
         """
-        tempertaure = 0.3
+        temperature = 0.3
         max_tokens = 3000
 
         # Create example lists from constants
@@ -275,7 +275,7 @@ class SkillDetector:
             "and software practices used in this project. "
             "Return your response as JSON only."
         )
-        return system_instructions, user_content, tempertaure, max_tokens
+        return system_instructions, user_content, temperature, max_tokens
 
     @staticmethod
     def _has_consent_for_llm() -> bool:
@@ -283,7 +283,7 @@ class SkillDetector:
         Check if user has given consent for LLM analysis.
 
         Args:
-            root: Root directory of the project"""
+            None (for now. TBD in future PR)"""
         return True  # TODO: Replace with real consent check in future PR
 
     @staticmethod
