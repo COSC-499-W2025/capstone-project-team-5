@@ -56,6 +56,7 @@ def _ensure_tables_created() -> None:
     # Import ORM models so their metadata is registered on Base before create_all.
     from capstone_project_team_5.data.models import (  # noqa: F401
         consent_record,
+        portfolio_item,
         project,
         upload_record,
     )
