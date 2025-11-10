@@ -3,7 +3,7 @@ from pathlib import Path
 from docx import Document
 from pypdf import PdfReader
 
-from capstone_project_team_5.utils.git_helper import is_git_repo, run_git_command
+from capstone_project_team_5.utils.git import is_git_repo, run_git
 
 
 class CollabDetector:
@@ -26,7 +26,7 @@ class CollabDetector:
             tuple: Number of collaborators and their identities.
         """
 
-        if is_git_repo(root=root):
+        if is_git_repo(path=root):
             git_authors = CollabDetector._git_authors(root=root)
             return len(git_authors), git_authors
 
@@ -129,12 +129,11 @@ class CollabDetector:
         authors: set[str] = set()
 
         # check if root is a repo
-        if not is_git_repo(root=root):
+        if not is_git_repo(path=root):
             return authors
 
         try:
-            git_command = "shortlog -sc --all"
-            result = run_git_command(command=git_command, root=root)
+            result = run_git(root, "shortlog", "-sc", "--all")
 
             if result == "":
                 return authors
