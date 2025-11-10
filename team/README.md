@@ -1,6 +1,59 @@
 # Team Weekly Logs
 
 <details>
+  <summary><h3>Week 10 | November 3 - 7</h3></summary>
+
+  ### Burnup Chart
+  <img width="907" height="478" alt="image" src="https://github.com/user-attachments/assets/39edc7bc-c43d-4217-ab41-306b0716d71d" />
+
+  ### Past Work
+  - Merging develop and sync branches
+  - Extracting multiple projects from a single zip file
+  - Deletion of portfolio items
+  - Refactor to reduce coupling
+  - Refactor for sql alchemy 
+  - Retrieve previously generated resume item
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Sync main with Develop |✅ Done | Need to get all PR's merged and sync this week. |
+  | Integrating All Features | In Progress | Need to integrate all completed features into the main program.
+  | Database | ✅ Done| Database set up and refactors for SQLAlchemy complete. |
+  | Refactoring to make codebase cleaner |  ✅ Done| Multiple services refactored. |
+
+  ### Upcoming Work
+  - Integrate entire end to end flow, including all features.
+  - Start exploring deep-analysis, as mentioned in this week's email.
+</details>
+
+<details>
+  <summary><h3>Week 9 | October 27 - November 2</h3></summary>
+
+  ### Burnup Chart
+  ![screenshot](Week9_burnup.png)
+
+  ### Past Work
+  - Create Centralized LLM Service 
+  - Extract individual contributions from a collaborative project 
+  - Deletion of portfolio items
+  - Extract key project contribution metrics
+  - Refactor for sql alchemy 
+  - Detect and persist multiple projects from single ZIP upload
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Sync main with Develop | In Progress | Need to get all PR's merged and sync this week. |
+  | Integrating All Features | In Progress | Need to integrate all completed features into the main program.
+  | Database | ✅ Done| Database set up and refactors for SQLAlchemy complete. |
+
+  ### Upcoming Work
+  - Syncing main with develop needs to be done this upcoming sprint once all PR's are merged.
+  - Some features are complete but not involved in the main program. This week all completed features can be implemented in the main program.
+</details>
+
+<details>
   <summary><h3>Week 8 | October 19-26, 2025</h3></summary>
 
 ### Burnup Chart
@@ -181,32 +234,5 @@
 
 </details>
 
-<details>
-  <summary><h3>Week 9 | October 27 - November 2</h3></summary>
-
-  ### Burnup Chart
-  ![screenshot](Week9_burnup.png)
-
-  ### Past Work
-  - Create Centralized LLM Service 
-  - Extract individual contributions from a collaborative project 
-  - Deletion of portfolio items
-  - Extract key project contribution metrics
-  - Refactor for sql alchemy 
-  - Detect and persist multiple projects from single ZIP upload
-
-  ### Updates on Previous To-Do's
-  | Task | Status | Notes |
-  | --- | --- | --- |
-  | Sync main with Develop | In Progress | Need to get all PR's merged and sync this week. |
-  | Integrating All Features | In Progress | Need to integrate all completed features into the main program.
-  | Database | ✅ Done| Database set up and refactors for SQLAlchemy complete. |
-
-  ### Upcoming Work
-  - Syncing main with develop needs to be done this upcoming sprint once all PR's are merged.
-  - Some features are complete but not involved in the main program. This week all completed features can be implemented in the main program.
-
-
-</details>
 
 ---
