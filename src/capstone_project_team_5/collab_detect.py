@@ -17,7 +17,7 @@ class CollabDetector:
         """
         Returns a summary of collaboration for the given project.
         Returns the number of collaborators found and their identities
-        if possbile.
+        if possible.
 
         Args:
             root: Project root directory.
