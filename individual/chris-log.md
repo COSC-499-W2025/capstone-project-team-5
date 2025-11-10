@@ -112,7 +112,7 @@ I failed to complete one of the tasks I set out to do from last week's log. Alth
 </details>
 
 
-## Week 9 | 26 October- 02 November 2025
+## Week 9 | 26 October - 02 November 2025
 
 <details>
   <summary><h3></h3></summary>
@@ -133,4 +133,27 @@ This week I started work on syncing our main branch with develop, but ran into s
 | :---- | :----- | :------- |
 | Reorganize GitHub Branches | In Progress | Merge main into develop. |
 | Refactor R16 Code | Not Yet Started | Restructure to work with SQL Alchemy |
+</details>
+
+## Week 10 | 02 November - 09 November 2025
+
+<details>
+  <summary><h3></h3></summary>
+
+
+
+This week I've finalized refactoring all code, including code for Requirement 16, to work with SQL Alchemy. Next week is reading week, so work will be light. Since all, or most, of the requirements have been covered, I intend to reasses where we're at, and discuss as a group, how to proceed. We may have the code for each requirement, but we need to ensure that all of the code is integrated properly into the overall program.
+
+### Previous Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Reorganize GitHub Branches | In Progress | Merge main into develop; waiting for reviews to merge. |
+| Refactor R16 Code | Completed | Restructure to work with SQL Alchemy. |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Reorganize GitHub Branches | In Progress | Finally merge develop into main. |
+| Further Planning | Not Yet Started | Discuss next steps with group in preparation for return to classes. |
 </details>
