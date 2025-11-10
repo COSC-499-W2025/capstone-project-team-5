@@ -9,7 +9,11 @@ from capstone_project_team_5.constants.contribution_metrics_constants import (
     CONTRIBUTION_CATEGORIES,
     SKIP_DIRS,
 )
-from capstone_project_team_5.utils.git_helper import is_git_repo, run_git_command
+from capstone_project_team_5.utils.git import (
+    is_git_repo,
+    list_changed_files,
+    list_commit_dates,
+)
 
 
 class ContributionMetrics:
@@ -75,16 +79,10 @@ class ContributionMetrics:
             Tuple: Project duration and formatted string.
         """
 
-        git_command: str = "log --all --pretty=format:%ad --date=iso"
-
-        output = run_git_command(command=git_command, root=root)
-
-        if output == "":
+        try:
+            commit_dates = list_commit_dates(root, rev_range="--all")
+        except RuntimeError:
             return timedelta(0), "Failed running command."
-
-        commit_dates = [
-            datetime.fromisoformat(line.strip()) for line in output.splitlines() if line.strip()
-        ]
 
         start_time = min(commit_dates)
         end_time = max(commit_dates)
@@ -177,13 +175,10 @@ class ContributionMetrics:
             dict[str, int] Contribution type with frequency.
         """
 
-        command = "log --name-only --pretty=format: --no-merges --all"
-        output = run_git_command(command, root)
-
-        if output == "":
+        try:
+            files_changed = list_changed_files(root, all=True, include_merges=False)
+        except RuntimeError:
             return {}
-
-        files_changed = [line.strip() for line in output.splitlines() if line.strip()]
 
         category_counts: Counter = Counter()
 

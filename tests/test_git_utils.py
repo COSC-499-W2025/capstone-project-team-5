@@ -13,6 +13,8 @@ from capstone_project_team_5.utils.git import (
     get_author_contributions,
     get_commit_type_counts,
     get_weekly_activity_window,
+    list_changed_files,
+    list_commit_dates,
     parse_numstat,
     render_weekly_activity_chart,
     run_git,
@@ -61,6 +63,32 @@ def _commit(
             "GIT_COMMITTER_EMAIL": email,
             "GIT_AUTHOR_DATE": stamp,
             "GIT_COMMITTER_DATE": stamp,
+        }
+    )
+    _run(["git", "commit", "-q", "-m", message], cwd=repo, env=env)
+
+
+def _commit_at_string(
+    repo: Path,
+    *,
+    filename: str,
+    content: str,
+    message: str,
+    author: str,
+    email: str,
+    when_str: str,
+) -> None:
+    (repo / filename).write_text(content, encoding="utf-8")
+    _run(["git", "add", filename], cwd=repo)
+    env = os.environ.copy()
+    env.update(
+        {
+            "GIT_AUTHOR_NAME": author,
+            "GIT_AUTHOR_EMAIL": email,
+            "GIT_COMMITTER_NAME": author,
+            "GIT_COMMITTER_EMAIL": email,
+            "GIT_AUTHOR_DATE": when_str,
+            "GIT_COMMITTER_DATE": when_str,
         }
     )
     _run(["git", "commit", "-q", "-m", message], cwd=repo, env=env)
@@ -188,3 +216,63 @@ def test_weekly_activity_window(tmp_path: Path) -> None:
 
 def test_render_weekly_activity_chart_empty() -> None:
     assert render_weekly_activity_chart({}) == []
+
+
+@pytest.mark.skipif(not _git_available(), reason="git not installed")
+def test_list_changed_files_basic(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    _commit(
+        repo,
+        filename="a.txt",
+        content="a\n",
+        message="feat: a",
+        author="User",
+        email="u@example.com",
+        when=datetime.now(UTC),
+    )
+    _commit(
+        repo,
+        filename="b.txt",
+        content="b\n",
+        message="feat: b",
+        author="User",
+        email="u@example.com",
+        when=datetime.now(UTC),
+    )
+    files = list_changed_files(repo)
+    assert "a.txt" in files and "b.txt" in files
+
+
+@pytest.mark.skipif(not _git_available(), reason="git not installed")
+def test_list_commit_dates_tz_and_dst(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    # Before US DST change (UTC-5)
+    _commit_at_string(
+        repo,
+        filename="pre_dst.txt",
+        content="x\n",
+        message="docs: pre dst",
+        author="T",
+        email="t@example.com",
+        when_str="2025-03-09T12:00:00-05:00",
+    )
+    # After US DST change (UTC-4)
+    _commit_at_string(
+        repo,
+        filename="post_dst.txt",
+        content="y\n",
+        message="docs: post dst",
+        author="T",
+        email="t@example.com",
+        when_str="2025-03-10T12:00:00-04:00",
+    )
+
+    dates = list_commit_dates(repo)
+    assert len(dates) >= 2
+    # Ensure tz-aware
+    assert all(dt.tzinfo is not None and dt.utcoffset() is not None for dt in dates[:2])
+    # Verify offsets present around DST boundary (-05:00 then -04:00)
+    # git log usually returns newest first; sort ascending for stable checks
+    first, second = sorted(dates)[:2]
+    assert str(first.utcoffset()) in {"-1 day, 19:00:00", "-1 day, 20:00:00", "-05:00:00", "-05:00"}
+    assert str(second.utcoffset()) in {"-1 day, 20:00:00", "-04:00:00", "-04:00"}
