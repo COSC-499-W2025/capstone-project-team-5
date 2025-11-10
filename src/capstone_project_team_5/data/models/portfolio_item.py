@@ -26,13 +26,13 @@ class PortfolioItem(Base):
         id: Auto-incrementing primary key.
         project_id: Foreign key to the associated project (nullable, SET NULL on delete).
         title: Title of the portfolio item.
-        content: JSON or text content of the portfolio item.
+        content: Text content of the portfolio item.
         created_at: UTC timestamp of when the item was created.
     """
 
     __tablename__ = "portfolio_items"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     project_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("projects.id", ondelete="SET NULL"),

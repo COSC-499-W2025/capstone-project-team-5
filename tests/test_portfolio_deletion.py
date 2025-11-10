@@ -48,6 +48,10 @@ def temp_db() -> Iterator[Path]:
     if original_db_url:
         os.environ["DB_URL"] = original_db_url
 
+    # Properly dispose of the engine to release file locks (important for Windows)
+    if db_module._engine is not None:
+        db_module._engine.dispose()
+
     # Reset the engine and session factory
     db_module._engine = None
     db_module._SessionLocal = None
