@@ -150,3 +150,20 @@ It was a busy week for me due to heavy midterm load and I was unable to be as in
 ### TODOs for Next week 
 - **Sql Migration**:  modify this week's PR to better reflect and work with the latest suggested infra for db.
 - **Multithreading** Look into multithreading and wherever possible implement it without breaking existing functionality.
+
+## Week #10 (November 02 2025 - November 09 2025)
+<details>
+  <summary><h3>Evaluation</h3></summary
+
+
+</details>
+
+### Team Activities
+- **PR Actions**: Reviewed PRs and provided any feedback/suggestions necessary.  
+
+
+### Personal Contributions
+- **Code Contributions**: Provided further code changes and UT changes to migrate from sqllite to ORM sqlalchemy to keep the logic and approach across the project consistent.
+### TODOs for Next week 
+- **Backlog Tasks**: Discuss with the team and pick up any free tasks.
+- **Multithreading** Look into multithreading and wherever possible implement it without breaking existing functionality.
