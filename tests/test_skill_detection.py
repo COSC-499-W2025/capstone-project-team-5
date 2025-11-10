@@ -55,12 +55,20 @@ def test_detect_practices_locally_from_project_structure(tmp_path: Path) -> None
 
 def test_case_insensitive_practice_detection(tmp_path: Path) -> None:
     """Test that case-insensitive practice file names are detected."""
-    (tmp_path / "README.md").write_text("# Project\n", encoding="utf-8")
-    skills_1 = extract_project_tools_practices(tmp_path)
-    (tmp_path / "readme.md").write_text("# Project\n", encoding="utf-8")
-    skills_2 = extract_project_tools_practices(tmp_path)
-    (tmp_path / "ReadMe.md").write_text("# Project\n", encoding="utf-8")
-    skills_3 = extract_project_tools_practices(tmp_path)
+    dir1 = tmp_path / "test1"
+    dir1.mkdir()
+    (dir1 / "README.md").write_text("# Project\n", encoding="utf-8")
+    dir2 = tmp_path / "test2"
+    dir2.mkdir()
+    (dir2 / "readme.md").write_text("# Project\n", encoding="utf-8")
+    dir3 = tmp_path / "test3"
+    dir3.mkdir()
+    (dir3 / "ReadMe.md").write_text("# Project\n", encoding="utf-8")
+
+    skills_1 = extract_project_tools_practices(dir1)
+    skills_2 = extract_project_tools_practices(dir2)
+    skills_3 = extract_project_tools_practices(dir3)
+
     assert "Documentation Discipline" in skills_1["practices"]
     assert "Documentation Discipline" in skills_2["practices"]
     assert "Documentation Discipline" in skills_3["practices"]

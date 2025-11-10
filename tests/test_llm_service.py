@@ -211,6 +211,15 @@ def test_extract_json_from_markdown_code_block() -> None:
     assert result == {"tools": ["Git", "Ruff"], "practices": ["Version Control"]}
 
 
+def test_extract_json_from_markdown_without_language() -> None:
+    """Test extracting JSON from markdown code block without language identifier."""
+    response = """```
+{"tools": ["Docker"], "practices": ["Testing"]}
+```"""
+    result = LLMService.extract_json_from_response(response)
+    assert result == {"tools": ["Docker"], "practices": ["Testing"]}
+
+
 def test_extract_json_raises_error_on_invalid_json() -> None:
     """Test that invalid JSON raises LLMError."""
     response = '{"tools": ["Docker", "practices": ["TDD"]}'  # Missing bracket

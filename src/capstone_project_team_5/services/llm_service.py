@@ -84,6 +84,7 @@ class LLMService:
             Parsed JSON as a dictionary or list
 
         """
+        # TODO: Improve JSON extraction to handle more edge cases in future PR
         response = response.strip()
 
         json_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", response, re.DOTALL)

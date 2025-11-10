@@ -304,6 +304,10 @@ class SkillDetector:
         try:
             tree = SkillDetector._generate_directory_tree(root)
 
+            # Skip LLM call if directory tree is empty
+            if not tree or not tree.strip():
+                return set(), set()
+
             # Create LLM call content
             system_instructions, user_content, temperature, max_tokens = (
                 SkillDetector._generate_llm_call_config(tree)
@@ -356,7 +360,7 @@ class SkillDetector:
         if not root.exists() or not root.is_dir():
             return skills
 
-        # Detect tools and psractices locally
+        # Detect tools and practices locally
         local_tools, local_practices = SkillDetector._detect_tools_practices_locally(root)
         skills["tools"].update(local_tools)
         skills["practices"].update(local_practices)
