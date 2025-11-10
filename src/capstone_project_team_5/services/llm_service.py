@@ -75,24 +75,26 @@ class LLMService:
         return self.provider.send_prompt(prompt, config)
 
     @staticmethod
-    def extract_json_from_response(response: str) -> dict:
-        """Extract JSON object from LLM response string.
-
+    def extract_json_from_response(response: str) -> dict | list:
+        """Extract and parse JSON from an LLM response.
         Args:
-            response: The LLM response string containing JSON.
+            response: Raw LLM response text
+
         Returns:
-            Parsed JSON object as a dictionary.
+            Parsed JSON as a dictionary or list
+
         """
-        # Regex to find JSON object
-        json_pattern = r"\{(?:[^{}]|(?R))*\}"
-        match = re.search(json_pattern, response, re.DOTALL)
+        response = response.strip()
 
-        if not match:
-            raise LLMError("No JSON object found in the LLM response.")
-
-        json_str = match.group(0)
+        json_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", response, re.DOTALL)
+        if json_match:
+            response = json_match.group(1).strip()
+        else:
+            json_match = re.search(r"[\{\[].*[\}\]]", response, re.DOTALL)
+            if json_match:
+                response = json_match.group(0)
 
         try:
-            return json.loads(json_str)
-        except Exception as e:
-            raise LLMError(f"Failed to parse JSON from LLM response: {e}") from e
+            return json.loads(response)
+        except json.JSONDecodeError as e:
+            raise LLMError(f"Failed to parse JSON from LLM response: {e}.") from e

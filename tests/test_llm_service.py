@@ -193,3 +193,40 @@ def test_llm_service_generate_llm_response_integration_with_gemini(
     )
 
     assert response == "Integration test response"
+
+
+def test_extract_json_from_plain_json() -> None:
+    """Test extracting JSON from a plain JSON string."""
+    response = '{"tools": ["Docker", "PyTest"], "practices": ["TDD"]}'
+    result = LLMService.extract_json_from_response(response)
+    assert result == {"tools": ["Docker", "PyTest"], "practices": ["TDD"]}
+
+
+def test_extract_json_from_markdown_code_block() -> None:
+    """Test extracting JSON from markdown code block."""
+    response = """```json
+{"tools": ["Git", "Ruff"], "practices": ["Version Control"]}
+```"""
+    result = LLMService.extract_json_from_response(response)
+    assert result == {"tools": ["Git", "Ruff"], "practices": ["Version Control"]}
+
+
+def test_extract_json_raises_error_on_invalid_json() -> None:
+    """Test that invalid JSON raises LLMError."""
+    response = '{"tools": ["Docker", "practices": ["TDD"]}'  # Missing bracket
+    with pytest.raises(LLMError, match="Failed to parse JSON"):
+        LLMService.extract_json_from_response(response)
+
+
+def test_extract_json_handles_array_at_root() -> None:
+    """Test extracting JSON arrays at root level."""
+    response = '["tool1", "tool2", "tool3"]'
+    result = LLMService.extract_json_from_response(response)
+    assert result == ["tool1", "tool2", "tool3"]
+
+
+def test_extract_json_with_surrounding_text() -> None:
+    """Test extracting JSON when surrounded by explanatory text."""
+    response = 'Based on analysis: {"tools": ["SQL"], "practices": ["Testing"]} as shown'
+    result = LLMService.extract_json_from_response(response)
+    assert result == {"tools": ["SQL"], "practices": ["Testing"]}
