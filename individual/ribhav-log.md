@@ -166,6 +166,7 @@ On a good pace. Things are starting to piece together and our tasks are becoming
 | Explore Artifact extraction | ⏳ In Progress       | Figure out how to extract different artifacts from a given folder |
 | Enhance bullet point generation for collaborative projects | ❌ Not Started | Build on top of Ethan's work from this week (W7) |
 
+
 ## Week 9 | October 27-31, 2025
 
 <details>
@@ -195,6 +196,40 @@ Had a nice discussion with Ojus about how we can use LLMs in our platform. Made 
 | Learn about Tauri | ⏳ In Progress      | Need to choose between the Tauri python plugin, or an API first approach. |
 | Explore Artifact extraction | ⏳ In Progress       | Added some functions to git.py to evalulate contributions |
 | Enhance bullet point generation for collaborative projects | ❌ Not Started | Build on top of Ethan's work from this week (W7) |
+
+## Week 10 | November 3-7, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+
+<img width="1063" height="623" alt="image" src="https://github.com/user-attachments/assets/2da8588b-d321-412c-ba32-a4f00febf3ee" />
+
+                               
+</details>
+
+### Task Progress this week
+
+Refactored local git utils to reduce coupling throughout our codebase and implemented changes that came up during discussion of last week's changes. Will discuss tasks with the team related to the deep-analysis after reading break.
+
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Review PRs | ✅ Done     |  |
+| Learn about Tauri | ⏳ In Progress      | Need to choose between the Tauri python plugin, or an API first approach. |
+| Refactor Git Utils Module | ✅ Done     |  |
+| Enhance bullet point generation for collaborative projects | ❌ Not Started | Build on top of Ethan's work from this week (W7) |
+
+
+### Next week's plans
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Review PRs | ❌ Not Started    |  |
+| Enhance bullet point generation for collaborative projects | ❌ Not Started | Build on top of Ethan's work from this week (W7) |
+
+
+
+
+
 
 
 
