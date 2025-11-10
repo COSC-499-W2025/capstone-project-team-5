@@ -2,7 +2,37 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-_Last Updated:_ November 2, 2025
+_Last Updated:_ November 9, 2025
+
+---
+
+## Week 10 | November 3-9, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1377" height="810" alt="image" src="https://github.com/user-attachments/assets/b1b6424d-6244-4b66-95f3-4ea283fffba5" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Refactored CLI to display analysis per project | ✅ Done | Each project now shows individual analysis sections for Language, Framework, Skills, Tools, File Analysis, and AI bullet points |
+| Implemented fallback to root-level analysis | ✅ Done | When no valid projects found or all projects skipped |
+| Refactored analysis logic into helper functions | ✅ Done | Improved code maintainability and organization |
+| Added comprehensive tests for per-project analysis | ✅ Done | 3 test cases: per-project display, root fallback, and single AI warning |
+| Conducted code reviews | ✅ Done |  |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Implement project ranking based on contributions | ❌ Not Started |  |
+| Continue code reviews | ❌ Not Started | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Implement project ranking based on contributions | ❌ Not Started | Deferred to next cycle |
+| Continue code reviews | ✅ Done | Ongoing task |
 
 ---
 
