@@ -103,19 +103,47 @@ def parse_numstat(output: str) -> list[NumstatEntry]:
 
 def get_author_contributions(repo: Path | str, rev_range: str = "HEAD") -> list[AuthorContribution]:
     """Summarize total commits, insertions, and deletions per author."""
-    raw_log = run_git(repo, "log", "--pretty=format:%H%x09%an", rev_range)
-    commits = [line.split("\t", 1) for line in raw_log.splitlines() if "\t" in line]
+    output = run_git(repo, "log", "--numstat", "--pretty=format:%H%x09%an%x09%ct", rev_range)
 
     totals: dict[str, list[int]] = defaultdict(lambda: [0, 0, 0])  # commits, added, deleted
 
-    for commit_hash, author in commits:
-        numstat = run_git(repo, "show", "--numstat", "--format=", commit_hash)
-        entries = parse_numstat(numstat)
-        added = sum(e.added for e in entries)
-        deleted = sum(e.deleted for e in entries)
-        totals[author][0] += 1
-        totals[author][1] += added
-        totals[author][2] += deleted
+    current_author: str | None = None
+    commit_added = 0
+    commit_deleted = 0
+
+    header_re = re.compile(r"^[0-9a-f]{7,40}$")
+
+    def _flush() -> None:
+        nonlocal current_author, commit_added, commit_deleted
+        if current_author is None:
+            return
+        totals[current_author][1] += commit_added
+        totals[current_author][2] += commit_deleted
+        commit_added = 0
+        commit_deleted = 0
+
+    for line in output.splitlines():
+        if not line:
+            continue
+        parts = line.split("\t")
+        # Detect commit header: hash\tauthor\ttimestamp
+        if len(parts) == 3 and header_re.fullmatch(parts[0]) is not None and parts[2].isdigit():
+            # Finish previous commit aggregation
+            _flush()
+            current_author = parts[1]
+            totals[current_author][0] += 1  # increment commit count
+            continue
+
+        # Otherwise, expect numstat line: added\tdeleted\tpath
+        if len(parts) >= 3:
+            a_s, d_s = parts[0], parts[1]
+            if a_s != "-" and d_s != "-":
+                with suppress(ValueError):
+                    commit_added += int(a_s)
+                    commit_deleted += int(d_s)
+
+    # Flush last commit
+    _flush()
 
     contributions = [AuthorContribution(a, c, add, del_) for a, (c, add, del_) in totals.items()]
     contributions.sort(key=lambda ac: ac.added + ac.deleted, reverse=True)
