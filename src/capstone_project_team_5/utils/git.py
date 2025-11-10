@@ -41,8 +41,20 @@ class AuthorContribution:
 
 
 def is_git_repo(path: Path) -> bool:
-    """Return True when ``path`` contains a Git repository."""
-    return path.joinpath(".git").is_dir()
+    """Return True when ``path`` is inside a Git working tree.
+
+    Uses ``git rev-parse --is-inside-work-tree`` for robustness across
+    subdirectories, worktrees, and submodules.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "--is-inside-work-tree"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return result.returncode == 0
+    except (OSError, ValueError):
+        return False
 
 
 def run_git(repo: Path | str, *args: str) -> str:
@@ -91,19 +103,47 @@ def parse_numstat(output: str) -> list[NumstatEntry]:
 
 def get_author_contributions(repo: Path | str, rev_range: str = "HEAD") -> list[AuthorContribution]:
     """Summarize total commits, insertions, and deletions per author."""
-    raw_log = run_git(repo, "log", "--pretty=format:%H%x09%an", rev_range)
-    commits = [line.split("\t", 1) for line in raw_log.splitlines() if "\t" in line]
+    output = run_git(repo, "log", "--numstat", "--pretty=format:%H%x09%an%x09%ct", rev_range)
 
     totals: dict[str, list[int]] = defaultdict(lambda: [0, 0, 0])  # commits, added, deleted
 
-    for commit_hash, author in commits:
-        numstat = run_git(repo, "show", "--numstat", "--format=", commit_hash)
-        entries = parse_numstat(numstat)
-        added = sum(e.added for e in entries)
-        deleted = sum(e.deleted for e in entries)
-        totals[author][0] += 1
-        totals[author][1] += added
-        totals[author][2] += deleted
+    current_author: str | None = None
+    commit_added = 0
+    commit_deleted = 0
+
+    header_re = re.compile(r"^[0-9a-f]{7,40}$")
+
+    def _flush() -> None:
+        nonlocal current_author, commit_added, commit_deleted
+        if current_author is None:
+            return
+        totals[current_author][1] += commit_added
+        totals[current_author][2] += commit_deleted
+        commit_added = 0
+        commit_deleted = 0
+
+    for line in output.splitlines():
+        if not line:
+            continue
+        parts = line.split("\t")
+        # Detect commit header: hash\tauthor\ttimestamp
+        if len(parts) == 3 and header_re.fullmatch(parts[0]) is not None and parts[2].isdigit():
+            # Finish previous commit aggregation
+            _flush()
+            current_author = parts[1]
+            totals[current_author][0] += 1  # increment commit count
+            continue
+
+        # Otherwise, expect numstat line: added\tdeleted\tpath
+        if len(parts) >= 3:
+            a_s, d_s = parts[0], parts[1]
+            if a_s != "-" and d_s != "-":
+                with suppress(ValueError):
+                    commit_added += int(a_s)
+                    commit_deleted += int(d_s)
+
+    # Flush last commit
+    _flush()
 
     contributions = [AuthorContribution(a, c, add, del_) for a, (c, add, del_) in totals.items()]
     contributions.sort(key=lambda ac: ac.added + ac.deleted, reverse=True)
@@ -272,6 +312,55 @@ def render_weekly_activity_chart_for_range(
     return render_weekly_activity_chart(activity)
 
 
+"""
+Lightweight wrappers for common git queries
+"""
+
+
+def list_changed_files(
+    repo: Path | str, *, all: bool = True, include_merges: bool = False
+) -> list[str]:
+    """Return the list of changed file paths across commits.
+
+    Parameters:
+        repo: Repository path.
+        all: Include all refs (adds ``--all``) when True.
+        include_merges: Include merges when True; otherwise adds ``--no-merges``.
+
+    Returns:
+        A list of file paths, including duplicates when files are changed in
+        multiple commits. Blank lines are filtered out.
+    """
+    args: list[str] = ["log", "--name-only", "--pretty=format:"]
+    if not include_merges:
+        args.append("--no-merges")
+    if all:
+        args.append("--all")
+    output = run_git(repo, *args)
+    return [line.strip() for line in output.splitlines() if line.strip()]
+
+
+def list_commit_dates(repo: Path | str, *, rev_range: str = "HEAD") -> list[datetime.datetime]:
+    """Return commit datetimes for ``rev_range`` parsed as tz-aware values.
+
+    Uses ``--date=iso-strict`` to emit ISO-8601 strings with offsets, which are
+    parsed via ``datetime.fromisoformat``.
+    """
+    output = run_git(repo, "log", "--pretty=format:%ad", "--date=iso-strict", rev_range)
+    dates: list[datetime.datetime] = []
+    for line in output.splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        try:
+            dt = datetime.datetime.fromisoformat(s)
+        except ValueError:
+            # Skip unparsable lines defensively
+            continue
+        dates.append(dt)
+    return dates
+
+
 __all__ = [
     "NumstatEntry",
     "AuthorContribution",
@@ -285,4 +374,6 @@ __all__ = [
     "render_weekly_activity_chart",
     "get_weekly_activity_window",
     "render_weekly_activity_chart_for_range",
+    "list_changed_files",
+    "list_commit_dates",
 ]
