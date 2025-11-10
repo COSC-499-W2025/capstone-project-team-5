@@ -41,8 +41,20 @@ class AuthorContribution:
 
 
 def is_git_repo(path: Path) -> bool:
-    """Return True when ``path`` contains a Git repository."""
-    return path.joinpath(".git").is_dir()
+    """Return True when ``path`` is inside a Git working tree.
+
+    Uses ``git rev-parse --is-inside-work-tree`` for robustness across
+    subdirectories, worktrees, and submodules.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "--is-inside-work-tree"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return result.returncode == 0
+    except (OSError, ValueError):
+        return False
 
 
 def run_git(repo: Path | str, *args: str) -> str:
@@ -272,6 +284,55 @@ def render_weekly_activity_chart_for_range(
     return render_weekly_activity_chart(activity)
 
 
+"""
+Lightweight wrappers for common git queries
+"""
+
+
+def list_changed_files(
+    repo: Path | str, *, all: bool = True, include_merges: bool = False
+) -> list[str]:
+    """Return the list of changed file paths across commits.
+
+    Parameters:
+        repo: Repository path.
+        all: Include all refs (adds ``--all``) when True.
+        include_merges: Include merges when True; otherwise adds ``--no-merges``.
+
+    Returns:
+        A list of file paths, including duplicates when files are changed in
+        multiple commits. Blank lines are filtered out.
+    """
+    args: list[str] = ["log", "--name-only", "--pretty=format:"]
+    if not include_merges:
+        args.append("--no-merges")
+    if all:
+        args.append("--all")
+    output = run_git(repo, *args)
+    return [line.strip() for line in output.splitlines() if line.strip()]
+
+
+def list_commit_dates(repo: Path | str, *, rev_range: str = "HEAD") -> list[datetime.datetime]:
+    """Return commit datetimes for ``rev_range`` parsed as tz-aware values.
+
+    Uses ``--date=iso-strict`` to emit ISO-8601 strings with offsets, which are
+    parsed via ``datetime.fromisoformat``.
+    """
+    output = run_git(repo, "log", "--pretty=format:%ad", "--date=iso-strict", rev_range)
+    dates: list[datetime.datetime] = []
+    for line in output.splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        try:
+            dt = datetime.datetime.fromisoformat(s)
+        except ValueError:
+            # Skip unparsable lines defensively
+            continue
+        dates.append(dt)
+    return dates
+
+
 __all__ = [
     "NumstatEntry",
     "AuthorContribution",
@@ -285,4 +346,6 @@ __all__ = [
     "render_weekly_activity_chart",
     "get_weekly_activity_window",
     "render_weekly_activity_chart_for_range",
+    "list_changed_files",
+    "list_commit_dates",
 ]
