@@ -164,16 +164,23 @@
 ---
 
 <details>
-  <summary><h3>Week X</h3></summary>
+  <summary><h3>Week 10</h3></summary>
+
+  <img width="1131" height="630" alt="image" src="https://github.com/user-attachments/assets/b6db910a-0f00-419e-9cf7-5af69a0737cc" />
+
 
 ### What Went Well
-  - 
+  - (FINALLY) Fully intgerated LLM service into the skill detection tool
+  - Enhanced functionality of LLM tool to handle json extractino from llm response
+  - Reviewed PRs :)
 
   ### What Didn't Go Well
-  - 
+  - All good
 
   ### Planning for Next Week
-  - 
+  - Need to make small teaks in prompt for skill detection tool
+  - Discuss with team about the new analysis requirements laid (time complexity, data structures, etc)
+  - Review more PRs :)
 </details>
 
 ---
