@@ -12,44 +12,34 @@ These functions deliberately do not provide write access.
 from __future__ import annotations
 
 import json
-import sqlite3
-from pathlib import Path
 from typing import Any
 
-BASE_DIR = Path(__file__).resolve().parents[2]
-DB_PATH = BASE_DIR / "db" / "artifact_miner.db"
+from sqlalchemy import text
+
+# Reuse application's DB infrastructure
+from capstone_project_team_5.data.db import get_session
 
 
-def _get_conn() -> sqlite3.Connection:
+def _get_connection():
+    """Return the module-level session context manager.
+
+    This mirrors the helper pattern used in `ProjectSummary` and provides a
+    single place to change session wiring for this module.
     """
-    Open a SQLite connection configured for row access.
-
-    Raises:
-        FileNotFoundError: If the DB file does not exist at `DB_PATH`.
-    """
-    if not DB_PATH.exists():
-        raise FileNotFoundError(f"Database not found at {DB_PATH}")
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return get_session()
 
 
 def get(item_id: int) -> dict[str, Any] | None:
-    """
-    Retrieve a portfolio item by id.
+    """Retrieve a portfolio item by its primary key from PortfolioItem table.
 
-    Args:
-        item_id: Primary key of the portfolio item.
-
-    Returns:
-        Optional[Dict[str, Any]]: Deserialized item (or None if not found).
+    Returns a dict with keys: id, project_id, title, content (deserialized),
+    created_at, or None if the item does not exist.
     """
-    conn = _get_conn()
-    try:
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM PortfolioItem WHERE id = ?", (item_id,))
-        row = cur.fetchone()
-        if not row:
+    with _get_connection() as session:
+        sql = text("SELECT * FROM PortfolioItem WHERE id = :id")
+        res = session.execute(sql, {"id": item_id})
+        row = res.mappings().fetchone()
+        if row is None:
             return None
         return {
             "id": row["id"],
@@ -58,29 +48,23 @@ def get(item_id: int) -> dict[str, Any] | None:
             "content": json.loads(row["content"]),
             "created_at": row["created_at"],
         }
-    finally:
-        conn.close()
 
 
 def list_all(limit: int | None = None) -> list[dict[str, Any]]:
-    """
-    List stored portfolio items in reverse chronological order.
+    """List stored portfolio items ordered by created_at DESC.
 
-    Args:
-        limit: Optional maximum number of items to return.
+    If `limit` is provided only that many items are returned.
     """
-    conn = _get_conn()
-    try:
-        cur = conn.cursor()
-        query = "SELECT * FROM PortfolioItem ORDER BY created_at DESC"
-        if limit:
-            query += " LIMIT ?"
-            cur.execute(query, (limit,))
+    with _get_connection() as session:
+        base_sql = "SELECT * FROM PortfolioItem ORDER BY created_at DESC"
+        if limit is not None:
+            sql = text(base_sql + " LIMIT :limit")
+            res = session.execute(sql, {"limit": limit})
         else:
-            cur.execute(query)
-        rows = cur.fetchall()
+            res = session.execute(text(base_sql))
+
         items: list[dict[str, Any]] = []
-        for row in rows:
+        for row in res.mappings().all():
             items.append(
                 {
                     "id": row["id"],
@@ -91,5 +75,3 @@ def list_all(limit: int | None = None) -> list[dict[str, Any]]:
                 }
             )
         return items
-    finally:
-        conn.close()
