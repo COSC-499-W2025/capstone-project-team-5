@@ -70,11 +70,18 @@ class ItemRetriever:
             row = res.mappings().fetchone()
             if row is None:
                 return None
+            # Safely deserialize JSON content; if it's already a dict or
+            # invalid JSON, fall back to the raw value stored in the DB.
+            try:
+                content = json.loads(row["content"])
+            except (TypeError, json.JSONDecodeError):
+                content = row["content"]
+
             return {
                 "id": row["id"],
                 "project_id": row["project_id"],
                 "title": row["title"],
-                "content": json.loads(row["content"]),
+                "content": content,
                 "created_at": row["created_at"],
             }
 
@@ -93,12 +100,19 @@ class ItemRetriever:
             res = session.execute(stmt)
             items: list[dict[str, Any]] = []
             for row in res.mappings().all():
+                # Attempt to deserialize JSON content; on failure return raw value
+                raw_content = row["content"]
+                try:
+                    content = json.loads(raw_content)
+                except (TypeError, json.JSONDecodeError):
+                    content = raw_content
+
                 items.append(
                     {
                         "id": row["id"],
                         "project_id": row["project_id"],
                         "title": row["title"],
-                        "content": json.loads(row["content"]),
+                        "content": content,
                         "created_at": row["created_at"],
                     }
                 )
