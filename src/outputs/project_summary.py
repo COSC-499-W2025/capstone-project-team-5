@@ -4,11 +4,29 @@ Author: Chris Hill
 """
 
 import json
-import sqlite3
-from pathlib import Path
+from typing import Any
 
-BASE_DIR = Path(__file__).resolve().parents[2]
-DB_PATH = BASE_DIR / "db" / "artifact_miner.db"
+from sqlalchemy import MetaData, Table, func, select
+from sqlalchemy.orm import Session
+
+from capstone_project_team_5.data.db import get_session
+
+# Simple cache for reflected Table objects keyed by (engine id, table name).
+_TABLE_CACHE: dict[tuple[int, str], Table] = {}
+
+
+def _get_table(name: str, bind) -> Table:
+    """Reflect and return a Table object for `name` using the given bind.
+
+    Caches the Table per-engine to avoid repeated reflection overhead.
+    """
+    key = (id(bind), name)
+    if key in _TABLE_CACHE:
+        return _TABLE_CACHE[key]
+    md = MetaData()
+    tbl = Table(name, md, autoload_with=bind)
+    _TABLE_CACHE[key] = tbl
+    return tbl
 
 
 class ProjectSummary:
@@ -23,150 +41,91 @@ class ProjectSummary:
 
     @staticmethod
     def _get_connection():
-        """Open a DB connection and configure row factory.
+        """Return the session context manager from the app DB wiring.
 
-        Returns:
-            sqlite3.Connection: A connection to the configured `DB_PATH` with
-                `row_factory` set to `sqlite3.Row`.
-
-        Raises:
-            FileNotFoundError: If the database file does not exist at `DB_PATH`.
+        This yields a SQLAlchemy Session when used as a context manager:
+            with ProjectSummary._get_connection() as session:
+                ...
         """
-        if not DB_PATH.exists():
-            raise FileNotFoundError(
-                "Database not found at {DB_PATH}. Ensure you have created"
-                "artifact_miner.db inside the db/ folder."
+        return get_session()
+
+    @classmethod
+    def _get_project_metadata(cls, session: Session, project_name: str) -> dict[str, Any] | None:
+        engine = session.get_bind()
+        project_tbl = _get_table("Project", engine)
+        stmt = select(
+            project_tbl.c.id,
+            project_tbl.c.name,
+            project_tbl.c.description,
+            project_tbl.c.is_collaborative,
+            project_tbl.c.start_date,
+            project_tbl.c.end_date,
+            project_tbl.c.language,
+            project_tbl.c.framework,
+            project_tbl.c.importance_rank,
+        ).where(project_tbl.c.name == project_name)
+
+        res = session.execute(stmt)
+        return res.mappings().fetchone()
+
+    @classmethod
+    def _get_artifact_counts(cls, session: Session, pid: int) -> dict[str, int]:
+        engine = session.get_bind()
+        artifact_tbl = _get_table("Artifact", engine)
+        stmt = (
+            select(artifact_tbl.c.type, func.count().label("count"))
+            .where(artifact_tbl.c.project_id == pid)
+            .group_by(artifact_tbl.c.type)
+        )
+        res = session.execute(stmt)
+        return {row["type"]: row["count"] for row in res.mappings().all()}
+
+    @classmethod
+    def _get_contrib_counts(cls, session: Session, pid: int) -> dict[str, int]:
+        engine = session.get_bind()
+        contrib_tbl = _get_table("Contribution", engine)
+        stmt = (
+            select(contrib_tbl.c.activity_type, func.count().label("count"))
+            .where(contrib_tbl.c.project_id == pid)
+            .group_by(contrib_tbl.c.activity_type)
+        )
+        res = session.execute(stmt)
+        return {row["activity_type"]: row["count"] for row in res.mappings().all()}
+
+    @classmethod
+    def _get_skills(cls, session: Session, pid: int) -> list[str]:
+        engine = session.get_bind()
+        skill_tbl = _get_table("Skill", engine)
+        projectskill_tbl = _get_table("ProjectSkill", engine)
+        stmt = (
+            select(skill_tbl.c.name)
+            .select_from(
+                skill_tbl.join(projectskill_tbl, projectskill_tbl.c.skill_id == skill_tbl.c.id)
             )
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        return conn
-
-    @staticmethod
-    def _get_project_metadata(cur: sqlite3.Cursor, project_name: str) -> sqlite3.Row:
-        """Fetch project metadata by project name.
-
-        Args:
-            cur (sqlite3.Cursor): Database cursor to use for the query.
-            project_name (str): Exact name of the project to look up.
-
-        Returns:
-            sqlite3.Row: Row containing project metadata (id, name, description, ...).
-
-        Raises:
-            ValueError: If no project with `project_name` exists.
-        """
-        cur.execute(
-            """
-            SELECT id, name, description, is_collaborative, start_date, end_date,
-                   language, framework, importance_rank
-            FROM Project
-            WHERE name = ?
-            """,
-            (project_name,),
+            .where(projectskill_tbl.c.project_id == pid)
         )
-        project = cur.fetchone()
-        if not project:
-            raise ValueError(f"Project '{project_name}' not found in database.")
-        return project
+        res = session.execute(stmt)
+        return [row["name"] for row in res.mappings().all()]
 
-    @staticmethod
-    def _get_artifact_counts(cur: sqlite3.Cursor, project_id: int) -> dict:
-        """Return a mapping of artifact type to count for a given project.
+    @classmethod
+    def summarize(cls, project_name: str) -> dict[str, Any]:
+        """Return a structured summary for the given project name.
 
-        Args:
-            cur (sqlite3.Cursor): Database cursor to use for the query.
-            project_id (int): Project primary key.
-
-        Returns:
-            dict: Mapping of artifact type (str) to integer count.
+        This method orchestrates smaller helpers that execute individual
+        queries. Splitting responsibilities improves readability and
+        makes unit testing each database query easier.
         """
-        cur.execute(
-            """
-            SELECT type, COUNT(*) AS count
-            FROM Artifact
-            WHERE project_id = ?
-            GROUP BY type
-            """,
-            (project_id,),
-        )
-        return {row["type"]: row["count"] for row in cur.fetchall()}
+        with cls._get_connection() as session:
+            project = cls._get_project_metadata(session, project_name)
+            if project is None:
+                raise ValueError(f"Project '{project_name}' not found in database.")
 
-    @staticmethod
-    def _get_contrib_counts(cur: sqlite3.Cursor, project_id: int) -> dict:
-        """Return a mapping of contribution activity type to count for a project.
-
-        Args:
-            cur (sqlite3.Cursor): Database cursor to use for the query.
-            project_id (int): Project primary key.
-
-        Returns:
-            dict: Mapping of activity_type (str) to integer count.
-        """
-        cur.execute(
-            """
-            SELECT activity_type, COUNT(*) AS count
-            FROM Contribution
-            WHERE project_id = ?
-            GROUP BY activity_type
-            """,
-            (project_id,),
-        )
-        return {row["activity_type"]: row["count"] for row in cur.fetchall()}
-
-    @staticmethod
-    def _get_skills(cur: sqlite3.Cursor, project_id: int) -> list:
-        """Return a list of skill names associated with the project.
-
-        Args:
-            cur (sqlite3.Cursor): Database cursor to use for the query.
-            project_id (int): Project primary key.
-
-        Returns:
-            list[str]: List of skill names (strings). Empty list if none.
-        """
-        cur.execute(
-            """
-            SELECT Skill.name
-            FROM Skill
-            JOIN ProjectSkill ON ProjectSkill.skill_id = Skill.id
-            WHERE ProjectSkill.project_id = ?
-            """,
-            (project_id,),
-        )
-        return [row["name"] for row in cur.fetchall()]
-
-    @staticmethod
-    def summarize(project_name: str) -> dict:
-        """Build and return a project summary dictionary.
-
-        This orchestrates the helper query methods to produce a complete view of
-        the project suitable for printing or serialization.
-
-        Args:
-            project_name (str): Exact name of the project to summarize.
-
-        Returns:
-            dict: A dictionary containing project metadata and derived metrics.
-                Keys include: 'project_name', 'description', 'collaboration',
-                'language', 'framework', 'importance_rank', 'start_date',
-                'end_date', 'activity_counts', 'artifact_counts', 'skills',
-                and 'summary' (a human-readable sentence).
-
-        Raises:
-            FileNotFoundError: If the database file is missing.
-            ValueError: If the project is not found in the database.
-        """
-        conn = ProjectSummary._get_connection()
-        try:
-            cur = conn.cursor()
-            project = ProjectSummary._get_project_metadata(cur, project_name)
             pid = project["id"]
+            artifact_counts = cls._get_artifact_counts(session, pid)
+            contrib_counts = cls._get_contrib_counts(session, pid)
+            skills = cls._get_skills(session, pid)
 
-            artifact_counts = ProjectSummary._get_artifact_counts(cur, pid)
-            contrib_counts = ProjectSummary._get_contrib_counts(cur, pid)
-            skills = ProjectSummary._get_skills(cur, pid)
-
-            summary = {
+            summary: dict[str, Any] = {
                 "project_name": project["name"],
                 "description": project["description"],
                 "collaboration": "collaborative" if project["is_collaborative"] else "individual",
@@ -185,17 +144,12 @@ class ProjectSummary:
                     f"spanning {project['start_date']} to {project['end_date']}."
                 ),
             }
+
             return summary
-        finally:
-            conn.close()
 
     @classmethod
-    def display(cls, project_name: str):
-        """Print the project summary as formatted JSON.
-
-        Args:
-            project_name (str): Exact name of the project to display.
-        """
+    def display(cls, project_name: str) -> None:
+        """Print the project summary as formatted JSON to stdout."""
         data = cls.summarize(project_name)
         print(json.dumps(data, indent=2))
 

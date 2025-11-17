@@ -201,6 +201,6 @@ def test_gemini_send_prompt_empty_response(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setattr(_genai, "Client", _FakeClient, raising=True)
 
     provider = GeminiProvider()
-    response = provider.send_prompt("Test prompt", {})
 
-    assert response == ""
+    with pytest.raises(LLMError, match="Gemini returned None response"):
+        provider.send_prompt("Test prompt", {})
