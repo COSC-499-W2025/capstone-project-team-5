@@ -24,9 +24,77 @@ class ContributionMetrics:
     """
 
     @staticmethod
+    def _format_project_duration(start_time: datetime, end_time: datetime) -> tuple[timedelta, str]:
+        """
+        Helper method to format project duration string output.
+
+        Args:
+            start_time: Datetime object.
+            end_time: Datetime object.
+
+        Returns:
+            tuple: Timedelta duration and formatted string duration.
+        """
+        duration: timedelta = end_time - start_time
+        days = duration.days
+
+        years, rem_days = divmod(days, 365)
+        months, days = divmod(rem_days, 30)
+
+        parts = []
+
+        if years:
+            parts.append(f"{years} year{'s' if years > 1 else ''}")
+        if months:
+            parts.append(f"{months} month{'s' if months > 1 else ''}")
+        if days:
+            parts.append(f"{days} day{'s' if days > 1 else ''}")
+
+        readable_duration = " ".join(parts) if parts else "0 days"
+        formatted = f"{readable_duration} (Started: {start_time.date()} → Ended: {end_time.date()})"
+
+        return duration, formatted
+
+    @staticmethod
+    def format_contribution_metrics(metrics: dict[str, int], source: str) -> str:
+        """
+        Formats the contribution metrics for a project
+        into a readable string for CLI output.
+
+        Args:
+            metrics: Dictionary mapping contribution types to their counts.
+            source: Description of metric source (e.g., "based on Git commits").
+
+        Returns:
+            A human-readable string summarizing contribution metrics.
+        """
+
+        if not metrics:
+            return "📉 No contribution data found."
+
+        emoji_map = {
+            "code": "💻",
+            "test": "🧪",
+            "devops": "⚙️ ",
+            "document": "📄",
+            "design": "🎨",
+            "data": "📊",
+        }
+
+        formatted_lines = []
+
+        for key, value in sorted(metrics.items(), key=lambda kv: kv[1], reverse=True):
+            emoji = emoji_map.get(key, "•")
+            formatted_lines.append(f"{emoji} {key.capitalize()}: {value}")
+
+        metrics_str = ", ".join(formatted_lines)
+
+        return f"Metrics {source}: {metrics_str}"
+
+    @staticmethod
     def get_project_duration(root: Path) -> tuple[timedelta, str]:
         """
-        Returns project duartion for the given project, choosing
+        Returns project duration for the given project, choosing
         between Git-based or filesystem-based analysis depending
         on the project type.
 
@@ -45,7 +113,7 @@ class ContributionMetrics:
         return ContributionMetrics._get_non_git_project_duration(root=root)
 
     @staticmethod
-    def get_project_contribution_metrics(root: Path) -> dict[str, int]:
+    def get_project_contribution_metrics(root: Path) -> tuple[dict[str, int], str]:
         """
         Returns contribution metrics (e.g., code vs test vs design vs document)
         for the given project, choosing between Git-based or filesystem-based
@@ -55,15 +123,19 @@ class ContributionMetrics:
             root: Project root directory.
 
         Returns:
-            dict[str, int] Contribution type with frequency.
+            tuple[dict[str, int], str] Dict with contribution type and frequency and their source.
         """
 
         # Sequential fallback, test for Git repo first.
 
         if is_git_repo(root):
-            return ContributionMetrics._get_git_contribution_metrics(root=root)
+            metrics = ContributionMetrics._get_git_contribution_metrics(root=root)
+            source = "based on Git commits"
+        else:
+            metrics = ContributionMetrics._get_non_git_contribution_metrics(root=root)
+            source = "based on file counts"
 
-        return ContributionMetrics._get_non_git_contribution_metrics(root=root)
+        return metrics, source
 
     @staticmethod
     def _get_git_project_duration(root: Path) -> tuple[timedelta, str]:
@@ -87,11 +159,9 @@ class ContributionMetrics:
         start_time = min(commit_dates)
         end_time = max(commit_dates)
 
-        duration: timedelta = end_time - start_time
-
-        formatted = f"Started: {start_time.date()}, Ended: {end_time.date()}"
-
-        return duration, formatted
+        return ContributionMetrics._format_project_duration(
+            start_time=start_time, end_time=end_time
+        )
 
     @staticmethod
     def _get_non_git_project_duration(root: Path) -> tuple[timedelta, str]:
@@ -145,11 +215,9 @@ class ContributionMetrics:
         start_time = min(timestamps)
         end_time = max(timestamps)
 
-        duration: timedelta = end_time - start_time
-
-        formatted = f"Started: {start_time.date()}, Ended: {end_time.date()}"
-
-        return duration, formatted
+        return ContributionMetrics._format_project_duration(
+            start_time=start_time, end_time=end_time
+        )
 
     @staticmethod
     def _get_file_category(filepath: str) -> str:
