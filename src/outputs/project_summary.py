@@ -6,10 +6,27 @@ Author: Chris Hill
 import json
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import MetaData, Table, func, select
 from sqlalchemy.orm import Session
 
 from capstone_project_team_5.data.db import get_session
+
+# Simple cache for reflected Table objects keyed by (engine id, table name).
+_TABLE_CACHE: dict[tuple[int, str], Table] = {}
+
+
+def _get_table(name: str, bind) -> Table:
+    """Reflect and return a Table object for `name` using the given bind.
+
+    Caches the Table per-engine to avoid repeated reflection overhead.
+    """
+    key = (id(bind), name)
+    if key in _TABLE_CACHE:
+        return _TABLE_CACHE[key]
+    md = MetaData()
+    tbl = Table(name, md, autoload_with=bind)
+    _TABLE_CACHE[key] = tbl
+    return tbl
 
 
 class ProjectSummary:
@@ -23,65 +40,71 @@ class ProjectSummary:
     """
 
     @staticmethod
-    def _get_connection() -> Session:
-        """Return a SQLAlchemy Session context manager from the application.
+    def _get_connection():
+        """Return the session context manager from the app DB wiring.
 
-        Use the shared `get_session()` to provide consistent session
-        configuration (transactions, expire_on_commit, etc.). Callers should
-        use this as a context manager: `with cls._get_connection() as session:`
+        This yields a SQLAlchemy Session when used as a context manager:
+            with ProjectSummary._get_connection() as session:
+                ...
         """
         return get_session()
 
     @classmethod
-    def _get_project_metadata(cls, conn: Session, project_name: str) -> dict[str, Any] | None:
-        project_sql = text(
-            """
-            SELECT id, name, description, is_collaborative, start_date, end_date,
-                   language, framework, importance_rank
-            FROM Project
-            WHERE name = :name
-            """
-        )
-        res = conn.execute(project_sql, {"name": project_name})
+    def _get_project_metadata(cls, session: Session, project_name: str) -> dict[str, Any] | None:
+        engine = session.get_bind()
+        project_tbl = _get_table("Project", engine)
+        stmt = select(
+            project_tbl.c.id,
+            project_tbl.c.name,
+            project_tbl.c.description,
+            project_tbl.c.is_collaborative,
+            project_tbl.c.start_date,
+            project_tbl.c.end_date,
+            project_tbl.c.language,
+            project_tbl.c.framework,
+            project_tbl.c.importance_rank,
+        ).where(project_tbl.c.name == project_name)
+
+        res = session.execute(stmt)
         return res.mappings().fetchone()
 
     @classmethod
-    def _get_artifact_counts(cls, conn: Session, pid: int) -> dict[str, int]:
-        artifacts_sql = text(
-            """
-            SELECT type, COUNT(*) AS count
-            FROM Artifact
-            WHERE project_id = :pid
-            GROUP BY type
-            """
+    def _get_artifact_counts(cls, session: Session, pid: int) -> dict[str, int]:
+        engine = session.get_bind()
+        artifact_tbl = _get_table("Artifact", engine)
+        stmt = (
+            select(artifact_tbl.c.type, func.count().label("count"))
+            .where(artifact_tbl.c.project_id == pid)
+            .group_by(artifact_tbl.c.type)
         )
-        res = conn.execute(artifacts_sql, {"pid": pid})
+        res = session.execute(stmt)
         return {row["type"]: row["count"] for row in res.mappings().all()}
 
     @classmethod
-    def _get_contrib_counts(cls, conn: Session, pid: int) -> dict[str, int]:
-        contrib_sql = text(
-            """
-            SELECT activity_type, COUNT(*) AS count
-            FROM Contribution
-            WHERE project_id = :pid
-            GROUP BY activity_type
-            """
+    def _get_contrib_counts(cls, session: Session, pid: int) -> dict[str, int]:
+        engine = session.get_bind()
+        contrib_tbl = _get_table("Contribution", engine)
+        stmt = (
+            select(contrib_tbl.c.activity_type, func.count().label("count"))
+            .where(contrib_tbl.c.project_id == pid)
+            .group_by(contrib_tbl.c.activity_type)
         )
-        res = conn.execute(contrib_sql, {"pid": pid})
+        res = session.execute(stmt)
         return {row["activity_type"]: row["count"] for row in res.mappings().all()}
 
     @classmethod
-    def _get_skills(cls, conn: Session, pid: int) -> list[str]:
-        skills_sql = text(
-            """
-            SELECT Skill.name
-            FROM Skill
-            JOIN ProjectSkill ON ProjectSkill.skill_id = Skill.id
-            WHERE ProjectSkill.project_id = :pid
-            """
+    def _get_skills(cls, session: Session, pid: int) -> list[str]:
+        engine = session.get_bind()
+        skill_tbl = _get_table("Skill", engine)
+        projectskill_tbl = _get_table("ProjectSkill", engine)
+        stmt = (
+            select(skill_tbl.c.name)
+            .select_from(
+                skill_tbl.join(projectskill_tbl, projectskill_tbl.c.skill_id == skill_tbl.c.id)
+            )
+            .where(projectskill_tbl.c.project_id == pid)
         )
-        res = conn.execute(skills_sql, {"pid": pid})
+        res = session.execute(stmt)
         return [row["name"] for row in res.mappings().all()]
 
     @classmethod

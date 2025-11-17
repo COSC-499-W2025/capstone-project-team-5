@@ -140,15 +140,17 @@ def test_portfolioitem_insert_and_retrieve(db_connection):
     # Insert a project to associate
     cursor.execute("INSERT INTO Project (name, description) VALUES (?, ?)", ("PortProj", "pdesc"))
     project_id = cursor.lastrowid
-    # Insert a portfolio item with JSON content
+    # Insert a generic generated item with JSON content and kind='portfolio'
     content = '{"summary": "Worked on X", "highlights": ["a","b"]}'
     cursor.execute(
-        "INSERT INTO PortfolioItem (project_id, title, content) VALUES (?, ?, ?)",
-        (project_id, "Portfolio Entry 1", content),
+        "INSERT INTO GeneratedItem (project_id, kind, title, content) VALUES (?, ?, ?, ?)",
+        (project_id, "portfolio", "Portfolio Entry 1", content),
     )
     db_connection.commit()
 
-    cursor.execute("SELECT * FROM PortfolioItem WHERE project_id = ?", (project_id,))
+    cursor.execute(
+        "SELECT * FROM GeneratedItem WHERE project_id = ? AND kind = ?", (project_id, "portfolio")
+    )
     row = cursor.fetchone()
     assert row is not None
     assert row["title"] == "Portfolio Entry 1"
@@ -162,15 +164,15 @@ def test_portfolioitem_project_delete_sets_null(db_connection):
     cursor.execute("INSERT INTO Project (name, description) VALUES (?, ?)", ("PortProj2", "pdesc2"))
     project_id = cursor.lastrowid
     cursor.execute(
-        "INSERT INTO PortfolioItem (project_id, title, content) VALUES (?, ?, ?)",
-        (project_id, "Entry", '{"k": "v"}'),
+        "INSERT INTO GeneratedItem (project_id, kind, title, content) VALUES (?, ?, ?, ?)",
+        (project_id, "portfolio", "Entry", '{"k": "v"}'),
     )
     db_connection.commit()
     # Delete project
     cursor.execute("DELETE FROM Project WHERE id = ?", (project_id,))
     db_connection.commit()
     # The portfolio item's project_id should be set to NULL due to ON DELETE SET NULL
-    cursor.execute("SELECT project_id FROM PortfolioItem WHERE title = ?", ("Entry",))
+    cursor.execute("SELECT project_id FROM GeneratedItem WHERE title = ?", ("Entry",))
     row = cursor.fetchone()
     assert row is not None
     assert row[0] is None
