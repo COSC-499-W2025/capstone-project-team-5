@@ -7,6 +7,8 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 
+from capstone_project_team_5.cli import _display_project_analyses
+from capstone_project_team_5.consent_tool import ConsentTool
 from capstone_project_team_5.data import db as db_module
 from capstone_project_team_5.data.db import get_session
 from capstone_project_team_5.data.models import Project, UploadRecord
@@ -140,3 +142,49 @@ def test_empty_directories_are_not_projects(temp_db: None, tmp_path: Path) -> No
 
     assert "filled" in rel_paths
     assert "empty_dir" not in rel_paths
+
+
+def test_project_importance_ranking_stored(temp_db: None, tmp_path: Path) -> None:
+    """Verify that project importance ranks are calculated and stored in database."""
+    zip_path = tmp_path / "ranking_test.zip"
+    _create_zip(
+        zip_path,
+        entries=[
+            ("project1/main.py", b"print('project1')\n"),
+            ("project1/utils.py", b"def util():\n    pass\n"),
+            ("project1/test_main.py", b"def test_something():\n    pass\n"),
+            ("project2/app.js", b"console.log('project2');\n"),
+            ("project3/README.md", b"# Project 3\n"),
+        ],
+    )
+
+    result = upload_zip(zip_path)
+
+    with ZipFile(zip_path) as archive:
+        extract_path = tmp_path / "extracted"
+        extract_path.mkdir()
+        archive.extractall(extract_path)
+
+    consent_tool = ConsentTool()
+    _display_project_analyses(
+        extract_root=extract_path,
+        projects=result.projects,
+        consent_tool=consent_tool,
+    )
+
+    with get_session() as session:
+        projects = session.query(Project).all()
+        ranked_projects = [p for p in projects if p.importance_rank is not None]
+
+        assert len(ranked_projects) > 0
+
+        ranks = [p.importance_rank for p in ranked_projects if p.importance_rank is not None]
+        assert all(isinstance(rank, int) for rank in ranks)
+        assert min(ranks) == 1
+        assert all(rank > 0 for rank in ranks)
+
+        scored_projects = [p for p in projects if p.importance_score is not None]
+        assert len(scored_projects) > 0
+        scores = [p.importance_score for p in scored_projects if p.importance_score is not None]
+        assert all(isinstance(score, float) for score in scores)
+        assert all(score >= 0 for score in scores)
