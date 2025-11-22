@@ -344,7 +344,7 @@ class CFileAnalyzer:
         """
         try:
             content = file_path.read_text(encoding="utf-8", errors="ignore")
-        except (OSError, UnicodeDecodeError):
+        except Exception:
             return None
 
         # Calculate relative path
