@@ -173,7 +173,8 @@ def test_project_importance_ranking_stored(temp_db: None, tmp_path: Path) -> Non
     )
 
     with get_session() as session:
-        projects = session.query(Project).all()
+        upload_record = session.query(UploadRecord).filter_by(filename=result.filename).one()
+        projects = session.query(Project).filter_by(upload_id=upload_record.id).all()
         ranked_projects = [p for p in projects if p.importance_rank is not None]
 
         assert len(ranked_projects) > 0
