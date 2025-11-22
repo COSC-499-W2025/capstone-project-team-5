@@ -281,3 +281,108 @@ class ContributionMetrics:
             category_counts[category] += 1
 
         return dict(category_counts)
+
+    @staticmethod
+    def calculate_importance_score(
+        metrics: dict[str, int], duration: timedelta, file_count: int
+    ) -> tuple[float, dict[str, float]]:
+        """
+        Calculate an importance score for a project based on contribution metrics.
+
+        The score combines multiple factors:
+        - Total contribution count (sum of all contribution types)
+        - Contribution diversity (number of different contribution types)
+        - Project duration (longer projects get higher score)
+        - File count (more files = higher score)
+
+        Args:
+            metrics: Dictionary mapping contribution types to their counts.
+            duration: Project duration as timedelta.
+            file_count: Number of files in the project.
+
+        Returns:
+            Tuple of (score, breakdown) where:
+            - score: Float score representing project importance (higher = more important)
+            - breakdown: Dictionary with component scores for display
+        """
+        total_contributions = sum(metrics.values()) if metrics else 0
+
+        diversity = len([v for v in metrics.values() if v > 0]) if metrics else 0
+
+        duration_days = max(duration.days, 0)
+
+        duration_score = min(duration_days / 365.0, 1.0) * 100
+
+        file_score = min(file_count / 100.0, 1.0) * 50
+
+        contribution_score = total_contributions * 2.0
+
+        diversity_bonus = diversity * 10.0
+
+        score = contribution_score + diversity_bonus + duration_score + file_score
+
+        breakdown = {
+            "contribution_score": contribution_score,
+            "diversity_bonus": diversity_bonus,
+            "duration_score": duration_score,
+            "file_score": file_score,
+            "total_contributions": float(total_contributions),
+            "diversity_count": float(diversity),
+        }
+
+        return score, breakdown
+
+    @staticmethod
+    def format_score_breakdown(score: float, breakdown: dict[str, float]) -> str:
+        """
+        Format the importance score breakdown for CLI display.
+
+        Args:
+            score: Total importance score.
+            breakdown: Dictionary with component scores.
+
+        Returns:
+            Formatted string showing score breakdown.
+        """
+        lines = [f"⭐ Importance Score: {score:.1f}"]
+        lines.append("   Breakdown:")
+        contrib_total = breakdown["total_contributions"]
+        contrib_score = breakdown["contribution_score"]
+        lines.append(f"   • Contributions: {contrib_score:.1f} ({contrib_total:.0f} total)")
+        div_bonus = breakdown["diversity_bonus"]
+        div_count = breakdown["diversity_count"]
+        lines.append(f"   • Diversity Bonus: {div_bonus:.1f} ({div_count:.0f} types)")
+        lines.append(f"   • Duration: {breakdown['duration_score']:.1f}")
+        lines.append(f"   • File Count: {breakdown['file_score']:.1f}")
+        return "\n".join(lines)
+
+    @staticmethod
+    def rank_projects(projects: list[tuple[int, float]]) -> list[tuple[int, int]]:
+        """
+        Assign ranks to projects based on their importance scores.
+
+        Projects are ranked in descending order of score (highest score = rank 1).
+        Projects with the same score receive the same rank (ties).
+
+        Args:
+            projects: List of (project_id, score) tuples.
+
+        Returns:
+            List of (project_id, rank) tuples, sorted by rank ascending.
+        """
+        if not projects:
+            return []
+
+        sorted_projects = sorted(projects, key=lambda x: x[1], reverse=True)
+
+        ranked: list[tuple[int, int]] = []
+        current_rank = 1
+        previous_score: float | None = None
+
+        for project_id, score in sorted_projects:
+            if previous_score is not None and score < previous_score:
+                current_rank = len(ranked) + 1
+            ranked.append((project_id, current_rank))
+            previous_score = score
+
+        return ranked
