@@ -14,6 +14,8 @@ dependencies = [
     "google-genai>=1.46.0",
     "python-dotenv>=1.2.1",
     "sqlalchemy>=2.0.20",
+    "tree-sitter>=0.25.2",
+    "tree-sitter-java>=0.23.5",
 ]
 
 [project.scripts]
