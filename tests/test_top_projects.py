@@ -44,6 +44,40 @@ def temp_db(tmp_path: Path):
         Column("importance_rank", Integer),
     )
 
+    # Additional tables expected by ProjectSummary when reflecting
+    artifact_tbl = Table(
+        "Artifact",
+        md,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("project_id", Integer, nullable=False),
+        Column("path", Text, nullable=False),
+        Column("type", Text, nullable=False),
+    )
+
+    contrib_tbl = Table(
+        "Contribution",
+        md,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("project_id", Integer, nullable=False),
+        Column("artifact_id", Integer),
+        Column("activity_type", Text, nullable=False),
+    )
+
+    skill_tbl = Table(
+        "Skill",
+        md,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("name", Text, nullable=False),
+    )
+
+    projectskill_tbl = Table(
+        "ProjectSkill",
+        md,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("project_id", Integer, nullable=False),
+        Column("skill_id", Integer, nullable=False),
+    )
+
     md.create_all(engine)
 
     # Insert some projects with varying importance_rank
