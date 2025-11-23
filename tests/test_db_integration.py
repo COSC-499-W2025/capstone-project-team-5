@@ -27,6 +27,12 @@ def _temporary_db_url(url: str) -> Iterator[None]:
 @pytest.fixture(autouse=True)
 def in_memory_db() -> Iterator[None]:
     with _temporary_db_url("sqlite:///:memory:"):
+        # Reset any cached engine/session factory so tests get a fresh in-memory DB
+        import capstone_project_team_5.data.db as app_db
+
+        app_db._engine = None
+        app_db._SessionLocal = None
+
         init_db()
         yield
 
