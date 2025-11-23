@@ -162,7 +162,7 @@ This week I've finalized refactoring all code, including code for Requirement 16
 
 <details>
   <summary><h3></h3></summary>
-
+<img alt="Screenshot 2025-11-23 120204" src="https://github.com/user-attachments/assets/acfe15a3-33aa-44aa-bec9-c2f2c47c72a1" />
 
 
 Coming back from reading week, we started the week off by reorienting the group and discussing the priorities for the final weeks of Milestone #1. For myself, I worked on completing code for Requirement 18: "Summarize the top-ranked projects." This went well, and next week I plan on contributing to whatever final integrations we need, including the possibility of deeper analysis of code contributions in different programming languages.
