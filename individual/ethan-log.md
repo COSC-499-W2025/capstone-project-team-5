@@ -66,3 +66,13 @@ This week time was spent in team meetings on monday discussing what is needed go
 | Refactoring| Done | Refactored previous features and added to main program CLI. |
 
 ![screenshot](Week10_checklist.png)
+
+## Week #12 (November 17 - November 23)
+
+This week time was spenting coding specific analysis for each major programming language to deepen our project analysis insights. I worked on JavaScript / TypeScript projects. The feature is complete. Next sprint time will be spent refactoring and making sure that all is met for the upcoming milestone.
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| JS/TS | Done | JS/TS project analysis to create resume-relevant insights. |
+
+![screenshot](Week12_checklist.png)
