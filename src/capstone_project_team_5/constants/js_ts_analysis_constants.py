@@ -1,0 +1,151 @@
+INTEGRATION_MAP = {
+    # Payment processing
+    "stripe": ("payment", "Stripe"),
+    "@stripe/stripe-js": ("payment", "Stripe"),
+    "paypal": ("payment", "PayPal"),
+    "braintree": ("payment", "Braintree"),
+    # Maps & Location
+    "google-maps": ("maps", "Google Maps"),
+    "@googlemaps/js-api-loader": ("maps", "Google Maps"),
+    "mapbox": ("maps", "Mapbox"),
+    "mapbox-gl": ("maps", "Mapbox"),
+    "leaflet": ("maps", "Leaflet"),
+    # Authentication
+    "auth0": ("auth", "Auth0"),
+    "@auth0/auth0-react": ("auth", "Auth0"),
+    "passport": ("auth", "Passport.js"),
+    "next-auth": ("auth", "NextAuth"),
+    "firebase": ("auth", "Firebase Auth"),
+    # Cloud Services
+    "aws-sdk": ("cloud", "AWS SDK"),
+    "@aws-sdk/client-s3": ("cloud", "AWS S3"),
+    "@aws-sdk/client-dynamodb": ("cloud", "AWS DynamoDB"),
+    "firebase-admin": ("cloud", "Firebase"),
+    "@google-cloud/storage": ("cloud", "Google Cloud Storage"),
+    # Email
+    "sendgrid": ("email", "SendGrid"),
+    "@sendgrid/mail": ("email", "SendGrid"),
+    "nodemailer": ("email", "Nodemailer"),
+    "mailgun": ("email", "Mailgun"),
+    # Analytics
+    "google-analytics": ("analytics", "Google Analytics"),
+    "mixpanel": ("analytics", "Mixpanel"),
+    "segment": ("analytics", "Segment"),
+    # Data Visualization
+    "chart.js": ("visualization", "Chart.js"),
+    "recharts": ("visualization", "Recharts"),
+    "d3": ("visualization", "D3.js"),
+    "plotly.js": ("visualization", "Plotly"),
+    # Social Media
+    "facebook-sdk": ("social", "Facebook SDK"),
+    "twitter": ("social", "Twitter API"),
+    # Real-time
+    "socket.io": ("realtime", "Socket.IO"),
+    "socket.io-client": ("realtime", "Socket.IO"),
+    "pusher": ("realtime", "Pusher"),
+    # Database ORMs/Clients
+    "prisma": ("database", "Prisma"),
+    "@prisma/client": ("database", "Prisma"),
+    "mongoose": ("database", "Mongoose"),
+    "typeorm": ("database", "TypeORM"),
+    "sequelize": ("database", "Sequelize"),
+    # UI Libraries
+    "@mui/material": ("ui", "Material-UI"),
+    "@material-ui/core": ("ui", "Material-UI"),
+    "antd": ("ui", "Ant Design"),
+    "react-bootstrap": ("ui", "React Bootstrap"),
+    "chakra-ui": ("ui", "Chakra UI"),
+    "@headlessui/react": ("ui", "Headless UI"),
+}
+
+# Feature detection patterns
+FEATURE_PATTERNS = {
+    "authentication": [
+        r"jwt\.sign",
+        r"passport\.",
+        r"bcrypt",
+        r"jsonwebtoken",
+        r"localStorage\.setItem.*token",
+        r"Authorization.*Bearer",
+        r"req\.user",
+        r"isAuthenticated",
+    ],
+    "payment_processing": [
+        r"stripe\.",
+        r"Stripe\(",
+        r"paypal",
+        r"checkout",
+        r"payment.*intent",
+    ],
+    "file_uploads": [
+        r"multer",
+        r"FormData",
+        r"file\.upload",
+        r"S3.*upload",
+        r'input.*type=["\']file',
+    ],
+    "real_time_updates": [
+        r"socket\.io",
+        r"WebSocket",
+        r"io\(",
+        r"socket\.emit",
+        r"socket\.on",
+    ],
+    "api_integration": [
+        r"axios\.",
+        r"fetch\(",
+        r"\.get\(.*http",
+        r"\.post\(.*http",
+        r"api\.",
+    ],
+    "state_management": [
+        r"createStore",
+        r"useReducer",
+        r"createSlice",
+        r"configureStore",
+        r"Provider.*store",
+    ],
+    "form_validation": [
+        r"yup",
+        r"zod",
+        r"react-hook-form",
+        r"formik",
+        r"validator\.",
+    ],
+    "responsive_design": [
+        r"@media",
+        r"useMediaQuery",
+        r"responsive",
+        r"mobile.*first",
+        r"breakpoint",
+    ],
+    "internationalization": [
+        r"i18n",
+        r"useTranslation",
+        r"react-intl",
+        r"next-i18next",
+    ],
+    "crud_operations": [
+        r"\.create\(",
+        r"\.update\(",
+        r"\.delete\(",
+        r"\.find\(",
+        r"POST.*api",
+        r"PUT.*api",
+        r"DELETE.*api",
+    ],
+    "routing": [
+        r"react-router",
+        r"<Route",
+        r"useRouter",
+        r"useNavigate",
+        r"router\.push",
+    ],
+    "data_visualization": [
+        r"Chart",
+        r"d3\.",
+        r"<LineChart",
+        r"<BarChart",
+        r"svg.*path",
+    ],
+}
