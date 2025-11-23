@@ -117,3 +117,142 @@ def test_non_git_metrics(tmp_path: Path):
         assert metrics[category] == len(files)
 
     assert source == "based on file counts"
+
+
+def test_calculate_importance_score_basic():
+    """Test basic importance score calculation."""
+    metrics = {"code": 10, "test": 5, "document": 2}
+    duration = timedelta(days=365)
+    file_count = 50
+
+    score, breakdown = ContributionMetrics.calculate_importance_score(metrics, duration, file_count)
+
+    assert isinstance(score, float)
+    assert score > 0
+    assert isinstance(breakdown, dict)
+    assert "contribution_score" in breakdown
+    assert "diversity_bonus" in breakdown
+    assert "duration_score" in breakdown
+    assert "file_score" in breakdown
+
+
+def test_calculate_importance_score_empty_metrics():
+    """Test importance score with empty metrics."""
+    metrics = {}
+    duration = timedelta(days=30)
+    file_count = 10
+
+    score, breakdown = ContributionMetrics.calculate_importance_score(metrics, duration, file_count)
+
+    assert isinstance(score, float)
+    assert score >= 0
+    assert isinstance(breakdown, dict)
+
+
+def test_calculate_importance_score_zero_duration():
+    """Test importance score with zero duration."""
+    metrics = {"code": 5}
+    duration = timedelta(days=0)
+    file_count = 20
+
+    score, breakdown = ContributionMetrics.calculate_importance_score(metrics, duration, file_count)
+
+    assert isinstance(score, float)
+    assert score > 0
+    assert breakdown["duration_score"] == 0.0
+
+
+def test_calculate_importance_score_diversity_bonus():
+    """Test that projects with more diverse contributions get higher scores."""
+    metrics_diverse = {"code": 10, "test": 5, "document": 3, "devops": 2}
+    metrics_single = {"code": 20}
+    duration = timedelta(days=100)
+    file_count = 30
+
+    score_diverse, _ = ContributionMetrics.calculate_importance_score(
+        metrics_diverse, duration, file_count
+    )
+    score_single, _ = ContributionMetrics.calculate_importance_score(
+        metrics_single, duration, file_count
+    )
+
+    assert score_diverse > score_single
+
+
+def test_calculate_importance_score_duration_factor():
+    """Test that longer projects get higher scores."""
+    metrics = {"code": 10}
+    duration_short = timedelta(days=30)
+    duration_long = timedelta(days=365)
+    file_count = 20
+
+    score_short, _ = ContributionMetrics.calculate_importance_score(
+        metrics, duration_short, file_count
+    )
+    score_long, _ = ContributionMetrics.calculate_importance_score(
+        metrics, duration_long, file_count
+    )
+
+    assert score_long > score_short
+
+
+def test_format_score_breakdown():
+    """Test formatting of score breakdown for display."""
+    score = 150.5
+    breakdown = {
+        "contribution_score": 100.0,
+        "diversity_bonus": 30.0,
+        "duration_score": 15.0,
+        "file_score": 5.5,
+        "total_contributions": 50.0,
+        "diversity_count": 3.0,
+    }
+
+    formatted = ContributionMetrics.format_score_breakdown(score, breakdown)
+
+    assert "Importance Score: 150.5" in formatted
+    assert "Contributions:" in formatted
+    assert "Diversity Bonus:" in formatted
+    assert "Duration:" in formatted
+    assert "File Count:" in formatted
+
+
+def test_rank_projects_basic():
+    """Test basic project ranking."""
+    projects = [(1, 100.0), (2, 50.0), (3, 150.0)]
+
+    ranked = ContributionMetrics.rank_projects(projects)
+
+    assert len(ranked) == 3
+    assert ranked[0] == (3, 1)
+    assert ranked[1] == (1, 2)
+    assert ranked[2] == (2, 3)
+
+
+def test_rank_projects_ties():
+    """Test that projects with same score get same rank."""
+    projects = [(1, 100.0), (2, 100.0), (3, 50.0)]
+
+    ranked = ContributionMetrics.rank_projects(projects)
+
+    assert len(ranked) == 3
+    assert ranked[0][1] == 1
+    assert ranked[1][1] == 1
+    assert ranked[2][1] == 3
+
+
+def test_rank_projects_empty():
+    """Test ranking with empty project list."""
+    ranked = ContributionMetrics.rank_projects([])
+
+    assert ranked == []
+
+
+def test_rank_projects_single():
+    """Test ranking with single project."""
+    projects = [(1, 100.0)]
+
+    ranked = ContributionMetrics.rank_projects(projects)
+
+    assert len(ranked) == 1
+    assert ranked[0] == (1, 1)
