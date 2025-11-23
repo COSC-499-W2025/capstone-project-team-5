@@ -11,6 +11,7 @@ Provides two modes:
 This module intentionally reuses `ProjectSummary` for per-project summaries
 and `ContributionMetrics` for computing importance scores.
 """
+
 from __future__ import annotations
 
 import json
@@ -83,11 +84,7 @@ def compute_top_projects_from_paths(paths: dict[int, Path], n: int = 3) -> list[
         else:
             file_count = sum(1 for f in root.rglob("*") if f.is_file())
 
-        score, breakdown = (
-            ContributionMetrics.calculate_importance_score(
-                metrics, duration, file_count
-            )
-        )
+        score, breakdown = ContributionMetrics.calculate_importance_score(metrics, duration, file_count)
         scores.append((pid, float(score), breakdown, source))
 
     # sort descending by score
