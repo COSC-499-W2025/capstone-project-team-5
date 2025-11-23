@@ -1,19 +1,17 @@
-import json
 from pathlib import Path
 
 import pytest
 from sqlalchemy import (
-    create_engine,
-    MetaData,
-    Table,
+    Boolean,
     Column,
     Integer,
+    MetaData,
+    Table,
     Text,
-    Boolean,
-    select,
+    create_engine,
 )
 
-from outputs.top_projects import get_top_projects_from_db, compute_top_projects_from_paths
+from outputs.top_projects import compute_top_projects_from_paths, get_top_projects_from_db
 
 
 def _reset_app_db():
@@ -45,7 +43,7 @@ def temp_db(tmp_path: Path):
     )
 
     # Additional tables expected by ProjectSummary when reflecting
-    artifact_tbl = Table(
+    Table(
         "Artifact",
         md,
         Column("id", Integer, primary_key=True, autoincrement=True),
@@ -54,7 +52,7 @@ def temp_db(tmp_path: Path):
         Column("type", Text, nullable=False),
     )
 
-    contrib_tbl = Table(
+    Table(
         "Contribution",
         md,
         Column("id", Integer, primary_key=True, autoincrement=True),
@@ -63,14 +61,14 @@ def temp_db(tmp_path: Path):
         Column("activity_type", Text, nullable=False),
     )
 
-    skill_tbl = Table(
+    Table(
         "Skill",
         md,
         Column("id", Integer, primary_key=True, autoincrement=True),
         Column("name", Text, nullable=False),
     )
 
-    projectskill_tbl = Table(
+    Table(
         "ProjectSkill",
         md,
         Column("id", Integer, primary_key=True, autoincrement=True),

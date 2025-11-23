@@ -15,12 +15,12 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import MetaData, Table, select
 
-from capstone_project_team_5.data.db import get_session
 from capstone_project_team_5.contribution_metrics import ContributionMetrics
+from capstone_project_team_5.data.db import get_session
 from outputs.project_summary import ProjectSummary
 
 
@@ -29,13 +29,13 @@ def _reflect_table(name: str, bind) -> Table:
     return Table(name, md, autoload_with=bind)
 
 
-def get_top_projects_from_db(n: int = 3) -> List[Dict[str, Any]]:
+def get_top_projects_from_db(n: int = 3) -> list[dict[str, Any]]:
     """Return top `n` projects by `importance_rank` from the DB.
 
     Each returned entry includes the `importance_rank` and the
     `ProjectSummary.summarize(...)` payload.
     """
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
     with get_session() as session:
         engine = session.get_bind()
         project_tbl = _reflect_table("Project", engine)
@@ -60,7 +60,7 @@ def get_top_projects_from_db(n: int = 3) -> List[Dict[str, Any]]:
     return results
 
 
-def compute_top_projects_from_paths(paths: Dict[int, Path], n: int = 3) -> List[Dict[str, Any]]:
+def compute_top_projects_from_paths(paths: dict[int, Path], n: int = 3) -> list[dict[str, Any]]:
     """Compute importance scores for projects by filesystem analysis.
 
     Args:
@@ -71,28 +71,35 @@ def compute_top_projects_from_paths(paths: Dict[int, Path], n: int = 3) -> List[
         List of dictionaries with keys: `project_id`, `score`, `breakdown`,
         `metrics_source`, and optionally `summary` if the project exists in the DB.
     """
-    scores: List[tuple[int, float, dict, str]] = []  # (pid, score, breakdown, source)
+    scores: list[tuple[int, float, dict, str]] = []  # (pid, score, breakdown, source)
 
     for pid, root in paths.items():
         metrics, source = ContributionMetrics.get_project_contribution_metrics(root)
         duration, _ = ContributionMetrics.get_project_duration(root)
 
         # file_count: fallback to sum of metrics when available, else count files
-        file_count = int(sum(metrics.values())) if metrics else sum(1 for f in root.rglob("*") if f.is_file())
+        if metrics:
+            file_count = int(sum(metrics.values()))
+        else:
+            file_count = sum(1 for f in root.rglob("*") if f.is_file())
 
-        score, breakdown = ContributionMetrics.calculate_importance_score(metrics, duration, file_count)
+        score, breakdown = (
+            ContributionMetrics.calculate_importance_score(
+                metrics, duration, file_count
+            )
+        )
         scores.append((pid, float(score), breakdown, source))
 
     # sort descending by score
     scores.sort(key=lambda t: t[1], reverse=True)
 
-    top: List[Dict[str, Any]] = []
+    top: list[dict[str, Any]] = []
     with get_session() as session:
         engine = session.get_bind()
         project_tbl = _reflect_table("Project", engine)
 
         for pid, score, breakdown, source in scores[:n]:
-            entry: Dict[str, Any] = {
+            entry: dict[str, Any] = {
                 "project_id": pid,
                 "score": score,
                 "breakdown": breakdown,
@@ -100,7 +107,8 @@ def compute_top_projects_from_paths(paths: Dict[int, Path], n: int = 3) -> List[
             }
 
             # Try to enrich with DB summary if project exists
-            res = session.execute(select(project_tbl.c.name).where(project_tbl.c.id == pid)).mappings().fetchone()
+            stmt = select(project_tbl.c.name).where(project_tbl.c.id == pid)
+            res = session.execute(stmt).mappings().fetchone()
             if res is not None:
                 try:
                     entry["summary"] = ProjectSummary.summarize(res["name"])  # type: ignore[arg-type]
@@ -112,7 +120,9 @@ def compute_top_projects_from_paths(paths: Dict[int, Path], n: int = 3) -> List[
     return top
 
 
-def display_top_projects(mode: str = "db", n: int = 3, paths: Optional[Dict[int, Path]] = None) -> None:
+def display_top_projects(
+    mode: str = "db", n: int = 3, paths: dict[int, Path] | None = None
+) -> None:
     """Print the top projects as formatted JSON.
 
     mode: 'db' to use stored importance_rank, 'computed' to calculate scores from paths.
