@@ -72,6 +72,10 @@ def compute_top_projects_from_paths(paths: dict[int, Path], n: int = 3) -> list[
         List of dictionaries with keys: `project_id`, `score`, `breakdown`,
         `metrics_source`, and optionally `summary` if the project exists in the DB.
     """
+    if n <= 0:
+    	raise ValueError("n must be a positive integer")
+  	if not paths:
+  		raise ValueError("paths cannot be empty")
     scores: list[tuple[int, float, dict, str]] = []  # (pid, score, breakdown, source)
 
     for pid, root in paths.items():
