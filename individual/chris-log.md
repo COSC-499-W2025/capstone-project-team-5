@@ -157,3 +157,28 @@ This week I've finalized refactoring all code, including code for Requirement 16
 | Reorganize GitHub Branches | In Progress | Finally merge develop into main. |
 | Further Planning | Not Yet Started | Discuss next steps with group in preparation for return to classes. |
 </details>
+
+## Week 12 | 16 November - 23 November 2025
+
+<details>
+  <summary><h3></h3></summary>
+
+
+
+Coming back from reading week, we started the week off by reorienting the group and discussing the priorities for the final weeks of Milestone #1. For myself, I worked on completing code for Requirement 18: "Summarize the top-ranked projects." This went well, and next week I plan on contributing to whatever final integrations we need, including the possibility of deeper analysis of code contributions in different programming languages.
+
+### Previous Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Reorganize GitHub Branches | In Progress | Merge main into develop; waiting for reviews to merge. |
+| Further Planning | In Progress | Discussed the final steps with regards to completing all necessary requirements. |
+| Write R18 Code | Completed | Summarize the top-ranked projects. |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Reorganize GitHub Branches | In Progress | Merge develop into main (possibly wait for Milestone #1 completion). |
+| Further Planning | In Progress | Discuss next steps with group with regards to final integration prior to Milestone #1 completion. |
+| Write Code for Deep Analysis | Not Yet Started | Write and finalize code for deeper code analysis on any necessary missing programming languages. |
+</details>
