@@ -33,7 +33,16 @@ def generate_c_bullets(summary: CProjectSummary, *, max_bullets: int = 6) -> lis
             f"across {summary.total_files} files, demonstrating proficiency in systems programming"
         )
     else:
-        bullets.append(
+        if summary.total_functions > 0:
+	        bullets.append(
+		        f"Developed a C/C++ library containing {summary.total_functions} functions "
+		        f"across {summary.total_lines_of_code:,} lines of well-structured code"
+	        )
+        else:
+        	bullets.append(
+        		f"Developed a C/C++ library with {summary.total_lines_of_code:,} lines "
+        		f"of well-structured code across {summary.total_files} files"
+      		)
             f"Developed a C/C++ library containing {summary.total_functions} functions "
             f"across {summary.total_lines_of_code:,} lines of well-structured code"
         )
