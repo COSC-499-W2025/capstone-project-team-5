@@ -12,7 +12,6 @@ from typing import Any
 
 import easygui as eg
 
-from capstone_project_team_5.constants.skill_detection_constants import SKIP_DIRS
 from capstone_project_team_5.data.db import get_session
 from capstone_project_team_5.data.models import ConsentRecord
 
@@ -219,11 +218,11 @@ Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
                 self.external_services = {
                     service: {"allowed": True} for service in selected_services
                 }
-                
+
                 # Check if user wants to use LLM features
                 if self._check_llm_in_services(selected_services):
                     self._configure_llm_preferences()
-                
+
                 eg.msgbox(
                     f"Thank you for agreeing. Selected services: {', '.join(selected_services)}",
                     title="Welcome!",
@@ -320,27 +319,27 @@ Default: Gemini (Google) is pre-selected as the first choice."""
 
         if selected and len(selected) > 0:
             ai_model_preferences = selected
-            
+
             # If more than one model selected, let user set priority
             if len(selected) > 1:
                 ai_model_preferences = self._set_model_priority(selected)
-            
+
             # Store AI config in external_services under "llm" key
             self.external_services["llm"] = {
                 "allowed": True,
-                "model_preferences": ai_model_preferences
+                "model_preferences": ai_model_preferences,
             }
-            
+
             eg.msgbox(
-                f"AI models configured with priority order:\n\n" + 
-                "\n".join([f"{i+1}. {model}" for i, model in enumerate(ai_model_preferences)]),
+                "AI models configured with priority order:\n\n"
+                + "\n".join([f"{i + 1}. {model}" for i, model in enumerate(ai_model_preferences)]),
                 title="AI Configuration Complete",
             )
         else:
             # Default to Gemini if nothing selected
             self.external_services["llm"] = {
                 "allowed": True,
-                "model_preferences": ["Gemini (Google)"]
+                "model_preferences": ["Gemini (Google)"],
             }
             eg.msgbox(
                 "No models selected. Defaulting to Gemini (Google).",
@@ -352,7 +351,7 @@ Default: Gemini (Google) is pre-selected as the first choice."""
 
         Args:
             selected_models: List of selected AI model names.
-            
+
         Returns:
             List of models in priority order.
         """
@@ -371,9 +370,9 @@ The application will try them in this order if one fails or is unavailable."""
                 break
 
             choice = eg.choicebox(
-                f"{msg}\n\nAlready selected ({len(ordered_models)}):\n" +
-                "\n".join([f"  {i+1}. {m}" for i, m in enumerate(ordered_models)]) +
-                f"\n\nSelect priority #{len(ordered_models) + 1}:",
+                f"{msg}\n\nAlready selected ({len(ordered_models)}):\n"
+                + "\n".join([f"  {i + 1}. {m}" for i, m in enumerate(ordered_models)])
+                + f"\n\nSelect priority #{len(ordered_models) + 1}:",
                 title=f"Priority Selection ({len(ordered_models) + 1}/{len(selected_models)})",
                 choices=remaining,
             )
@@ -404,11 +403,6 @@ These patterns will be excluded from scanning:
 
 The default selections are recommended for most projects.
 You can add custom patterns later."""
-
-        # Get default patterns from SKIP_DIRS constant
-        default_patterns = sorted(list(SKIP_DIRS) + [
-            ".DS_Store", "Thumbs.db", "*.log", "logs", "tmp", "temp", ".tmp"
-        ])
 
         # Pre-select all default patterns
         selected = eg.multchoicebox(
@@ -446,8 +440,12 @@ You can add custom patterns later."""
         while True:
             pattern = eg.enterbox(
                 "Enter a custom ignore pattern (e.g., '*.tmp', 'my_folder', '*.bak'):\n\n"
-                "Current custom patterns:\n" +
-                ("\n".join([f"  - {p}" for p in custom_patterns]) if custom_patterns else "  (none)"),
+                "Current custom patterns:\n"
+                + (
+                    "\n".join([f"  - {p}" for p in custom_patterns])
+                    if custom_patterns
+                    else "  (none)"
+                ),
                 title="Add Custom Ignore Pattern",
             )
 
