@@ -103,18 +103,14 @@ def compute_top_projects_from_paths(paths: dict[int, Path], n: int = 3) -> list[
         duration = 0
 
         if root_path is None or not root_path.exists() or not root_path.is_dir():
-            logger.warning(
-                "Project %s path missing or not a directory: %r", pid_int, root
-            )
+            logger.warning("Project %s path missing or not a directory: %r", pid_int, root)
             metrics = {}
             source = "missing_path"
             file_count = 0
         else:
             # Safely call metric collection and duration helpers; these may raise
             try:
-                metrics, source = ContributionMetrics.get_project_contribution_metrics(
-                    root_path
-                )
+                metrics, source = ContributionMetrics.get_project_contribution_metrics(root_path)
             except Exception as exc:  # pragma: no cover - defensive
                 logger.warning(
                     "Failed to collect contribution metrics for %s (%s): %s",
@@ -155,13 +151,9 @@ def compute_top_projects_from_paths(paths: dict[int, Path], n: int = 3) -> list[
                 if metrics and isinstance(metrics, dict):
                     file_count = int(sum(metrics.values()))
                 else:
-                    file_count = sum(
-                        1 for f in root_path.rglob("*") if f.is_file()
-                    )
+                    file_count = sum(1 for f in root_path.rglob("*") if f.is_file())
             except (OSError, TypeError) as exc:  # pragma: no cover - defensive
-                logger.warning(
-                    "Failed to count files for %s (%s): %s", pid_int, root_path, exc
-                )
+                logger.warning("Failed to count files for %s (%s): %s", pid_int, root_path, exc)
                 file_count = 0
 
         # Ensure metrics is a dict for downstream code
@@ -173,9 +165,7 @@ def compute_top_projects_from_paths(paths: dict[int, Path], n: int = 3) -> list[
                 metrics, duration, file_count
             )
         except Exception as exc:  # pragma: no cover - defensive
-            logger.warning(
-                "Failed to calculate importance score for %s: %s", pid_int, exc
-            )
+            logger.warning("Failed to calculate importance score for %s: %s", pid_int, exc)
             score = 0.0
             breakdown = {}
 
