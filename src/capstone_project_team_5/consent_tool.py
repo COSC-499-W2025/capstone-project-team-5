@@ -29,6 +29,8 @@ class ConsentTool:
         consent_given: Whether main consent has been given.
         use_external_services: Whether external services consent has been given.
         external_services: Dictionary of external service configurations.
+            Each service is stored as: {"service_name": {"allowed": True, ...other config}}
+            LLM config stored as: {"llm": {"allowed": True, "model_preferences": [...]}}
         default_ignore_patterns: List of patterns to ignore during file analysis.
     """
 
@@ -41,6 +43,76 @@ class ConsentTool:
         "Google Cloud Services",
         "AWS Services",
         "Microsoft Azure",
+    ]
+
+    # Available AI models for LLM features
+    AVAILABLE_AI_MODELS: list[str] = [
+        "Gemini (Google)",
+        "GPT-4 (OpenAI)",
+        "GPT-3.5 (OpenAI)",
+        "Claude (Anthropic)",
+        "LLaMA (Meta)",
+        "Mistral AI",
+    ]
+
+    # Common file extensions and directories to ignore
+    COMMON_IGNORE_PATTERNS: list[str] = [
+        # Version control
+        ".git",
+        ".svn",
+        ".hg",
+        # Dependencies
+        "node_modules",
+        "vendor",
+        "packages",
+        "bower_components",
+        # Python environments
+        "venv",
+        ".venv",
+        "env",
+        ".env",
+        "virtualenv",
+        "__pycache__",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".tox",
+        ".nox",
+        # IDEs
+        ".idea",
+        ".vscode",
+        ".vs",
+        # Build outputs
+        "build",
+        "dist",
+        "out",
+        "target",
+        ".next",
+        ".nuxt",
+        ".gradle",
+        # Caches
+        ".cache",
+        "coverage",
+        ".nyc_output",
+        # OS files
+        ".DS_Store",
+        "Thumbs.db",
+        # Common media/binary
+        ".exe",
+        ".dll",
+        ".so",
+        ".dylib",
+        ".class",
+        ".jar",
+        ".war",
+        ".ear",
+        # Logs
+        "*.log",
+        "logs",
+        # Temp files
+        "tmp",
+        "temp",
+        ".tmp",
     ]
 
     def __init__(self) -> None:
@@ -102,7 +174,7 @@ Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
 
         This method displays the primary consent form for file access. If the user
         agrees, it proceeds to request consent for external services integration,
-        then records the configuration.
+        LLM preferences, and file ignore patterns, then records the configuration.
 
         Returns:
             True if user agrees to main consent, False otherwise.
@@ -113,10 +185,10 @@ Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
 
         if main_consent_given:
             self.consent_given = True
+            # Configure file ignore patterns
+            self.default_ignore_patterns = self._configure_ignore_patterns()
             # If user agrees to main consent, request external services consent
             self.get_external_services_consent()
-            # Set default ignore patterns
-            self.default_ignore_patterns = self._get_default_ignore_patterns()
             # Record the collected configuration
             self.record_consent(self._build_config())
             return True
@@ -142,7 +214,15 @@ Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
             # Allow user to select which external services to enable
             selected_services = self._select_external_services()
             if selected_services:
-                self.external_services = {service: True for service in selected_services}
+                # Store services with 'allowed' property
+                self.external_services = {
+                    service: {"allowed": True} for service in selected_services
+                }
+
+                # Check if user wants to use LLM features
+                if self._check_llm_in_services(selected_services):
+                    self._configure_llm_preferences()
+
                 eg.msgbox(
                     f"Thank you for agreeing. Selected services: {', '.join(selected_services)}",
                     title="Welcome!",
@@ -182,6 +262,209 @@ You can select multiple services or none."""
         # multchoicebox returns None if user cancels, or a list of selected items
         return selected if selected is not None else []
 
+    def _check_llm_in_services(self, selected_services: list[str]) -> bool:
+        """Check if any LLM service is selected.
+
+        Args:
+            selected_services: List of selected service names.
+
+        Returns:
+            True if any LLM service is in the selected services.
+        """
+        llm_services = {"Gemini", "OpenAI/GPT", "Claude"}
+        return any(service in selected_services for service in llm_services)
+
+    def _configure_llm_preferences(self) -> None:
+        """Configure LLM model preferences with priority order."""
+        msg = """Would you like to use AI/LLM features for enhanced analysis?
+
+AI features include:
+- Automated resume bullet point generation
+- Project description enhancement
+- Skill analysis and recommendations
+
+Note: This requires API keys for the selected AI services."""
+
+        use_llm = eg.buttonbox(
+            msg,
+            title="AI/LLM Features",
+            choices=["Yes, configure AI", "No, skip AI features"],
+        )
+
+        if use_llm == "Yes, configure AI":
+            # Store LLM configuration in external_services
+            self._select_ai_model_preferences()
+        else:
+            eg.msgbox(
+                "AI features disabled. You can enable them later in settings.",
+                title="Notice",
+            )
+
+    def _select_ai_model_preferences(self) -> None:
+        """Allow user to select and prioritize AI models."""
+        msg = """Select your preferred AI models in order of preference.
+
+The application will try models in the order you select them.
+If the first model is unavailable, it will fall back to the next one.
+
+Default: Gemini (Google) is pre-selected as the first choice."""
+
+        # Pre-select Gemini as default
+        selected = eg.multchoicebox(
+            msg=msg,
+            title="AI Model Preferences",
+            choices=self.AVAILABLE_AI_MODELS,
+            preselect=[0],  # Pre-select first item (Gemini)
+        )
+
+        if selected and len(selected) > 0:
+            ai_model_preferences = selected
+
+            # If more than one model selected, let user set priority
+            if len(selected) > 1:
+                ai_model_preferences = self._set_model_priority(selected)
+
+            # Store AI config in external_services under "llm" key
+            self.external_services["llm"] = {
+                "allowed": True,
+                "model_preferences": ai_model_preferences,
+            }
+
+            eg.msgbox(
+                "AI models configured with priority order:\n\n"
+                + "\n".join([f"{i + 1}. {model}" for i, model in enumerate(ai_model_preferences)]),
+                title="AI Configuration Complete",
+            )
+        else:
+            # Default to Gemini if nothing selected
+            self.external_services["llm"] = {
+                "allowed": True,
+                "model_preferences": ["Gemini (Google)"],
+            }
+            eg.msgbox(
+                "No models selected. Defaulting to Gemini (Google).",
+                title="Default AI Model",
+            )
+
+    def _set_model_priority(self, selected_models: list[str]) -> list[str]:
+        """Allow user to set priority order for selected AI models.
+
+        Args:
+            selected_models: List of selected AI model names.
+
+        Returns:
+            List of models in priority order.
+        """
+        msg = """Set the priority order for your AI models.
+
+Select models one by one in your preferred order (highest priority first).
+The application will try them in this order if one fails or is unavailable."""
+
+        ordered_models: list[str] = []
+        remaining = selected_models.copy()
+
+        while remaining:
+            if len(remaining) == 1:
+                # Last item, just add it
+                ordered_models.append(remaining[0])
+                break
+
+            choice = eg.choicebox(
+                f"{msg}\n\nAlready selected ({len(ordered_models)}):\n"
+                + "\n".join([f"  {i + 1}. {m}" for i, m in enumerate(ordered_models)])
+                + f"\n\nSelect priority #{len(ordered_models) + 1}:",
+                title=f"Priority Selection ({len(ordered_models) + 1}/{len(selected_models)})",
+                choices=remaining,
+            )
+
+            if choice:
+                ordered_models.append(choice)
+                remaining.remove(choice)
+            else:
+                # User cancelled, keep remaining in original order
+                ordered_models.extend(remaining)
+                break
+
+        return ordered_models
+
+    def _configure_ignore_patterns(self) -> list[str]:
+        """Configure file and directory ignore patterns.
+
+        Returns:
+            List of patterns to ignore during file analysis.
+        """
+        msg = """Select files and directories to IGNORE during analysis.
+
+These patterns will be excluded from scanning:
+- Version control directories (.git, .svn)
+- Dependencies (node_modules, vendor)
+- Build outputs (dist, build)
+- Cache and temporary files
+
+The default selections are recommended for most projects.
+You can add custom patterns later."""
+
+        # Pre-select all default patterns
+        selected = eg.multchoicebox(
+            msg=msg,
+            title="Configure Ignore Patterns",
+            choices=self.COMMON_IGNORE_PATTERNS,
+            preselect=list(range(len(self.COMMON_IGNORE_PATTERNS))),  # Pre-select all
+        )
+
+        if selected:
+            # Show option to add custom patterns
+            add_custom = eg.buttonbox(
+                "Would you like to add custom ignore patterns?",
+                title="Custom Patterns",
+                choices=["Yes, add custom", "No, continue"],
+            )
+
+            if add_custom == "Yes, add custom":
+                custom_patterns = self._add_custom_ignore_patterns()
+                selected.extend(custom_patterns)
+
+            return selected
+        else:
+            # User cancelled, use minimal defaults
+            return [".git", "node_modules", "__pycache__"]
+
+    def _add_custom_ignore_patterns(self) -> list[str]:
+        """Allow user to add custom ignore patterns.
+
+        Returns:
+            List of custom ignore patterns.
+        """
+        custom_patterns: list[str] = []
+
+        while True:
+            pattern = eg.enterbox(
+                "Enter a custom ignore pattern (e.g., '*.tmp', 'my_folder', '*.bak'):\n\n"
+                "Current custom patterns:\n"
+                + (
+                    "\n".join([f"  - {p}" for p in custom_patterns])
+                    if custom_patterns
+                    else "  (none)"
+                ),
+                title="Add Custom Ignore Pattern",
+            )
+
+            if pattern and pattern.strip():
+                custom_patterns.append(pattern.strip())
+
+                add_more = eg.buttonbox(
+                    f"Pattern '{pattern.strip()}' added.\n\nAdd another pattern?",
+                    title="Add More?",
+                    choices=["Yes, add more", "No, done"],
+                )
+
+                if add_more != "Yes, add more":
+                    break
+            else:
+                break
+
+        return custom_patterns
+
     def _get_default_ignore_patterns(self) -> list[str]:
         """Get default file/folder patterns to ignore during file analysis.
 
@@ -211,7 +494,7 @@ You can select multiple services or none."""
             user_config: Dictionary containing UserConfig-compatible data with keys:
                 - consent_given: bool
                 - use_external_services: bool
-                - external_services: dict
+                - external_services: dict (with nested config like {"service": {"allowed": True}})
                 - default_ignore_patterns: list[str]
         """
         with get_session() as session:
