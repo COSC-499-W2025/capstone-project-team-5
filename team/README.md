@@ -1,6 +1,31 @@
 # Team Weekly Logs
 
 <details>
+  <summary><h3>Week 12 | November 17 - 23</h3></summary>
+
+  ### Burnup Chart
+  <img width="930" height="675" alt="image" src="https://github.com/user-attachments/assets/51ee191e-da7b-45b9-bb2d-96d12522074b" />
+
+  ### Past Work
+  - Implemented deep analysis Java, C, C++, JS, TS, Python.
+  - Add project ranking based on user contributions
+  - Summarize top ranked projects
+  - Update consent tool for integration preparation
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Sync main with Develop |✅ Done | Need to get all PR's merged and sync this week. |
+  | Integrating All Features | In Progress | Primary focus for next week.
+  | Database | ✅ Done| Database set up and refactors for SQLAlchemy complete. |
+  | Refactoring to make codebase cleaner |  ✅ Done| Multiple services refactored. |
+
+  ### Upcoming Work
+  - Integrate all features and components, and prepare for milestone 1.
+</details>
+
+
+<details>
   <summary><h3>Week 10 | November 3 - 7</h3></summary>
 
   ### Burnup Chart
