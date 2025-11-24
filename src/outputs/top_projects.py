@@ -1,0 +1,217 @@
+"""
+Utilities to select and summarize the top-ranked projects.
+
+Provides two modes:
+- DB-driven: read `Project.importance_rank` from the database and return
+  the top N projects with full `ProjectSummary` data.
+- Computed: accept a mapping of `project_id -> filesystem Path`, compute
+  importance scores with `ContributionMetrics`, rank them, and return the
+  top N entries (optionally enriched with DB `ProjectSummary` if available).
+
+This module intentionally reuses `ProjectSummary` for per-project summaries
+and `ContributionMetrics` for computing importance scores.
+"""
+
+from __future__ import annotations
+
+import datetime
+import json
+import logging
+from datetime import timedelta
+from pathlib import Path
+from typing import Any
+
+from sqlalchemy import MetaData, Table, select
+
+from capstone_project_team_5.contribution_metrics import ContributionMetrics
+from capstone_project_team_5.data.db import get_session
+from outputs.project_summary import ProjectSummary
+
+
+def _reflect_table(name: str, bind) -> Table:
+    md = MetaData()
+    return Table(name, md, autoload_with=bind)
+
+
+def get_top_projects_from_db(n: int = 3) -> list[dict[str, Any]]:
+    """Return top `n` projects by `importance_rank` from the DB.
+
+    Each returned entry includes the `importance_rank` and the
+    `ProjectSummary.summarize(...)` payload.
+    """
+    results: list[dict[str, Any]] = []
+    with get_session() as session:
+        engine = session.get_bind()
+        project_tbl = _reflect_table("Project", engine)
+        stmt = (
+            select(project_tbl.c.name, project_tbl.c.importance_rank)
+            .order_by(project_tbl.c.importance_rank.desc().nullslast())
+            .limit(n)
+        )
+
+        rows = session.execute(stmt).mappings().all()
+        for row in rows:
+            name = row["name"]
+            rank = row["importance_rank"]
+            # reuse ProjectSummary to build the detailed summary
+            try:
+                summary = ProjectSummary.summarize(name)
+            except ValueError:
+                summary = {"project_name": name}
+
+            results.append({"importance_rank": rank, "summary": summary})
+
+    return results
+
+
+def compute_top_projects_from_paths(paths: dict[int, Path], n: int = 3) -> list[dict[str, Any]]:
+    """Compute importance scores for projects by filesystem analysis.
+
+    Args:
+        paths: Mapping of `project_id` -> `Path` to the project root on disk.
+        n: Number of top projects to return.
+
+    Returns:
+        List of dictionaries with keys: `project_id`, `score`, `breakdown`,
+        `metrics_source`, and optionally `summary` if the project exists in the DB.
+    """
+    if n <= 0:
+        raise ValueError("n must be a positive integer")
+    if not paths:
+        raise ValueError("paths cannot be empty")
+    scores: list[tuple[int, float, dict, str]] = []  # (pid, score, breakdown, source)
+
+    logger = logging.getLogger(__name__)
+
+    for pid, root in paths.items():
+        # Basic validation for inputs
+        try:
+            pid_int = int(pid)
+        except Exception:
+            logger.warning("Skipping project with non-integer id: %r", pid)
+            continue
+
+        # Allow string paths but coerce to Path; guard against bad types
+        try:
+            root_path = Path(root)
+        except TypeError:
+            logger.warning("Invalid path for project %s: %r", pid_int, root)
+            root_path = None
+
+        metrics: dict | None = None
+        source = "unknown"
+        duration = timedelta(0)
+
+        if root_path is None or not root_path.exists() or not root_path.is_dir():
+            logger.warning("Project %s path missing or not a directory: %r", pid_int, root)
+            metrics = {}
+            source = "missing_path"
+            file_count = 0
+        else:
+            # Safely call metric collection and duration helpers; these may raise
+            try:
+                metrics, source = ContributionMetrics.get_project_contribution_metrics(root_path)
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning(
+                    "Failed to collect contribution metrics for %s (%s): %s",
+                    pid_int,
+                    root_path,
+                    exc,
+                )
+                metrics = {}
+                source = "metrics_error"
+
+            try:
+                duration_val = ContributionMetrics.get_project_duration(root_path)
+                # get_project_duration may return (duration, something_else)
+                d = duration_val[0] if isinstance(duration_val, tuple) else duration_val
+
+                # Normalize duration to a timedelta if possible
+                if isinstance(d, datetime.timedelta):
+                    duration = d
+                elif isinstance(d, (int, float)):
+                    # interpret numeric as days
+                    duration = timedelta(days=int(d))
+                else:
+                    duration = timedelta(0)
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning(
+                    "Failed to compute project duration for %s (%s): %s",
+                    pid_int,
+                    root_path,
+                    exc,
+                )
+                duration = timedelta(0)
+
+            # file_count: fallback to sum of metrics when available, else count files
+            try:
+                if metrics and isinstance(metrics, dict):
+                    file_count = int(sum(metrics.values()))
+                else:
+                    file_count = sum(1 for f in root_path.rglob("*") if f.is_file())
+            except (OSError, TypeError) as exc:  # pragma: no cover - defensive
+                logger.warning("Failed to count files for %s (%s): %s", pid_int, root_path, exc)
+                file_count = 0
+
+        # Ensure metrics is a dict for downstream code
+        if not isinstance(metrics, dict):
+            metrics = {}
+
+        try:
+            score, breakdown = ContributionMetrics.calculate_importance_score(
+                metrics, duration, file_count
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("Failed to calculate importance score for %s: %s", pid_int, exc)
+            score = 0.0
+            breakdown = {}
+
+        scores.append((pid_int, float(score), breakdown, source))
+
+    # sort descending by score
+    scores.sort(key=lambda t: t[1], reverse=True)
+
+    top: list[dict[str, Any]] = []
+    with get_session() as session:
+        engine = session.get_bind()
+        project_tbl = _reflect_table("Project", engine)
+
+        for pid, score, breakdown, source in scores[:n]:
+            entry: dict[str, Any] = {
+                "project_id": pid,
+                "score": score,
+                "breakdown": breakdown,
+                "metrics_source": source,
+            }
+
+            # Try to enrich with DB summary if project exists
+            stmt = select(project_tbl.c.name).where(project_tbl.c.id == pid)
+            res = session.execute(stmt).mappings().fetchone()
+            if res is not None:
+                try:
+                    entry["summary"] = ProjectSummary.summarize(res["name"])  # type: ignore[arg-type]
+                except ValueError:
+                    entry["summary"] = {"project_id": pid}
+
+            top.append(entry)
+
+    return top
+
+
+def display_top_projects(
+    mode: str = "db", n: int = 3, paths: dict[int, Path] | None = None
+) -> None:
+    """Print the top projects as formatted JSON.
+
+    mode: 'db' to use stored importance_rank, 'computed' to calculate scores from paths.
+    """
+    if mode == "db":
+        out = get_top_projects_from_db(n=n)
+    elif mode == "computed":
+        if paths is None:
+            raise ValueError("paths must be provided when mode='computed'")
+        out = compute_top_projects_from_paths(paths, n=n)
+    else:
+        raise ValueError("mode must be 'db' or 'computed'")
+
+    print(json.dumps(out, indent=2, default=str))
