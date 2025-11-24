@@ -186,16 +186,20 @@
 ---
 
 <details>
-  <summary><h3>Week X</h3></summary>
+  <summary><h3>Week 12</h3></summary>
+<img width="642" height="771" alt="image" src="https://github.com/user-attachments/assets/35f21254-5d7e-42c7-85c7-6f8fcbd3c695" />
 
 ### What Went Well
-  - 
+  - Created Java File analyzer for OOP prinicples, and other attributes
+  - Reviewed more PRs
+  - Got started on new OpenAI provider (next week's PR)
 
   ### What Didn't Go Well
-  - 
+  - All good
 
   ### Planning for Next Week
-  - 
+  - Integrate all components and tools for the milestone
+  - Complete OpenAI Provider implementation
 </details>
 
 ---
