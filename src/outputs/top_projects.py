@@ -14,12 +14,12 @@ and `ContributionMetrics` for computing importance scores.
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
 import datetime
-from datetime import timedelta
-from typing import Any
+import json
 import logging
+from datetime import timedelta
+from pathlib import Path
+from typing import Any
 
 from sqlalchemy import MetaData, Table, select
 
@@ -100,7 +100,7 @@ def compute_top_projects_from_paths(paths: dict[int, Path], n: int = 3) -> list[
 
         metrics: dict | None = None
         source = "unknown"
-        duration = 0
+        duration = timedelta(0)
 
         if root_path is None or not root_path.exists() or not root_path.is_dir():
             logger.warning("Project %s path missing or not a directory: %r", pid_int, root)
@@ -124,10 +124,7 @@ def compute_top_projects_from_paths(paths: dict[int, Path], n: int = 3) -> list[
             try:
                 duration_val = ContributionMetrics.get_project_duration(root_path)
                 # get_project_duration may return (duration, something_else)
-                if isinstance(duration_val, tuple):
-                    d = duration_val[0]
-                else:
-                    d = duration_val
+                d = duration_val[0] if isinstance(duration_val, tuple) else duration_val
 
                 # Normalize duration to a timedelta if possible
                 if isinstance(d, datetime.timedelta):
