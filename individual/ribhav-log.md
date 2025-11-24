@@ -226,6 +226,35 @@ Refactored local git utils to reduce coupling throughout our codebase and implem
 | Review PRs | ❌ Not Started    |  |
 | Enhance bullet point generation for collaborative projects | ❌ Not Started | Build on top of Ethan's work from this week (W7) |
 
+## Week 12 | November 17-21, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1586" height="971" alt="image" src="https://github.com/user-attachments/assets/19736a1b-5539-4e21-be19-dbdad5137c53" />
+</details>
+
+### Task Progress this week
+
+Added local analysis for python files and started plugging in programming language analysis to the complete end to end to satisfy milestone requirements.
+
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Review PRs | ✅ Done     |  |
+| Learn about Tauri | ⏳ In Progress      | Need to choose between the Tauri python plugin, or an API first approach. |
+| Add Python Analysis | ✅ Done |  |
+
+
+### Next week's plans
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Review PRs | ❌ Not Started    |  |
+| Finish integrating contribution integration | ❌ Not Started | |
+
+
+
+
+
 
 
 
