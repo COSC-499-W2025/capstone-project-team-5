@@ -125,3 +125,61 @@ class GeminiProvider(LLMProvider):
             raise  # re-throwing LLM error
         except Exception as e:
             raise LLMError(f"Gemini API call failed: {e}") from e
+
+
+class OpenAIProvider(LLMProvider):
+    """OpenAI (ChatGPT) implementation."""
+
+    def __init__(self) -> None:
+        """Initialize OpenAI provider with API key from environment.
+
+        Note: Environment variables are loaded via load_dotenv() at package initialization.
+        """
+        from openai import OpenAI
+
+        self.api_key = os.environ.get("OPENAI_API_KEY")
+        if not self.api_key:
+            raise LLMError("Missing OPENAI_API_KEY environment variable")
+
+        self.model = os.environ.get("LLM_MODEL", "gpt-4o-mini")
+        self.client = OpenAI(api_key=self.api_key)
+
+    def send_prompt(self, prompt: str, config: dict) -> str:
+        """Send prompt to OpenAI and return response text.
+
+        Args:
+            prompt: The full prompt string.
+            config: Configuration dictionary for the OpenAI API.
+
+        Returns:
+            The response text from OpenAI.
+        """
+        try:
+            # OpenAI Chat Completions API expects messages format
+            messages = [{"role": "user", "content": prompt}]
+
+            response = self.client.chat.completions.create(
+                model=self.model, messages=messages, **config
+            )
+
+            # Error handling for None or empty response
+            if not response.choices:
+                raise LLMError("OpenAI returned empty choices list")
+
+            content = response.choices[0].message.content
+            if content is None:
+                error_details = []
+                if hasattr(response.choices[0], "finish_reason"):
+                    error_details.append(f"finish_reason={response.choices[0].finish_reason}")
+
+                error_msg = "OpenAI returned None response"
+                if error_details:
+                    error_msg += f": {', '.join(error_details)}"
+
+                raise LLMError(error_msg)
+
+            return content.strip()
+        except LLMError:
+            raise  # re-throwing LLM error
+        except Exception as e:
+            raise LLMError(f"OpenAI API call failed: {e}") from e
