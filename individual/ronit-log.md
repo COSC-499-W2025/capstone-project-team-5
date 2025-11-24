@@ -2,7 +2,37 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-_Last Updated:_ November 9, 2025
+_Last Updated:_ November 23, 2025
+
+---
+
+## Week 12 | November 17-23, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1126" height="646" alt="image" src="https://github.com/user-attachments/assets/c5e99486-147b-4055-96a5-16b6e6fcc19c" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Implemented project importance ranking system | ✅ Done | Calculates + displays project importance scores based on contribution volume, diversity, project duration and file count |
+| Added comprehensive unit tests for ranking system | ✅ Done | 14 test cases: score calculation, empty metrics, zero duration, diversity bonus, duration factor, ranking ties, edge cases and score breakdown formatting |
+| Added integration test for database persistence | ✅ Done | |
+| Conducted code reviews | ✅ Done |  |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Prepare for presentation/video demo | ❌ Not Started |  |
+| Pending integration stuff | ❌ Not Started |  |
+| Continue code reviews | ❌ Not Started | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Implement project ranking based on contributions | ✅ Done | |
+| Continue code reviews | ✅ Done | Ongoing task |
 
 ---
 
