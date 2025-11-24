@@ -58,6 +58,10 @@ class PythonAnalyzer:
 
         self.all_code_content = "\n".join(code_files)
 
+    # ---------------------------------------------------------
+    # IMPORT PARSING
+    # ---------------------------------------------------------
+
     def _extract_imports(self):
         """Pull import statements using regex."""
         imports = set()
@@ -65,6 +69,7 @@ class PythonAnalyzer:
         for line in self.all_code_content.splitlines():
             m1 = re.match(r"^\s*import\s+([a-zA-Z0-9_\.]+)", line)
             m2 = re.match(r"^\s*from\s+([a-zA-Z0-9_\.]+)", line)
+
             if m1:
                 imports.add(m1.group(1).split(".")[0])
             if m2:
@@ -72,9 +77,14 @@ class PythonAnalyzer:
 
         self.imports = imports
 
+    # ---------------------------------------------------------
+    # AST PARSING
+    # ---------------------------------------------------------
+
     def _parse_ast(self):
         """Parse AST for OOP analysis."""
         trees = []
+
         for root, dirs, files in os.walk(self.project_path):
             dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
 
@@ -85,59 +95,61 @@ class PythonAnalyzer:
                         trees.append(ast.parse(p.read_text(encoding="utf-8", errors="ignore")))
                     except Exception:
                         continue
+
         self.ast_trees = trees
 
     # ---------------------------------------------------------
     # OOP ANALYSIS
     # ---------------------------------------------------------
 
-    def _extract_target_names(self, target):
-        """Get variable names from assignment target nodes."""
-        if isinstance(target, ast.Name):
-            return [target.id]
-        if isinstance(target, ast.Attribute):
-            return [target.attr]
-        if isinstance(target, ast.Tuple):
-            names = []
-            for elt in target.elts:
-                names.extend(self._extract_target_names(elt))
-            return names
-        return []
-
     def _analyze_oop(self) -> dict:
         classes = {}
         inheritance = False
         encapsulation = False
         polymorphism = False
-
         method_map = defaultdict(list)
 
         for tree in self.ast_trees:
             for node in ast.walk(tree):
-                if isinstance(node, ast.ClassDef):
-                    cname = node.name
+                if not isinstance(node, ast.ClassDef):
+                    continue
 
-                    bases = [base.id for base in node.bases if isinstance(base, ast.Name)]
+                cname = node.name
 
-                    if bases:
-                        inheritance = True
+                # inheritance detection
+                bases = [base.id for base in node.bases if isinstance(base, ast.Name)]
+                if bases:
+                    inheritance = True
 
-                    # Encapsulation — looking for private attrs
-                    for sub in ast.walk(node):
-                        if isinstance(sub, ast.Assign):
-                            for t in sub.targets:
-                                for name in self._extract_target_names(t):
-                                    if name.startswith("_"):
-                                        encapsulation = True
+                # -------------------------------------------------
+                # FIXED ENCAPSULATION DETECTION (instance/class private attrs only)
+                # -------------------------------------------------
+                for sub in ast.walk(node):
+                    if isinstance(sub, ast.Assign):
+                        for tgt in sub.targets:
+                            # Only consider attribute assignments, e.g., self._x
+                            if isinstance(tgt, ast.Attribute):
+                                attr_name = tgt.attr
 
-                    # Methods for polymorphism
-                    for sub in node.body:
-                        if isinstance(sub, ast.FunctionDef):
-                            method_map[cname].append(sub.name)
+                                # Must start with _ but not __dunder__
+                                if not attr_name.startswith("_"):
+                                    continue
+                                if attr_name.startswith("__") and attr_name.endswith("__"):
+                                    continue
 
-                    classes[cname] = bases
+                                val = tgt.value
+                                # self._x, cls._x, ClassName._x
+                                if isinstance(val, ast.Name) and val.id in {"self", "cls", cname}:
+                                    encapsulation = True
 
-        # Polymorphism: any shared method names between classes
+                # collect methods
+                for sub in node.body:
+                    if isinstance(sub, ast.FunctionDef):
+                        method_map[cname].append(sub.name)
+
+                classes[cname] = bases
+
+        # polymorphism: same method names in different classes
         cls_names = list(method_map.keys())
         for i in range(len(cls_names)):
             for j in range(i + 1, len(cls_names)):
@@ -244,17 +256,14 @@ class PythonAnalyzer:
     def _generate_skills_list(self, tech_stack, features, integrations, oop) -> list[str]:
         skills = set()
 
-        # Tech stack
         for _, items in tech_stack.items():
             skills.update(items)
 
-        # Feature skills
         skills.update(features)
 
         if "Object-Oriented Design" in features or oop.get("classes"):
             skills.add("Object-Oriented Design")
 
-        # OOP skills
         if oop["inheritance"]:
             skills.add("Object-Oriented Programming (Inheritance)")
         if oop["encapsulation"]:
@@ -262,7 +271,6 @@ class PythonAnalyzer:
         if oop["polymorphism"]:
             skills.add("Polymorphism")
 
-        # Integrations
         if "http" in integrations:
             skills.add("HTTP API Integration")
         if "aws" in integrations:
