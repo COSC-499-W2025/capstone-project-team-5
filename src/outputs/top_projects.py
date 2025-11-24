@@ -16,7 +16,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import datetime
+from datetime import timedelta
 from typing import Any
+import logging
 
 from sqlalchemy import MetaData, Table, select
 
@@ -78,20 +81,105 @@ def compute_top_projects_from_paths(paths: dict[int, Path], n: int = 3) -> list[
         raise ValueError("paths cannot be empty")
     scores: list[tuple[int, float, dict, str]] = []  # (pid, score, breakdown, source)
 
+    logger = logging.getLogger(__name__)
+
     for pid, root in paths.items():
-        metrics, source = ContributionMetrics.get_project_contribution_metrics(root)
-        duration, _ = ContributionMetrics.get_project_duration(root)
+        # Basic validation for inputs
+        try:
+            pid_int = int(pid)
+        except Exception:
+            logger.warning("Skipping project with non-integer id: %r", pid)
+            continue
 
-        # file_count: fallback to sum of metrics when available, else count files
-        if metrics:
-            file_count = int(sum(metrics.values()))
+        # Allow string paths but coerce to Path; guard against bad types
+        try:
+            root_path = Path(root)
+        except TypeError:
+            logger.warning("Invalid path for project %s: %r", pid_int, root)
+            root_path = None
+
+        metrics: dict | None = None
+        source = "unknown"
+        duration = 0
+
+        if root_path is None or not root_path.exists() or not root_path.is_dir():
+            logger.warning(
+                "Project %s path missing or not a directory: %r", pid_int, root
+            )
+            metrics = {}
+            source = "missing_path"
+            file_count = 0
         else:
-            file_count = sum(1 for f in root.rglob("*") if f.is_file())
+            # Safely call metric collection and duration helpers; these may raise
+            try:
+                metrics, source = ContributionMetrics.get_project_contribution_metrics(
+                    root_path
+                )
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning(
+                    "Failed to collect contribution metrics for %s (%s): %s",
+                    pid_int,
+                    root_path,
+                    exc,
+                )
+                metrics = {}
+                source = "metrics_error"
 
-        score, breakdown = ContributionMetrics.calculate_importance_score(
-            metrics, duration, file_count
-        )
-        scores.append((pid, float(score), breakdown, source))
+            try:
+                duration_val = ContributionMetrics.get_project_duration(root_path)
+                # get_project_duration may return (duration, something_else)
+                if isinstance(duration_val, tuple):
+                    d = duration_val[0]
+                else:
+                    d = duration_val
+
+                # Normalize duration to a timedelta if possible
+                if isinstance(d, datetime.timedelta):
+                    duration = d
+                elif isinstance(d, (int, float)):
+                    # interpret numeric as days
+                    duration = timedelta(days=int(d))
+                else:
+                    duration = timedelta(0)
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning(
+                    "Failed to compute project duration for %s (%s): %s",
+                    pid_int,
+                    root_path,
+                    exc,
+                )
+                duration = timedelta(0)
+
+            # file_count: fallback to sum of metrics when available, else count files
+            try:
+                if metrics and isinstance(metrics, dict):
+                    file_count = int(sum(metrics.values()))
+                else:
+                    file_count = sum(
+                        1 for f in root_path.rglob("*") if f.is_file()
+                    )
+            except (OSError, TypeError) as exc:  # pragma: no cover - defensive
+                logger.warning(
+                    "Failed to count files for %s (%s): %s", pid_int, root_path, exc
+                )
+                file_count = 0
+
+        # Ensure metrics is a dict for downstream code
+        if not isinstance(metrics, dict):
+            metrics = {}
+
+        try:
+            score, breakdown = ContributionMetrics.calculate_importance_score(
+                metrics, duration, file_count
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning(
+                "Failed to calculate importance score for %s: %s", pid_int, exc
+            )
+            score = 0.0
+            breakdown = {}
+
+        scores.append((pid_int, float(score), breakdown, source))
 
     # sort descending by score
     scores.sort(key=lambda t: t[1], reverse=True)
