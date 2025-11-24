@@ -244,10 +244,15 @@ class PythonAnalyzer:
     def _generate_skills_list(self, tech_stack, features, integrations, oop) -> list[str]:
         skills = set()
 
+        # Tech stack
         for _, items in tech_stack.items():
             skills.update(items)
 
+        # Feature skills
         skills.update(features)
+
+        if "Object-Oriented Design" in features or oop.get("classes"):
+            skills.add("Object-Oriented Design")
 
         # OOP skills
         if oop["inheritance"]:
