@@ -168,3 +168,20 @@ It was a busy week for me due to heavy midterm load and I was unable to be as in
 ### TODOs for Next week 
 - **Backlog Tasks**: Discuss with the team and pick up any free tasks.
 - **Multithreading** Look into multithreading and wherever possible implement it without breaking existing functionality.
+- 
+## Week #12 (November 16 2025 - November 23 2025)
+<details>
+  <summary><h3>Evaluation</h3></summary
+
+<img width="2940" height="1912" alt="image" src="https://github.com/user-attachments/assets/69cd170d-dae0-4163-a4e1-4bf87da326f0" />
+
+</details>
+
+### Team Activities
+- **PR Actions**: Reviewed PRs and provided any feedback/suggestions necessary.  
+
+### Personal Contributions
+- **Code Contributions**: Provided code for local C and C++ code analysis in the absence of a llm model , also provided small updates to the consent tool to allow for more ignore patterns. 
+### TODOs for Next week 
+- **Backlog Tasks**: Discuss with the team and pick up any free tasks.
+- **Integration**: Work with the team on integrating any modules that arent already connected and do any code cleanups if necessary.
