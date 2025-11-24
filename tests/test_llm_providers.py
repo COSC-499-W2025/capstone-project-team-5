@@ -6,6 +6,7 @@ from capstone_project_team_5.services.llm_providers import (
     GeminiProvider,
     LLMError,
     LLMProvider,
+    OpenAIProvider,
 )
 
 
@@ -203,4 +204,186 @@ def test_gemini_send_prompt_empty_response(monkeypatch: pytest.MonkeyPatch) -> N
     provider = GeminiProvider()
 
     with pytest.raises(LLMError, match="Gemini returned None response"):
+        provider.send_prompt("Test prompt", {})
+
+
+# OpenAI Provider Tests
+
+
+def test_openai_initialization_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test successful initialization with API key."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-api-key-123")
+    monkeypatch.setenv("LLM_MODEL", "gpt-4o-mini")
+
+    # Mock the OpenAI client to prevent actual API calls
+    class _FakeClient:
+        def __init__(self, api_key: str) -> None:
+            self.api_key = api_key
+
+    import openai
+
+    monkeypatch.setattr(openai, "OpenAI", _FakeClient, raising=True)
+
+    provider = OpenAIProvider()
+    assert provider.api_key == "test-api-key-123"
+    assert provider.model == "gpt-4o-mini"
+
+
+def test_openai_initialization_missing_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test initialization fails without API key."""
+    # Ensure OPENAI_API_KEY is not set
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    with pytest.raises(LLMError, match="Missing OPENAI_API_KEY environment variable"):
+        OpenAIProvider()
+
+
+def test_openai_initialization_default_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that default model is used when LLM_MODEL is not set."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.delenv("LLM_MODEL", raising=False)
+
+    class _FakeClient:
+        def __init__(self, api_key: str) -> None:
+            pass
+
+    import openai
+
+    monkeypatch.setattr(openai, "OpenAI", _FakeClient, raising=True)
+
+    provider = OpenAIProvider()
+    assert provider.model == "gpt-4o-mini"
+
+
+def test_openai_send_prompt_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test successful prompt sending and response."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_MODEL", "gpt-4o-mini")
+
+    class _FakeMessage:
+        def __init__(self, content: str) -> None:
+            self.content = content
+
+    class _FakeChoice:
+        def __init__(self, message: _FakeMessage) -> None:
+            self.message = message
+            self.finish_reason = "stop"
+
+    class _FakeResponse:
+        def __init__(self, choices: list[_FakeChoice]) -> None:
+            self.choices = choices
+
+    class _FakeCompletions:
+        def create(self, *, model: str, messages: list[dict], **kwargs: dict) -> _FakeResponse:
+            return _FakeResponse([_FakeChoice(_FakeMessage("  Test response from OpenAI  "))])
+
+    class _FakeChat:
+        def __init__(self) -> None:
+            self.completions = _FakeCompletions()
+
+    class _FakeClient:
+        def __init__(self, api_key: str) -> None:
+            self.chat = _FakeChat()
+
+    import openai
+
+    monkeypatch.setattr(openai, "OpenAI", _FakeClient, raising=True)
+
+    provider = OpenAIProvider()
+    response = provider.send_prompt("Test prompt", {"temperature": 0.7, "max_tokens": 100})
+
+    assert response == "Test response from OpenAI"
+
+
+def test_openai_send_prompt_api_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that API failures are properly wrapped in LLMError."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    class _FakeCompletions:
+        def create(self, *, model: str, messages: list[dict], **kwargs: dict) -> None:
+            raise RuntimeError("API rate limit exceeded")
+
+    class _FakeChat:
+        def __init__(self) -> None:
+            self.completions = _FakeCompletions()
+
+    class _FakeClient:
+        def __init__(self, api_key: str) -> None:
+            self.chat = _FakeChat()
+
+    import openai
+
+    monkeypatch.setattr(openai, "OpenAI", _FakeClient, raising=True)
+
+    provider = OpenAIProvider()
+    with pytest.raises(LLMError, match="OpenAI API call failed.*rate limit"):
+        provider.send_prompt("Test prompt", {})
+
+
+def test_openai_send_prompt_empty_choices(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test handling of empty choices list from API."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    class _FakeResponse:
+        def __init__(self) -> None:
+            self.choices = []
+
+    class _FakeCompletions:
+        def create(self, *, model: str, messages: list[dict], **kwargs: dict) -> _FakeResponse:
+            return _FakeResponse()
+
+    class _FakeChat:
+        def __init__(self) -> None:
+            self.completions = _FakeCompletions()
+
+    class _FakeClient:
+        def __init__(self, api_key: str) -> None:
+            self.chat = _FakeChat()
+
+    import openai
+
+    monkeypatch.setattr(openai, "OpenAI", _FakeClient, raising=True)
+
+    provider = OpenAIProvider()
+
+    with pytest.raises(LLMError, match="OpenAI returned empty choices list"):
+        provider.send_prompt("Test prompt", {})
+
+
+def test_openai_send_prompt_none_content(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test handling of None content in response."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    class _FakeMessage:
+        def __init__(self) -> None:
+            self.content = None
+
+    class _FakeChoice:
+        def __init__(self) -> None:
+            self.message = _FakeMessage()
+            self.finish_reason = "length"
+
+    class _FakeResponse:
+        def __init__(self) -> None:
+            self.choices = [_FakeChoice()]
+
+    class _FakeCompletions:
+        def create(self, *, model: str, messages: list[dict], **kwargs: dict) -> _FakeResponse:
+            return _FakeResponse()
+
+    class _FakeChat:
+        def __init__(self) -> None:
+            self.completions = _FakeCompletions()
+
+    class _FakeClient:
+        def __init__(self, api_key: str) -> None:
+            self.chat = _FakeChat()
+
+    import openai
+
+    monkeypatch.setattr(openai, "OpenAI", _FakeClient, raising=True)
+
+    provider = OpenAIProvider()
+
+    with pytest.raises(LLMError, match="OpenAI returned None response"):
         provider.send_prompt("Test prompt", {})
