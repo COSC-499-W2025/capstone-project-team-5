@@ -11,6 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from capstone_project_team_5.data.db import Base
 
 if TYPE_CHECKING:
+    from capstone_project_team_5.data.models.code_analysis import CodeAnalysis
     from capstone_project_team_5.data.models.portfolio_item import PortfolioItem
     from capstone_project_team_5.data.models.upload_record import UploadRecord
 
@@ -46,4 +47,7 @@ class Project(Base):
     upload: Mapped[UploadRecord] = relationship("UploadRecord", back_populates="projects")
     portfolio_items: Mapped[list[PortfolioItem]] = relationship(
         "PortfolioItem", back_populates="project", cascade="all, delete-orphan"
+    )
+    code_analyses: Mapped[list[CodeAnalysis]] = relationship(
+        "CodeAnalysis", back_populates="project", cascade="all, delete-orphan"
     )

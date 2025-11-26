@@ -55,6 +55,7 @@ def _ensure_tables_created() -> None:
     """Ensure all ORM tables are created (called automatically on first engine access)."""
     # Import ORM models so their metadata is registered on Base before create_all.
     from capstone_project_team_5.data.models import (  # noqa: F401
+        code_analysis,
         consent_record,
         portfolio_item,
         project,

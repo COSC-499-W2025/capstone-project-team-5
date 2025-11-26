@@ -65,3 +65,18 @@ CREATE TABLE IF NOT EXISTS GeneratedItem (
 CREATE INDEX IF NOT EXISTS idx_generateditem_kind ON GeneratedItem(kind);
 CREATE INDEX IF NOT EXISTS idx_generateditem_project ON GeneratedItem(project_id);
 CREATE INDEX IF NOT EXISTS idx_generateditem_created_at ON GeneratedItem(created_at);
+
+-- Code analysis results table for storing language-specific metrics
+CREATE TABLE IF NOT EXISTS code_analyses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    language TEXT NOT NULL,
+    analysis_type TEXT NOT NULL DEFAULT 'local',
+    metrics_json TEXT NOT NULL,
+    summary_text TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_code_analyses_project ON code_analyses(project_id);
+CREATE INDEX IF NOT EXISTS idx_code_analyses_language ON code_analyses(language);
