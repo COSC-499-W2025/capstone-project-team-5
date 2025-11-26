@@ -21,7 +21,7 @@ def sample_c_project(tmp_path: Path) -> Path:
     """Create a sample C project for testing."""
     project_dir = tmp_path / "test_c_project"
     project_dir.mkdir()
-    
+
     # Create a simple C file
     main_c = project_dir / "main.c"
     main_c.write_text("""
@@ -57,7 +57,7 @@ int main() {
     return 0;
 }
 """)
-    
+
     # Create a header file
     utils_h = project_dir / "utils.h"
     utils_h.write_text("""
@@ -69,7 +69,7 @@ int multiply(int a, int b);
 
 #endif
 """)
-    
+
     # Create utils.c
     utils_c = project_dir / "utils.c"
     utils_c.write_text("""
@@ -83,7 +83,7 @@ int multiply(int a, int b) {
     return a * b;
 }
 """)
-    
+
     return project_dir
 
 
@@ -108,13 +108,15 @@ def test_c_analyzer_on_sample_project(sample_c_project: Path):
 def test_c_bullet_generation(sample_c_project: Path):
     """Test that local C bullets are generated correctly."""
     bullets = generate_c_project_bullets(sample_c_project, max_bullets=6)
-    
+
     assert len(bullets) > 0
     assert len(bullets) <= 6
-    
+
     # Check that bullets mention key features
     bullets_text = " ".join(bullets).lower()
-    assert any(keyword in bullets_text for keyword in ["memory", "thread", "concurrent", "functions"])
+    assert any(
+        keyword in bullets_text for keyword in ["memory", "thread", "concurrent", "functions"]
+    )
 
 
 def test_database_integration(sample_c_project: Path):
@@ -132,7 +134,7 @@ def test_database_integration(sample_c_project: Path):
         )
         session.add(upload)
         session.flush()
-        
+
         # Create project
         project = Project(
             upload_id=upload.id,
@@ -144,10 +146,10 @@ def test_database_integration(sample_c_project: Path):
         )
         session.add(project)
         session.flush()
-        
+
         # Analyze project
         summary = CFileAnalyzer.analyze_project(sample_c_project)
-        
+
         # Save analysis
         metrics = {
             "total_files": summary.total_files,
@@ -162,7 +164,7 @@ def test_database_integration(sample_c_project: Path):
             "uses_concurrency": summary.uses_concurrency,
             "uses_error_handling": summary.uses_error_handling,
         }
-        
+
         analysis = CodeAnalysis(
             project_id=project.id,
             language="C/C++",
@@ -172,11 +174,11 @@ def test_database_integration(sample_c_project: Path):
         )
         session.add(analysis)
         session.flush()
-        
+
         # Generate and save bullets
         bullets = generate_c_project_bullets(sample_c_project, max_bullets=6)
         content = "\n".join(f"• {bullet}" for bullet in bullets)
-        
+
         portfolio_item = PortfolioItem(
             project_id=project.id,
             title="Local C/C++ Resume Bullets - test_c_project",
@@ -184,34 +186,34 @@ def test_database_integration(sample_c_project: Path):
         )
         session.add(portfolio_item)
         session.commit()
-        
+
         # Verify data was saved
         saved_project_id = project.id
-    
+
     # Retrieve and verify
     with get_session() as session:
         # Check project exists
         project = session.query(Project).filter(Project.id == saved_project_id).first()
         assert project is not None
         assert project.name == "test_c_project"
-        
+
         # Check analysis exists
-        analyses = session.query(CodeAnalysis).filter(
-            CodeAnalysis.project_id == saved_project_id
-        ).all()
+        analyses = (
+            session.query(CodeAnalysis).filter(CodeAnalysis.project_id == saved_project_id).all()
+        )
         assert len(analyses) == 1
         assert analyses[0].language == "C/C++"
-        
+
         # Check metrics JSON
         saved_metrics = json.loads(analyses[0].metrics_json)
         assert saved_metrics["total_files"] == 3
         assert saved_metrics["uses_memory_management"] is True
         assert saved_metrics["uses_concurrency"] is True
-        
+
         # Check portfolio items
-        items = session.query(PortfolioItem).filter(
-            PortfolioItem.project_id == saved_project_id
-        ).all()
+        items = (
+            session.query(PortfolioItem).filter(PortfolioItem.project_id == saved_project_id).all()
+        )
         assert len(items) == 1
         assert "Local C/C++" in items[0].title
         assert len(items[0].content) > 0
@@ -230,7 +232,7 @@ def test_code_analysis_cascade_delete(sample_c_project: Path):
         )
         session.add(upload)
         session.flush()
-        
+
         project = Project(
             upload_id=upload.id,
             name="test",
@@ -240,7 +242,7 @@ def test_code_analysis_cascade_delete(sample_c_project: Path):
         )
         session.add(project)
         session.flush()
-        
+
         # Create analysis
         analysis = CodeAnalysis(
             project_id=project.id,
@@ -250,18 +252,16 @@ def test_code_analysis_cascade_delete(sample_c_project: Path):
         )
         session.add(analysis)
         session.commit()
-        
+
         project_id = project.id
-    
+
     # Delete project
     with get_session() as session:
         project = session.query(Project).filter(Project.id == project_id).first()
         session.delete(project)
         session.commit()
-    
+
     # Verify analysis was also deleted (cascade)
     with get_session() as session:
-        analyses = session.query(CodeAnalysis).filter(
-            CodeAnalysis.project_id == project_id
-        ).all()
+        analyses = session.query(CodeAnalysis).filter(CodeAnalysis.project_id == project_id).all()
         assert len(analyses) == 0

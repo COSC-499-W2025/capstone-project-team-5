@@ -157,10 +157,10 @@ def _display_project_analyses(
         # Display C/C++ specific analysis if applicable
         if language == "C/C++":
             _display_c_analysis(project_path)
-            
+
             # Save C/C++ analysis to database
             _save_analysis_to_db(project.name, project.rel_path, language, project_path)
-            
+
             # Generate and display local C/C++ bullets
             try:
                 local_bullets = generate_c_project_bullets(project_path, max_bullets=6)
@@ -169,9 +169,11 @@ def _display_project_analyses(
                     print("-" * 60)
                     for bullet in local_bullets:
                         print(f"• {bullet}")
-                    
+
                     # Save local bullets to portfolio
-                    _save_bullets_to_portfolio(project.name, project.rel_path, local_bullets, "Local C/C++")
+                    _save_bullets_to_portfolio(
+                        project.name, project.rel_path, local_bullets, "Local C/C++"
+                    )
             except Exception as exc:
                 print(f"\n⚠️  Local bullet generation failed: {exc}")
 
@@ -234,7 +236,7 @@ def _display_root_analysis(extract_root: Path, consent_tool: ConsentTool) -> Non
     # Display C/C++ specific analysis if applicable
     if language == "C/C++":
         _display_c_analysis(extract_root)
-        
+
         # Generate and display local C/C++ bullets
         try:
             local_bullets = generate_c_project_bullets(extract_root, max_bullets=6)
@@ -363,21 +365,24 @@ def _display_c_analysis(project_path: Path) -> None:
     """
     try:
         summary = CFileAnalyzer.analyze_project(project_path)
-        
+
         if summary.total_files == 0:
             return
-        
+
         print("\n🔍 C/C++ Code Analysis")
         print("-" * 60)
-        print(f"Files: {summary.total_files} ({summary.source_files} source, {summary.header_files} headers)")
+        print(
+            f"Files: {summary.total_files} "
+            f"({summary.source_files} source, {summary.header_files} headers)"
+        )
         print(f"Lines of Code: {summary.total_lines_of_code:,}")
         print(f"Functions: {summary.total_functions}")
-        
+
         if summary.total_structs > 0:
             print(f"Structs: {summary.total_structs}")
         if summary.total_classes > 0:
             print(f"Classes: {summary.total_classes}")
-        
+
         features = []
         if summary.uses_pointers:
             features.append("Pointers")
@@ -387,25 +392,27 @@ def _display_c_analysis(project_path: Path) -> None:
             features.append("Concurrency")
         if summary.uses_error_handling:
             features.append("Error Handling")
-        
+
         if features:
             print(f"Features: {', '.join(features)}")
-        
+
         if summary.libraries_used:
             libs = sorted(summary.libraries_used)[:5]
             lib_str = ", ".join(libs)
             if len(summary.libraries_used) > 5:
                 lib_str += f" (+{len(summary.libraries_used) - 5} more)"
             print(f"Libraries: {lib_str}")
-        
+
         if summary.avg_complexity > 0:
             print(f"Avg Complexity: {summary.avg_complexity:.1f}")
-    
+
     except Exception as exc:
         print(f"\n⚠️  C/C++ analysis failed: {exc}")
 
 
-def _save_analysis_to_db(project_name: str, project_rel_path: str, language: str, project_path: Path) -> None:
+def _save_analysis_to_db(
+    project_name: str, project_rel_path: str, language: str, project_path: Path
+) -> None:
     """Save code analysis results to the database.
 
     Args:
@@ -416,13 +423,13 @@ def _save_analysis_to_db(project_name: str, project_rel_path: str, language: str
     """
     if language != "C/C++":
         return  # Currently only C/C++ is fully supported
-    
+
     try:
         summary = CFileAnalyzer.analyze_project(project_path)
-        
+
         if summary.total_files == 0:
             return
-        
+
         # Convert summary to JSON
         metrics = {
             "total_files": summary.total_files,
@@ -440,19 +447,23 @@ def _save_analysis_to_db(project_name: str, project_rel_path: str, language: str
             "uses_concurrency": summary.uses_concurrency,
             "uses_error_handling": summary.uses_error_handling,
         }
-        
-        summary_text = f"C/C++ project with {summary.total_lines_of_code:,} LOC, {summary.total_functions} functions"
-        
+
+        summary_text = (
+            f"C/C++ project with {summary.total_lines_of_code:,} LOC, "
+            f"{summary.total_functions} functions"
+        )
+
         # Save to database
         with get_session() as session:
             # Find the project by name and rel_path
             from capstone_project_team_5.data.models.project import Project
-            
-            project = session.query(Project).filter(
-                Project.name == project_name,
-                Project.rel_path == project_rel_path
-            ).first()
-            
+
+            project = (
+                session.query(Project)
+                .filter(Project.name == project_name, Project.rel_path == project_rel_path)
+                .first()
+            )
+
             if project:
                 analysis = CodeAnalysis(
                     project_id=project.id,
@@ -463,12 +474,14 @@ def _save_analysis_to_db(project_name: str, project_rel_path: str, language: str
                 )
                 session.add(analysis)
                 session.commit()
-    
+
     except Exception as exc:
         print(f"\n⚠️  Failed to save analysis to database: {exc}")
 
 
-def _save_bullets_to_portfolio(project_name: str, project_rel_path: str, bullets: list[str], bullet_type: str = "Local") -> None:
+def _save_bullets_to_portfolio(
+    project_name: str, project_rel_path: str, bullets: list[str], bullet_type: str = "Local"
+) -> None:
     """Save generated bullet points as portfolio items.
 
     Args:
@@ -479,16 +492,17 @@ def _save_bullets_to_portfolio(project_name: str, project_rel_path: str, bullets
     """
     if not bullets:
         return
-    
+
     try:
         with get_session() as session:
             from capstone_project_team_5.data.models.project import Project
-            
-            project = session.query(Project).filter(
-                Project.name == project_name,
-                Project.rel_path == project_rel_path
-            ).first()
-            
+
+            project = (
+                session.query(Project)
+                .filter(Project.name == project_name, Project.rel_path == project_rel_path)
+                .first()
+            )
+
             if project:
                 # Create portfolio item with bullets
                 content = "\n".join(f"• {bullet}" for bullet in bullets)
@@ -499,7 +513,7 @@ def _save_bullets_to_portfolio(project_name: str, project_rel_path: str, bullets
                 )
                 session.add(portfolio_item)
                 session.commit()
-    
+
     except Exception as exc:
         print(f"\n⚠️  Failed to save bullets to portfolio: {exc}")
 
