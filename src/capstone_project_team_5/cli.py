@@ -19,9 +19,12 @@ from capstone_project_team_5.file_walker import DirectoryWalker
 from capstone_project_team_5.models import InvalidZipError
 from capstone_project_team_5.models.upload import DetectedProject
 from capstone_project_team_5.services import upload_zip
-from capstone_project_team_5.services.c_bullets import generate_c_project_bullets
 from capstone_project_team_5.services.llm import (
     generate_bullet_points_from_analysis,
+)
+from capstone_project_team_5.services.local_bullets import (
+    generate_local_bullets,
+    should_use_local_analysis,
 )
 from capstone_project_team_5.services.ranking import update_project_ranks
 from capstone_project_team_5.skill_detection import extract_project_tools_practices
@@ -154,38 +157,46 @@ def _display_project_analyses(
         print("-" * 60)
         print(f"Total: {summary['total_files']} files ({total_size})")
 
-        # Display C/C++ specific analysis if applicable
+        # Display C/C++ specific analysis if applicable (diagnostic only)
         if language == "C/C++":
             _display_c_analysis(project_path)
-
-            # Save C/C++ analysis to database
             _save_analysis_to_db(project.name, project.rel_path, language, project_path)
 
-            # Generate and display local C/C++ bullets
+        # Determine whether to use local or AI bullet generation
+        use_local = should_use_local_analysis(
+            language=language, has_llm_consent=ai_allowed, llm_available=ai_allowed
+        )
+
+        if use_local:
+            # Use local analysis (C/C++ or when AI not available/consented)
             try:
-                local_bullets = generate_c_project_bullets(project_path, max_bullets=6)
+                local_bullets = generate_local_bullets(project_path, max_bullets=6)
                 if local_bullets:
-                    print("\n📝 Local Resume Bullets (No LLM)")
+                    print("\nLocal Resume Bullets (No LLM)")
                     print("-" * 60)
                     for bullet in local_bullets:
-                        print(f"• {bullet}")
+                        print(f"- {bullet}")
 
                     # Save local bullets to portfolio
                     _save_bullets_to_portfolio(
-                        project.name, project.rel_path, local_bullets, "Local C/C++"
+                        project.name, project.rel_path, local_bullets, "Local Analysis"
                     )
             except Exception as exc:
-                print(f"\n⚠️  Local bullet generation failed: {exc}")
-
-        ai_warning_printed = _emit_ai_bullet_points(
-            language=language,
-            framework=framework,
-            combined_skills=combined_skills,
-            tools=tools,
-            ai_allowed=ai_allowed,
-            ai_warning=ai_warning,
-            warning_printed=ai_warning_printed,
-        )
+                print(f"\nWarning: Local bullet generation failed: {exc}")
+        else:
+            # Try AI bullet generation with fallback to local
+            ai_warning_printed = _emit_ai_bullet_points(
+                language=language,
+                framework=framework,
+                combined_skills=combined_skills,
+                tools=tools,
+                ai_allowed=ai_allowed,
+                ai_warning=ai_warning,
+                warning_printed=ai_warning_printed,
+                project_path=project_path,
+                project_name=project.name,
+                project_rel_path=project.rel_path,
+            )
 
         analyzed += 1
         print()
@@ -233,30 +244,38 @@ def _display_root_analysis(extract_root: Path, consent_tool: ConsentTool) -> Non
     total_size = _format_bytes(summary["total_size_bytes"])
     print(f"Total: {summary['total_files']} files ({total_size})")
 
-    # Display C/C++ specific analysis if applicable
+    # Display C/C++ specific analysis if applicable (diagnostic only)
     if language == "C/C++":
         _display_c_analysis(extract_root)
 
-        # Generate and display local C/C++ bullets
+    # Determine whether to use local or AI bullet generation
+    use_local = should_use_local_analysis(
+        language=language, has_llm_consent=ai_allowed, llm_available=ai_allowed
+    )
+
+    if use_local:
+        # Use local analysis (C/C++ or when AI not available/consented)
         try:
-            local_bullets = generate_c_project_bullets(extract_root, max_bullets=6)
+            local_bullets = generate_local_bullets(extract_root, max_bullets=6)
             if local_bullets:
-                print("\n📝 Local Resume Bullets (No LLM)")
+                print("\nLocal Resume Bullets (No LLM)")
                 print("-" * 60)
                 for bullet in local_bullets:
-                    print(f"• {bullet}")
+                    print(f"- {bullet}")
         except Exception as exc:
-            print(f"\n⚠️  Local bullet generation failed: {exc}")
-
-    _emit_ai_bullet_points(
-        language=language,
-        framework=framework,
-        combined_skills=combined_skills,
-        tools=tools,
-        ai_allowed=ai_allowed,
-        ai_warning=ai_warning,
-        warning_printed=False,
-    )
+            print(f"\nWarning: Local bullet generation failed: {exc}")
+    else:
+        # Try AI bullet generation with fallback to local
+        _emit_ai_bullet_points(
+            language=language,
+            framework=framework,
+            combined_skills=combined_skills,
+            tools=tools,
+            ai_allowed=ai_allowed,
+            ai_warning=ai_warning,
+            warning_printed=False,
+            project_path=extract_root,
+        )
 
 
 def _resolve_project_path(base: Path, rel_path: str) -> Path | None:
@@ -272,6 +291,40 @@ def _resolve_project_path(base: Path, rel_path: str) -> Path | None:
     if not segments:
         return None
     return base.joinpath(*segments)
+
+
+def _fallback_to_local_bullets(
+    project_path: Path, project_name: str | None = None, project_rel_path: str | None = None
+) -> bool:
+    """Fallback to local bullet generation when AI fails or returns nothing.
+
+    Args:
+        project_path: Path to the project
+        project_name: Project name (for saving bullets)
+        project_rel_path: Project relative path (for saving bullets)
+
+    Returns:
+        True (warning has been handled)
+    """
+    try:
+        local_bullets = generate_local_bullets(project_path, max_bullets=6)
+        if local_bullets:
+            print("\nLocal Resume Bullets (Fallback)")
+            print("-" * 60)
+            for bullet in local_bullets:
+                print(f"- {bullet}")
+
+            # Save local bullets to portfolio if project info provided
+            if project_name and project_rel_path:
+                _save_bullets_to_portfolio(
+                    project_name, project_rel_path, local_bullets, "Local Fallback"
+                )
+        else:
+            print("Warning: No bullets could be generated.")
+    except Exception as exc:
+        print(f"Warning: Fallback bullet generation also failed: {exc}")
+
+    return True
 
 
 def _ai_bullet_permission(consent_tool: ConsentTool) -> tuple[bool, str | None]:
@@ -309,8 +362,27 @@ def _emit_ai_bullet_points(
     ai_allowed: bool,
     ai_warning: str | None,
     warning_printed: bool,
+    project_path: Path | None = None,
+    project_name: str | None = None,
+    project_rel_path: str | None = None,
 ) -> bool:
-    """Print AI bullet points when permitted, returning updated warning flag."""
+    """Print AI bullet points when permitted, with fallback to local analysis.
+
+    Args:
+        language: Detected programming language
+        framework: Detected framework (if any)
+        combined_skills: Set of detected skills
+        tools: Set of detected tools
+        ai_allowed: Whether AI bullet generation is permitted
+        ai_warning: Warning message if AI not allowed
+        warning_printed: Whether warning has been printed
+        project_path: Path to project (for fallback to local)
+        project_name: Project name (for saving fallback bullets)
+        project_rel_path: Project relative path (for saving fallback bullets)
+
+    Returns:
+        Updated warning_printed flag
+    """
 
     if ai_allowed:
         try:
@@ -327,11 +399,25 @@ def _emit_ai_bullet_points(
                 print("-" * 60)
                 for bullet in ai_bullets:
                     print(f"- {bullet}")
+                # Save AI bullets to portfolio if project info provided
+                if project_name and project_rel_path and ai_bullets:
+                    _save_bullets_to_portfolio(
+                        project_name, project_rel_path, ai_bullets, "AI-Generated"
+                    )
+                return warning_printed
             else:
                 print("\nAI Bullets: provider returned no content.")
+                # Fallback to local if AI returns nothing
+                if project_path:
+                    print("Falling back to local analysis...")
+                    return _fallback_to_local_bullets(project_path, project_name, project_rel_path)
         except Exception as exc:  # pragma: no cover - defensive logging
             print(f"\nAI Bullets error: {exc}")
-            print("\n⚠️  Could not generate AI bullet points.")
+            print("\nWarning: Could not generate AI bullet points.")
+            # Fallback to local analysis on error
+            if project_path:
+                print("Falling back to local analysis...")
+                return _fallback_to_local_bullets(project_path, project_name, project_rel_path)
         return warning_printed
 
     if not warning_printed and ai_warning is not None:

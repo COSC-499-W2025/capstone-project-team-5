@@ -111,7 +111,8 @@ def test_run_cli_falls_back_to_root_analysis_when_no_projects(
     output = capfd.readouterr().out
     assert "📊 Analysis Summary" in output
     assert "📊 Project Analysis" not in output
-    assert "⚠️  External services consent not given" in output
+    # When AI consent is not given, system falls back to local bullets instead of showing warning
+    assert "Local Resume Bullets" in output
     assert "AI Bullet Points" not in output
 
 
@@ -150,8 +151,8 @@ def test_run_cli_reports_missing_gemini_once(
     assert exit_code == 0
 
     output = capfd.readouterr().out
-    message = "⚠️  Gemini not enabled in external services; skipping AI bullet generation."
-    assert output.count(message) == 1
+    # When Gemini is not enabled, system falls back to local bullets instead of showing warning
+    assert "Local Resume Bullets" in output
     assert "📊 Project Analysis" in output
     assert "AI Bullet Points" not in output
     assert calls == []
