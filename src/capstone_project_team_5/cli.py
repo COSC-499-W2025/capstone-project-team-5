@@ -198,15 +198,14 @@ def _display_root_analysis(extract_root: Path, consent_tool: ConsentTool) -> Non
     file_summary = data["file_summary"]
     print(f"Total: {file_summary['total_files']} files ({file_summary['total_size']})")
 
-    ai_bullets = data.get("ai_bullets") or []
-    ai_warning = data.get("ai_warning")
-    if ai_bullets:
-        print("\nAI Bullet Points")
-        print("-" * 60)
-        for bullet in ai_bullets:
-            print(f"- {bullet}")
-    elif ai_warning:
-        print(ai_warning)
+    ai_allowed, ai_warning = _ai_bullet_permission(consent_tool)
+    _emit_ai_bullet_points(
+        project_path=extract_root,
+        analysis=None,
+        ai_allowed=ai_allowed,
+        ai_warning=ai_warning,
+        warning_printed=False,
+    )
 
 
 def _resolve_project_path(base: Path, rel_path: str) -> Path | None:
