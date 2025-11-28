@@ -15,6 +15,10 @@ from capstone_project_team_5.models import InvalidZipError
 from capstone_project_team_5.models.upload import DetectedProject
 from capstone_project_team_5.services import upload_zip
 from capstone_project_team_5.services.bullet_generator import generate_resume_bullets
+from capstone_project_team_5.services.code_analysis_persistence import (
+    save_code_analysis_to_db,
+)
+from capstone_project_team_5.services.project_analysis import ProjectAnalysis
 from capstone_project_team_5.services.ranking import update_project_ranks
 from capstone_project_team_5.skill_detection import extract_project_tools_practices
 from capstone_project_team_5.utils import display_upload_result, prompt_for_zip_file
@@ -104,10 +108,14 @@ def _display_project_analyses(
         except ValueError:
             continue
 
-        language, framework = identify_language_and_framework(project_path)
-        skills = extract_project_tools_practices(project_path)
-        tools = set(skills.get("tools", set()))
-        practices = set(skills.get("practices", set()))
+        # Run unified analysis once (includes language detection, skills, C++ analyzer, etc.)
+        from capstone_project_team_5.services.project_analysis import analyze_project
+
+        analysis = analyze_project(project_path)
+        language = analysis.language
+        framework = analysis.framework
+        tools = analysis.tools
+        practices = analysis.practices
         combined_skills = tools | practices
         summary = DirectoryWalker.get_summary(walk_result)
         total_size = _format_bytes(summary["total_size_bytes"])
@@ -148,10 +156,14 @@ def _display_project_analyses(
 
         ai_warning_printed = _emit_ai_bullet_points(
             project_path=project_path,
+            analysis=analysis,
             ai_allowed=ai_allowed,
             ai_warning=ai_warning,
             warning_printed=ai_warning_printed,
         )
+
+        # Save analysis to database (language-agnostic)
+        save_code_analysis_to_db(project.name, project.rel_path, analysis)
 
         analyzed += 1
         print()
@@ -251,6 +263,7 @@ def _ai_bullet_permission(consent_tool: ConsentTool) -> tuple[bool, str | None]:
 def _emit_ai_bullet_points(
     *,
     project_path: Path,
+    analysis: ProjectAnalysis | None = None,
     ai_allowed: bool,
     ai_warning: str | None,
     warning_printed: bool,
@@ -258,12 +271,13 @@ def _emit_ai_bullet_points(
     """Generate and print resume bullets with proper AI/local fallback.
 
     This now uses the unified bullet generation system that:
-    1. Runs complete analysis (all analyzers including C/C++ if applicable)
+    1. Uses pre-computed analysis if provided (avoids redundant analysis)
     2. Tries AI generation first if permitted
     3. Falls back to local generation automatically
 
     Args:
         project_path: Path to project directory
+        analysis: Pre-computed ProjectAnalysis (avoids redundant C++ analyzer calls)
         ai_allowed: Whether AI generation is permitted (consent)
         ai_warning: Warning message if AI not allowed
         warning_printed: Whether warning has been printed already
@@ -272,10 +286,10 @@ def _emit_ai_bullet_points(
         Updated warning_printed flag
     """
     # Determine if AI is available (check for API key)
+    # Determine if AI is available (check for API key)
     import os
 
     ai_available = bool(os.getenv("GOOGLE_API_KEY"))
-
     # Use unified bullet generator with proper fallback
     try:
         bullets, source = generate_resume_bullets(
@@ -283,6 +297,7 @@ def _emit_ai_bullet_points(
             max_bullets=6,
             use_ai=ai_allowed,
             ai_available=ai_available,
+            analysis=analysis,
         )
 
         if bullets:

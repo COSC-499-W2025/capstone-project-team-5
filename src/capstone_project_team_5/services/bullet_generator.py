@@ -21,11 +21,12 @@ def generate_resume_bullets(
     max_bullets: int = 6,
     use_ai: bool = True,
     ai_available: bool = True,
+    analysis: ProjectAnalysis | None = None,
 ) -> tuple[list[str], str]:
     """Generate resume bullets with proper AI/local fallback.
 
     This is the main entry point for bullet generation. It:
-    1. Runs complete project analysis (all analyzers)
+    1. Uses pre-computed analysis if provided, otherwise runs analysis
     2. Tries AI generation if permitted
     3. Falls back to local generation if needed
     4. Returns bullets and source indicator
@@ -35,14 +36,16 @@ def generate_resume_bullets(
         max_bullets: Maximum number of bullets to generate
         use_ai: Whether AI generation is allowed (consent)
         ai_available: Whether AI API is configured
+        analysis: Optional pre-computed ProjectAnalysis (avoids redundant analysis)
 
     Returns:
         Tuple of (bullets list, source) where source is "AI" or "Local"
     """
     project_path = Path(project_path)
 
-    # Step 1: Run complete analysis (always)
-    analysis = analyze_project(project_path)
+    # Step 1: Use provided analysis or run it if not provided
+    if analysis is None:
+        analysis = analyze_project(project_path)
 
     # Step 2: Try AI first if allowed and available
     if use_ai and ai_available:
