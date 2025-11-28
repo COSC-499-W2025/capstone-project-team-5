@@ -135,6 +135,15 @@ class LanguageFrameworkDetector:
             Tuple of detected language (or None) and framework (or None).
         """
         pkg = root / "package.json"
+        project_root = root
+
+        if not pkg.exists():
+            nested = next(root.rglob("package.json"), None)
+            if nested is None:
+                return None, None
+            pkg = nested
+            project_root = nested.parent
+
         if not pkg.exists():
             return None, None
 
@@ -154,7 +163,7 @@ class LanguageFrameworkDetector:
             "TypeScript"
             if any(
                 f.endswith(".ts") or f.endswith(".tsx")
-                for f in (p.name for p in root.rglob("*.ts*"))
+                for f in (p.name for p in project_root.rglob("*.ts*"))
             )
             else "JavaScript"
         )
@@ -176,7 +185,8 @@ class LanguageFrameworkDetector:
                 break
 
         if framework is None and (
-            (root / "src-tauri" / "tauri.conf.json").exists() or (root / "tauri.conf.json").exists()
+            (project_root / "src-tauri" / "tauri.conf.json").exists()
+            or (project_root / "tauri.conf.json").exists()
         ):
             framework = "Tauri"
 
