@@ -279,6 +279,97 @@ ERROR_HANDLING_PATTERNS = {
     "assert",
 }
 
+# === OOP PRINCIPLES (C++) ===
+INHERITANCE_PATTERNS = {
+    r"class\s+\w+\s*:\s*public",  # Public inheritance
+    r"class\s+\w+\s*:\s*protected",  # Protected inheritance
+    r"class\s+\w+\s*:\s*private",  # Private inheritance
+}
+
+POLYMORPHISM_INDICATORS = {
+    "virtual",
+    "override",
+    "final",
+    "pure virtual",
+}
+
+ENCAPSULATION_INDICATORS = {
+    "private:",
+    "protected:",
+    "public:",
+    "getter",
+    "setter",
+}
+
+# === DESIGN PATTERNS ===
+DESIGN_PATTERN_INDICATORS = {
+    "Singleton": ["static.*instance", "private.*constructor"],
+    "Factory": ["create", "make", "Factory"],
+    "Observer": ["notify", "subscribe", "observer", "listener"],
+    "Strategy": ["Strategy", "algorithm"],
+    "Decorator": ["Decorator", "wrapper"],
+    "Adapter": ["Adapter", "adapt"],
+    "Builder": ["Builder", "build"],
+}
+
+# === DATA STRUCTURES ===
+DATA_STRUCTURE_KEYWORDS = {
+    "LinkedList",
+    "Tree",
+    "BinaryTree",
+    "BST",
+    "Graph",
+    "HashMap",
+    "HashTable",
+    "Queue",
+    "Stack",
+    "Heap",
+    "Trie",
+    "AVL",
+    "RedBlack",
+}
+
+# === ALGORITHM INDICATORS ===
+ALGORITHM_PATTERNS = {
+    "sort": ["quicksort", "mergesort", "heapsort", "bubblesort", "insertion"],
+    "search": ["binary_search", "linear_search", "dfs", "bfs"],
+    "graph": ["dijkstra", "bellman", "floyd", "kruskal", "prim"],
+    "dynamic_programming": ["memoization", "tabulation", "dp"],
+}
+
+# === C++ MODERN FEATURES ===
+MODERN_CPP_FEATURES = {
+    "lambda": r"\[.*\]\s*\(.*\)\s*\{.*\}",
+    "auto": r"\bauto\s+\w+\s*=",
+    "constexpr": r"\bconstexpr\b",
+    "move_semantics": ["std::move", "&&"],
+    "smart_pointers": ["unique_ptr", "shared_ptr", "weak_ptr"],
+    "templates": r"template\s*<",
+    "raii": ["RAII", "destructor", "~"],
+}
+
+# === SOFTWARE ENGINEERING PRACTICES ===
+TESTING_INDICATORS = {
+    "TEST",
+    "test_",
+    "Test",
+    "assert",
+    "EXPECT_",
+    "ASSERT_",
+    "catch",
+    "gtest",
+}
+
+OPTIMIZATION_KEYWORDS = {
+    "inline",
+    "constexpr",
+    "noexcept",
+    "register",
+    "restrict",
+    "__attribute__",
+    "optimize",
+}
+
 # === FILE TYPE CLASSIFICATIONS ===
 HEADER_EXTENSIONS = {".h", ".hpp", ".hh", ".hxx", ".H"}
 SOURCE_EXTENSIONS = {".c", ".cpp", ".cc", ".cxx", ".C"}

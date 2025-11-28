@@ -14,14 +14,20 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from capstone_project_team_5.constants.c_analysis_constants import (
+    ALGORITHM_PATTERNS,
     ALL_C_EXTENSIONS,
     COMMON_C_LIBRARIES,
     COMMON_CPP_LIBRARIES,
     COMPLEXITY_KEYWORDS,
     CONCURRENCY_PATTERNS,
+    DATA_STRUCTURE_KEYWORDS,
+    DESIGN_PATTERN_INDICATORS,
     ERROR_HANDLING_PATTERNS,
     HEADER_EXTENSIONS,
+    INHERITANCE_PATTERNS,
     MEMORY_FUNCTIONS,
+    MODERN_CPP_FEATURES,
+    POLYMORPHISM_INDICATORS,
 )
 
 
@@ -66,6 +72,15 @@ class CFileStats:
     uses_concurrency: bool = False
     uses_error_handling: bool = False
     library_usage: set[str] = field(default_factory=set)
+    # OOP and advanced features
+    uses_inheritance: bool = False
+    uses_polymorphism: bool = False
+    uses_templates: bool = False
+    uses_lambda: bool = False
+    uses_modern_cpp: bool = False
+    design_patterns: set[str] = field(default_factory=set)
+    data_structures: set[str] = field(default_factory=set)
+    algorithms_used: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -107,6 +122,16 @@ class CProjectSummary:
     uses_concurrency: bool = False
     uses_error_handling: bool = False
     file_stats: list[CFileStats] = field(default_factory=list)
+    # OOP and advanced features (aggregated)
+    uses_inheritance: bool = False
+    uses_polymorphism: bool = False
+    uses_templates: bool = False
+    uses_lambda: bool = False
+    uses_modern_cpp: bool = False
+    design_patterns: set[str] = field(default_factory=set)
+    data_structures: set[str] = field(default_factory=set)
+    algorithms_used: set[str] = field(default_factory=set)
+    oop_score: float = 0.0  # 0-10 score for OOP usage
 
 
 class CFileAnalyzer:
@@ -330,6 +355,77 @@ class CFileAnalyzer:
         return libraries
 
     @staticmethod
+    def _detect_oop_features(content: str) -> dict[str, bool | set[str]]:
+        """Detect OOP principles and features (C++).
+
+        Args:
+            content: Source code content (without comments).
+
+        Returns:
+            Dictionary with OOP feature flags and detected patterns.
+        """
+        features = {
+            "inheritance": False,
+            "polymorphism": False,
+            "templates": False,
+            "lambda": False,
+            "modern_cpp": False,
+            "design_patterns": set(),
+            "data_structures": set(),
+            "algorithms": set(),
+        }
+
+        # Detect inheritance
+        for pattern in INHERITANCE_PATTERNS:
+            if re.search(pattern, content):
+                features["inheritance"] = True
+                break
+
+        # Detect polymorphism
+        for indicator in POLYMORPHISM_INDICATORS:
+            if re.search(rf"\b{indicator}\b", content):
+                features["polymorphism"] = True
+                break
+
+        # Detect templates
+        if re.search(r"template\s*<", content):
+            features["templates"] = True
+
+        # Detect lambda expressions
+        if re.search(r"\[.*\]\s*\(.*\)\s*{", content):
+            features["lambda"] = True
+
+        # Detect modern C++ features
+        modern_features = MODERN_CPP_FEATURES
+        if re.search(modern_features.get("auto", ""), content):
+            features["modern_cpp"] = True
+        if re.search(modern_features.get("constexpr", ""), content):
+            features["modern_cpp"] = True
+        if any(ptr in content for ptr in modern_features.get("smart_pointers", [])):
+            features["modern_cpp"] = True
+
+        # Detect design patterns
+        for pattern_name, indicators in DESIGN_PATTERN_INDICATORS.items():
+            for indicator in indicators:
+                if re.search(indicator, content, re.IGNORECASE):
+                    features["design_patterns"].add(pattern_name)
+                    break
+
+        # Detect data structures
+        for ds in DATA_STRUCTURE_KEYWORDS:
+            if re.search(rf"\b{ds}\b", content, re.IGNORECASE):
+                features["data_structures"].add(ds)
+
+        # Detect algorithms
+        for algo_type, patterns in ALGORITHM_PATTERNS.items():
+            for pattern in patterns:
+                if re.search(pattern, content, re.IGNORECASE):
+                    features["algorithms"].add(algo_type)
+                    break
+
+        return features
+
+    @staticmethod
     def analyze_file(file_path: Path, root: Path | None = None) -> CFileStats | None:
         """Analyze a single C/C++ file.
 
@@ -344,7 +440,7 @@ class CFileAnalyzer:
         """
         try:
             content = file_path.read_text(encoding="utf-8", errors="ignore")
-        except (OSError, UnicodeDecodeError):
+        except Exception:
             return None
 
         # Calculate relative path
@@ -387,6 +483,17 @@ class CFileAnalyzer:
             uses_error_handling=CFileAnalyzer._detect_error_handling(clean_content),
             library_usage=CFileAnalyzer._detect_libraries(includes),
         )
+
+        # Detect OOP and advanced features
+        oop_features = CFileAnalyzer._detect_oop_features(clean_content)
+        stats.uses_inheritance = oop_features["inheritance"]
+        stats.uses_polymorphism = oop_features["polymorphism"]
+        stats.uses_templates = oop_features["templates"]
+        stats.uses_lambda = oop_features["lambda"]
+        stats.uses_modern_cpp = oop_features["modern_cpp"]
+        stats.design_patterns = oop_features["design_patterns"]
+        stats.data_structures = oop_features["data_structures"]
+        stats.algorithms_used = oop_features["algorithms"]
 
         return stats
 
@@ -442,6 +549,16 @@ class CFileAnalyzer:
 
             summary.libraries_used.update(stats.library_usage)
 
+            # Aggregate OOP and advanced features
+            summary.uses_inheritance = summary.uses_inheritance or stats.uses_inheritance
+            summary.uses_polymorphism = summary.uses_polymorphism or stats.uses_polymorphism
+            summary.uses_templates = summary.uses_templates or stats.uses_templates
+            summary.uses_lambda = summary.uses_lambda or stats.uses_lambda
+            summary.uses_modern_cpp = summary.uses_modern_cpp or stats.uses_modern_cpp
+            summary.design_patterns.update(stats.design_patterns)
+            summary.data_structures.update(stats.data_structures)
+            summary.algorithms_used.update(stats.algorithms_used)
+
             # Track include usage
             for include in stats.includes:
                 all_includes[include] += 1
@@ -450,6 +567,22 @@ class CFileAnalyzer:
         if summary.total_files > 0:
             total_complexity = sum(stat.complexity_score for stat in summary.file_stats)
             summary.avg_complexity = total_complexity / summary.total_files
+
+            # Calculate OOP score (0-10)
+            oop_score = 0
+            if summary.total_classes > 0:
+                oop_score += 2
+            if summary.uses_inheritance:
+                oop_score += 2
+            if summary.uses_polymorphism:
+                oop_score += 2
+            if summary.uses_templates:
+                oop_score += 1
+            if summary.uses_modern_cpp:
+                oop_score += 1
+            if len(summary.design_patterns) > 0:
+                oop_score += 2
+            summary.oop_score = min(oop_score, 10)
 
         # Get most common includes
         summary.common_includes = all_includes.most_common(10)
@@ -473,11 +606,11 @@ class CFileAnalyzer:
         lines.append("=== C/C++ Project Analysis ===\n")
 
         # File counts
-        lines.append(f"📁 Total Files: {summary.total_files}")
+        lines.append(f"Total Files: {summary.total_files}")
         lines.append(f"   Headers: {summary.header_files}, Source: {summary.source_files}")
 
         # Code metrics
-        lines.append("\n📊 Code Metrics:")
+        lines.append("\nCode Metrics:")
         lines.append(f"   Lines of Code: {summary.total_lines_of_code:,}")
         lines.append(f"   Functions: {summary.total_functions}")
         lines.append(f"   Structs: {summary.total_structs}")
@@ -497,19 +630,56 @@ class CFileAnalyzer:
             features.append("Error Handling")
 
         if features:
-            lines.append(f"\n⚙️  Technical Features: {', '.join(features)}")
+            lines.append(f"\nTechnical Features: {', '.join(features)}")
+
+        # OOP and Advanced Features (aggregated across all files)
+        if summary.oop_score > 0:
+            lines.append(f"\nOOP Score: {summary.oop_score:.1f}/10")
+
+            oop_features = []
+            if summary.uses_inheritance:
+                oop_features.append("Inheritance")
+            if summary.uses_polymorphism:
+                oop_features.append("Polymorphism")
+            if summary.uses_templates:
+                oop_features.append("Templates")
+            if summary.uses_lambda:
+                oop_features.append("Lambda Expressions")
+            if summary.uses_modern_cpp:
+                oop_features.append("Modern C++")
+
+            if oop_features:
+                lines.append(f"   Features: {', '.join(oop_features)}")
+
+        # Design Patterns (aggregated)
+        if summary.design_patterns:
+            lines.append("\nDesign Patterns Detected:")
+            for pattern in sorted(summary.design_patterns):
+                lines.append(f"   - {pattern}")
+
+        # Data Structures (aggregated)
+        if summary.data_structures:
+            lines.append("\nData Structures:")
+            for ds in sorted(summary.data_structures):
+                lines.append(f"   - {ds}")
+
+        # Algorithms (aggregated)
+        if summary.algorithms_used:
+            lines.append("\nAlgorithm Types:")
+            for algo in sorted(summary.algorithms_used):
+                lines.append(f"   - {algo.replace('_', ' ').title()}")
 
         # Libraries
         if summary.libraries_used:
-            lines.append("\n📚 Libraries Used:")
+            lines.append("\nLibraries Used:")
             for lib in sorted(summary.libraries_used):
-                lines.append(f"   • {lib}")
+                lines.append(f"   - {lib}")
 
         # Common includes
         if summary.common_includes:
-            lines.append("\n#️⃣  Most Common Includes:")
+            lines.append("\nMost Common Includes:")
             for include, count in summary.common_includes[:5]:
-                lines.append(f"   • {include} ({count} files)")
+                lines.append(f"   - {include} ({count} files)")
 
         return "\n".join(lines)
 
@@ -572,14 +742,40 @@ def analyze_c_files(files: list[Path], root: Path | None = None) -> CProjectSumm
 
         summary.libraries_used.update(stats.library_usage)
 
+        # Aggregate OOP and advanced features
+        summary.uses_inheritance = summary.uses_inheritance or stats.uses_inheritance
+        summary.uses_polymorphism = summary.uses_polymorphism or stats.uses_polymorphism
+        summary.uses_templates = summary.uses_templates or stats.uses_templates
+        summary.uses_lambda = summary.uses_lambda or stats.uses_lambda
+        summary.uses_modern_cpp = summary.uses_modern_cpp or stats.uses_modern_cpp
+        summary.design_patterns.update(stats.design_patterns)
+        summary.data_structures.update(stats.data_structures)
+        summary.algorithms_used.update(stats.algorithms_used)
+
         # Track include usage
         for include in stats.includes:
             all_includes[include] += 1
 
-    # Calculate averages
+    # Calculate averages and scores
     if summary.total_files > 0:
         total_complexity = sum(stat.complexity_score for stat in summary.file_stats)
         summary.avg_complexity = total_complexity / summary.total_files
+
+        # Calculate OOP score (0-10)
+        oop_score = 0
+        if summary.total_classes > 0:
+            oop_score += 2
+        if summary.uses_inheritance:
+            oop_score += 2
+        if summary.uses_polymorphism:
+            oop_score += 2
+        if summary.uses_templates:
+            oop_score += 1
+        if summary.uses_modern_cpp:
+            oop_score += 1
+        if len(summary.design_patterns) > 0:
+            oop_score += 2
+        summary.oop_score = min(oop_score, 10)
 
     # Get most common includes
     summary.common_includes = all_includes.most_common(10)
