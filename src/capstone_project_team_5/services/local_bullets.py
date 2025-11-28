@@ -37,10 +37,17 @@ See c_analyzer.py and services/c_bullets.py as reference implementations.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from capstone_project_team_5.contribution_metrics import ContributionMetrics
 from capstone_project_team_5.detection import identify_language_and_framework
-from capstone_project_team_5.services.c_bullets import generate_c_project_bullets
+from capstone_project_team_5.services.c_bullets import (
+    generate_c_bullets,
+    generate_c_project_bullets,
+)
+
+if TYPE_CHECKING:
+    from capstone_project_team_5.services.project_analysis import ProjectAnalysis
 
 
 def generate_local_bullets(project_root: Path | str, *, max_bullets: int = 6) -> list[str]:
@@ -226,3 +233,142 @@ def should_use_local_analysis(
 
     # For C/C++, local analysis is often preferred as it's more accurate
     return language == "C/C++"
+
+
+def generate_language_specific_bullets(
+    summary: Any, language: str, max_bullets: int = 6
+) -> list[str]:
+    """Generate bullets from a language-specific summary object.
+
+    This is a COMMON METHOD that routes to language-specific generators,
+    making it easy to add new languages without modifying callers.
+
+    Args:
+        summary: Language-specific summary object (e.g., CProjectSummary)
+        language: Programming language (e.g., "C/C++", "Python", "Java")
+        max_bullets: Maximum number of bullets to generate
+
+    Returns:
+        List of professionally-written resume bullets
+
+    Example:
+        >>> from capstone_project_team_5.c_analyzer import CProjectSummary
+        >>> summary = CProjectSummary(...)
+        >>> bullets = generate_language_specific_bullets(summary, "C/C++", 6)
+    """
+    if language == "C/C++":
+        return generate_c_bullets(summary, max_bullets=max_bullets)
+    # Future languages - just add new elif blocks:
+    # elif language == "Python":
+    #     from capstone_project_team_5.services.python_bullets import generate_python_bullets
+    #     return generate_python_bullets(summary, max_bullets=max_bullets)
+    # elif language == "Java":
+    #     from capstone_project_team_5.services.java_bullets import generate_java_bullets
+    #     return generate_java_bullets(summary, max_bullets=max_bullets)
+    else:
+        # No language-specific generator available
+        return []
+
+
+def generate_generic_bullets(analysis: ProjectAnalysis, max_bullets: int = 6) -> list[str]:
+    """Generate generic bullets from ProjectAnalysis (no language-specific data).
+
+    This is used as a fallback when no language-specific analyzer is available.
+
+    Args:
+        analysis: ProjectAnalysis with aggregated data
+        max_bullets: Maximum bullets to generate
+
+    Returns:
+        List of generic resume bullets
+    """
+    bullets = []
+
+    # Determine technology stack
+    tech_stack = (
+        f"{analysis.language}/{analysis.framework}" if analysis.framework else analysis.language
+    )
+
+    # Opening bullet - project scope
+    if analysis.lines_of_code > 0 and analysis.total_files > 0:
+        bullets.append(
+            f"Developed a {tech_stack} application with {analysis.lines_of_code:,} lines "
+            f"of code across {analysis.total_files} files"
+        )
+    else:
+        file_count = len(analysis.tools | analysis.practices)
+        if file_count > 0:
+            bullets.append(
+                f"Built a {tech_stack} project with {file_count} identified components "
+                f"and configuration files"
+            )
+
+    # OOP and architecture (if applicable)
+    if analysis.oop_score > 0:
+        oop_desc = []
+        if analysis.class_count > 0:
+            oop_desc.append(f"{analysis.class_count} classes")
+        if analysis.function_count > 0:
+            oop_desc.append(f"{analysis.function_count} functions")
+
+        if oop_desc:
+            bullets.append(f"Architected a modular design implementing {' and '.join(oop_desc)}")
+
+    # OOP features
+    if analysis.oop_features:
+        features = ", ".join(sorted(analysis.oop_features))
+        bullets.append(
+            f"Applied object-oriented principles including {features} "
+            f"for maintainable and extensible code"
+        )
+
+    # Design patterns
+    if analysis.design_patterns:
+        if len(analysis.design_patterns) == 1:
+            pattern = list(analysis.design_patterns)[0]
+            bullets.append(
+                f"Implemented the {pattern} design pattern to solve architectural challenges"
+            )
+        else:
+            patterns = ", ".join(sorted(analysis.design_patterns))
+            bullets.append(
+                f"Utilized multiple design patterns ({patterns}) for robust architecture"
+            )
+
+    # Data structures
+    if analysis.data_structures:
+        ds_list = sorted(analysis.data_structures)
+        if len(ds_list) <= 2:
+            ds_str = " and ".join(ds_list)
+        else:
+            ds_str = f"{', '.join(ds_list[:2])}, and {len(ds_list) - 2} others"
+
+        bullets.append(f"Developed custom data structures ({ds_str}) optimized for performance")
+
+    # Algorithms
+    if analysis.algorithms:
+        algo_types = ", ".join(sorted(analysis.algorithms))
+        bullets.append(f"Implemented efficient algorithms for {algo_types} operations")
+
+    # Technical features
+    if analysis.technical_features:
+        features = ", ".join(sorted(analysis.technical_features))
+        bullets.append(f"Leveraged {features} for robust implementation")
+
+    # Tools and practices
+    if analysis.tools:
+        tool_count = len(analysis.tools)
+        if tool_count <= 3:
+            tools_str = ", ".join(sorted(analysis.tools))
+        else:
+            tools_list = sorted(analysis.tools)
+            tools_str = f"{', '.join(tools_list[:3])}, and {tool_count - 3} others"
+
+        bullets.append(f"Utilized industry-standard tools including {tools_str}")
+
+    # Development practices
+    if analysis.practices:
+        practices_str = ", ".join(sorted(analysis.practices))
+        bullets.append(f"Followed best practices: {practices_str}")
+
+    return bullets[:max_bullets]
