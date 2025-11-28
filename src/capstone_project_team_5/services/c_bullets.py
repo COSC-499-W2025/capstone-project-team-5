@@ -93,8 +93,76 @@ def generate_c_bullets(summary: CProjectSummary, *, max_bullets: int = 6) -> lis
 
         bullets.append(f"Integrated external libraries including {lib_str} to extend functionality")
 
+    # OOP Principles - shows advanced C++ knowledge
+    if summary.uses_inheritance or summary.uses_polymorphism:
+        oop_features = []
+        if summary.uses_inheritance:
+            oop_features.append("inheritance")
+        if summary.uses_polymorphism:
+            oop_features.append("polymorphism with virtual functions")
+
+        bullets.append(
+            f"Applied object-oriented principles including {' and '.join(oop_features)}, "
+            f"creating maintainable and extensible class hierarchies"
+        )
+
+    # Design Patterns - demonstrates software engineering maturity
+    if summary.design_patterns:
+        patterns = sorted(summary.design_patterns)
+        if len(patterns) == 1:
+            pattern_str = f"the {patterns[0]} pattern"
+        elif len(patterns) == 2:
+            pattern_str = f"{patterns[0]} and {patterns[1]} patterns"
+        else:
+            pattern_str = f"{', '.join(patterns[:-1])}, and {patterns[-1]} patterns"
+
+        bullets.append(
+            f"Implemented industry-standard design patterns ({pattern_str}) "
+            f"to solve common architectural challenges"
+        )
+
+    # Data Structures - shows algorithmic thinking
+    if summary.data_structures:
+        ds_list = sorted(summary.data_structures)
+        if len(ds_list) == 1:
+            ds_str = ds_list[0]
+        elif len(ds_list) == 2:
+            ds_str = f"{ds_list[0]} and {ds_list[1]}"
+        else:
+            ds_str = f"{', '.join(ds_list[:2])}, and {len(ds_list) - 2} other structures"
+
+        bullets.append(
+            f"Developed custom data structures ({ds_str}) "
+            f"optimized for specific performance requirements"
+        )
+
+    # Algorithms - demonstrates problem-solving skills
+    if summary.algorithms_used:
+        algo_types = sorted(summary.algorithms_used)
+        algo_str = ", ".join(a.replace("_", " ") for a in algo_types)
+
+        bullets.append(
+            f"Implemented efficient algorithms for {algo_str}, "
+            f"demonstrating strong computational thinking and optimization skills"
+        )
+
+    # Modern C++ Features - shows up-to-date knowledge
+    if summary.uses_modern_cpp or summary.uses_lambda or summary.uses_templates:
+        modern_features = []
+        if summary.uses_lambda:
+            modern_features.append("lambda expressions")
+        if summary.uses_templates:
+            modern_features.append("generic programming with templates")
+        if summary.uses_modern_cpp:
+            modern_features.append("modern C++ idioms")
+
+        bullets.append(
+            f"Leveraged {', '.join(modern_features)} to write expressive, "
+            f"type-safe, and performant code following C++11/14/17 standards"
+        )
+
     # Complexity handling - shows problem-solving
-    if summary.avg_complexity > 5:
+    if summary.avg_complexity > 5 and len(bullets) < max_bullets:
         bullets.append(
             f"Managed algorithmic complexity (avg score: {summary.avg_complexity:.1f}) "
             f"with clean control flow and maintainable logic"
