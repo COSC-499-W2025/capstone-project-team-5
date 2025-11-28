@@ -15,6 +15,7 @@ from capstone_project_team_5.models import InvalidZipError
 from capstone_project_team_5.models.upload import DetectedProject
 from capstone_project_team_5.services import upload_zip
 from capstone_project_team_5.services.bullet_generator import generate_resume_bullets
+from capstone_project_team_5.services.ranking import update_project_ranks
 from capstone_project_team_5.skill_detection import extract_project_tools_practices
 from capstone_project_team_5.utils import display_upload_result, prompt_for_zip_file
 
@@ -91,6 +92,7 @@ def _display_project_analyses(
     ai_allowed, ai_warning = _ai_bullet_permission(consent_tool)
     ai_warning_printed = False
     analyzed = 0
+    project_scores: list[tuple[str, str, float, dict[str, float]]] = []
 
     for project in projects:
         project_path = _resolve_project_path(extract_root, project.rel_path)
@@ -111,8 +113,17 @@ def _display_project_analyses(
         total_size = _format_bytes(summary["total_size_bytes"])
         collab_summary = CollabDetector.collaborator_summary(project_path)
         collaborators = CollabDetector.format_collaborators(collab_summary)
-        project_duration = ContributionMetrics.get_project_duration(project_path)[1]
-        contribution_metrics = ContributionMetrics.get_project_contribution_metrics(project_path)
+        duration_timedelta, project_duration = ContributionMetrics.get_project_duration(
+            project_path
+        )
+        contribution_metrics, metrics_source = ContributionMetrics.get_project_contribution_metrics(
+            project_path
+        )
+
+        score, breakdown = ContributionMetrics.calculate_importance_score(
+            contribution_metrics, duration_timedelta, project.file_count
+        )
+        project_scores.append((project.name, project.rel_path, score, breakdown))
 
         if analyzed == 0:
             print("\n📊 Project Analysis")
@@ -127,11 +138,9 @@ def _display_project_analyses(
         tools_list = ", ".join(sorted(tools)) or "None detected"
         print(f"🧠 Skills: {skills_list}")
         print(f"🧰 Tools: {tools_list}")
-        print(
-            ContributionMetrics.format_contribution_metrics(
-                contribution_metrics[0], contribution_metrics[1]
-            )
-        )
+        print(ContributionMetrics.format_contribution_metrics(contribution_metrics, metrics_source))
+
+        print(f"\n{ContributionMetrics.format_score_breakdown(score, breakdown)}")
 
         print("\n📂 File Analysis")
         print("-" * 60)
@@ -146,6 +155,9 @@ def _display_project_analyses(
 
         analyzed += 1
         print()
+
+    if project_scores and analyzed > 0:
+        update_project_ranks(project_scores)
 
     return analyzed
 
