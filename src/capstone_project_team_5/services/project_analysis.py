@@ -162,6 +162,60 @@ def _analyze_cpp_project(analysis: ProjectAnalysis) -> None:
         pass
 
 
+def _analyze_js_project(analysis: ProjectAnalysis) -> None:
+    """Run JavaScript/TypeScript specific analysis and update the ProjectAnalysis object.
+
+    Args:
+        analysis: ProjectAnalysis object to update with JS/TS specific data
+    """
+    try:
+        from capstone_project_team_5.js_code_analyzer import analyze_js_project
+
+        summary = analyze_js_project(analysis.project_path, analysis.language, analysis.framework)
+
+        analysis.language_analysis["js_ts_summary"] = summary
+
+        analysis.total_files = summary.total_files
+        analysis.lines_of_code = summary.total_lines_of_code
+
+        for _category, items in summary.tech_stack.items():
+            analysis.tools.update(items)
+
+        analysis.practices.update(summary.features)
+
+        if summary.tech_stack.get("backend"):
+            analysis.technical_features.add("Backend Development")
+            analysis.technical_features.add("API Development")
+
+        if summary.tech_stack.get("database"):
+            analysis.technical_features.add("Database Integration")
+
+        if summary.tech_stack.get("testing"):
+            analysis.technical_features.add("Automated Testing")
+
+        if summary.uses_typescript:
+            analysis.technical_features.add("TypeScript")
+
+        if summary.tech_stack.get("frontend"):
+            analysis.technical_features.add("Frontend Development")
+
+        if summary.uses_react:
+            analysis.oop_features.add("Component-Based Architecture")
+            analysis.oop_features.add("React Hooks")
+
+        if summary.uses_nodejs:
+            analysis.oop_features.add("Event-Driven Architecture")
+
+        analysis.design_patterns.update(summary.design_patterns)
+
+        if summary.integrations:
+            analysis.language_analysis["js_ts_integrations"] = summary.integrations
+
+    except ImportError:
+        # JS analyzer not available, skip
+        pass
+
+
 # Future: Add more language analyzers following the same pattern
 # def _analyze_python_project(analysis: ProjectAnalysis) -> None:
 #     """Run Python specific analysis."""
