@@ -14,9 +14,11 @@ from capstone_project_team_5.file_walker import DirectoryWalker
 from capstone_project_team_5.models import InvalidZipError
 from capstone_project_team_5.models.upload import DetectedProject
 from capstone_project_team_5.services import upload_zip
-from capstone_project_team_5.services.llm import (
-    generate_bullet_points_from_analysis,
+from capstone_project_team_5.services.bullet_generator import generate_resume_bullets
+from capstone_project_team_5.services.code_analysis_persistence import (
+    save_code_analysis_to_db,
 )
+from capstone_project_team_5.services.project_analysis import ProjectAnalysis
 from capstone_project_team_5.services.ranking import update_project_ranks
 from capstone_project_team_5.skill_detection import extract_project_tools_practices
 from capstone_project_team_5.utils import display_upload_result, prompt_for_zip_file
@@ -94,7 +96,7 @@ def _display_project_analyses(
     ai_allowed, ai_warning = _ai_bullet_permission(consent_tool)
     ai_warning_printed = False
     analyzed = 0
-    project_scores: list[tuple[str, str, float]] = []
+    project_scores: list[tuple[str, str, float, dict[str, float]]] = []
 
     for project in projects:
         project_path = _resolve_project_path(extract_root, project.rel_path)
@@ -106,10 +108,14 @@ def _display_project_analyses(
         except ValueError:
             continue
 
-        language, framework = identify_language_and_framework(project_path)
-        skills = extract_project_tools_practices(project_path)
-        tools = set(skills.get("tools", set()))
-        practices = set(skills.get("practices", set()))
+        # Run unified analysis once (includes language detection, skills, C++ analyzer, etc.)
+        from capstone_project_team_5.services.project_analysis import analyze_project
+
+        analysis = analyze_project(project_path)
+        language = analysis.language
+        framework = analysis.framework
+        tools = analysis.tools
+        practices = analysis.practices
         combined_skills = tools | practices
         summary = DirectoryWalker.get_summary(walk_result)
         total_size = _format_bytes(summary["total_size_bytes"])
@@ -149,14 +155,15 @@ def _display_project_analyses(
         print(f"Total: {summary['total_files']} files ({total_size})")
 
         ai_warning_printed = _emit_ai_bullet_points(
-            language=language,
-            framework=framework,
-            combined_skills=combined_skills,
-            tools=tools,
+            project_path=project_path,
+            analysis=analysis,
             ai_allowed=ai_allowed,
             ai_warning=ai_warning,
             warning_printed=ai_warning_printed,
         )
+
+        # Save analysis to database (language-agnostic)
+        save_code_analysis_to_db(project.name, project.rel_path, analysis)
 
         analyzed += 1
         print()
@@ -205,10 +212,7 @@ def _display_root_analysis(extract_root: Path, consent_tool: ConsentTool) -> Non
     print(f"Total: {summary['total_files']} files ({total_size})")
 
     _emit_ai_bullet_points(
-        language=language,
-        framework=framework,
-        combined_skills=combined_skills,
-        tools=tools,
+        project_path=extract_root,
         ai_allowed=ai_allowed,
         ai_warning=ai_warning,
         warning_printed=False,
@@ -258,39 +262,59 @@ def _ai_bullet_permission(consent_tool: ConsentTool) -> tuple[bool, str | None]:
 
 def _emit_ai_bullet_points(
     *,
-    language: str,
-    framework: str | None,
-    combined_skills: set[str],
-    tools: set[str],
+    project_path: Path,
+    analysis: ProjectAnalysis | None = None,
     ai_allowed: bool,
     ai_warning: str | None,
     warning_printed: bool,
 ) -> bool:
-    """Print AI bullet points when permitted, returning updated warning flag."""
+    """Generate and print resume bullets with proper AI/local fallback.
 
-    if ai_allowed:
-        try:
-            ai_bullets = generate_bullet_points_from_analysis(
-                language=language,
-                framework=framework,
-                skills=sorted(combined_skills),
-                tools=sorted(tools),
-                max_bullets=6,
-            )
+    This now uses the unified bullet generation system that:
+    1. Uses pre-computed analysis if provided (avoids redundant analysis)
+    2. Tries AI generation first if permitted
+    3. Falls back to local generation automatically
 
-            if ai_bullets:
-                print("\nAI Bullet Points")
-                print("-" * 60)
-                for bullet in ai_bullets:
-                    print(f"- {bullet}")
-            else:
-                print("\nAI Bullets: provider returned no content.")
-        except Exception as exc:  # pragma: no cover - defensive logging
-            print(f"\nAI Bullets error: {exc}")
-            print("\n⚠️  Could not generate AI bullet points.")
+    Args:
+        project_path: Path to project directory
+        analysis: Pre-computed ProjectAnalysis (avoids redundant C++ analyzer calls)
+        ai_allowed: Whether AI generation is permitted (consent)
+        ai_warning: Warning message if AI not allowed
+        warning_printed: Whether warning has been printed already
+
+    Returns:
+        Updated warning_printed flag
+    """
+    # Determine if AI is available (check for API key)
+    # Determine if AI is available (check for API key)
+    import os
+
+    ai_available = bool(os.getenv("GOOGLE_API_KEY"))
+    # Use unified bullet generator with proper fallback
+    try:
+        bullets, source = generate_resume_bullets(
+            project_path,
+            max_bullets=6,
+            use_ai=ai_allowed,
+            ai_available=ai_available,
+            analysis=analysis,
+        )
+
+        if bullets:
+            print(f"\nResume Bullet Points ({source} Generation)")
+            print("-" * 60)
+            for bullet in bullets:
+                print(f"- {bullet}")
+        else:
+            print("\nNo bullet points could be generated.")
+
         return warning_printed
 
-    if not warning_printed and ai_warning is not None:
+    except Exception as exc:
+        print(f"\nBullet generation error: {exc}")
+
+    # Print warning if AI was not allowed
+    if not ai_allowed and not warning_printed and ai_warning is not None:
         print(ai_warning)
         return True
 

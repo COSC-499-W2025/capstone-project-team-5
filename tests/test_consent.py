@@ -64,7 +64,10 @@ def test_get_external_services_consent_with_selections() -> None:
 
     assert result is True
     assert consent_tool.use_external_services is True
-    assert consent_tool.external_services == {"GitHub API": True, "LinkedIn API": True}
+    assert consent_tool.external_services == {
+        "GitHub API": {"allowed": True},
+        "LinkedIn API": {"allowed": True},
+    }
 
 
 def test_get_external_services_consent_no_selections() -> None:
