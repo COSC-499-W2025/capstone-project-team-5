@@ -6,6 +6,7 @@ from capstone_project_team_5.services.llm_providers import (
     GeminiProvider,
     LLMError,
     LLMProvider,
+    OpenAIProvider,
 )
 from capstone_project_team_5.services.llm_service import LLMService
 
@@ -49,6 +50,25 @@ def test_llm_service_initialization_with_default_gemini_provider(
 
     service = LLMService()
     assert isinstance(service.provider, GeminiProvider)
+
+
+def test_llm_service_initialization_with_openai_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that LLMService initializes with OpenAI provider when configured."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_PROVIDER", "openai")
+
+    class _FakeClient:
+        def __init__(self, api_key: str) -> None:
+            pass
+
+    import openai
+
+    monkeypatch.setattr(openai, "OpenAI", _FakeClient, raising=True)
+
+    service = LLMService()
+    assert isinstance(service.provider, OpenAIProvider)
 
 
 def test_llm_service_initialization_with_unknown_provider(
