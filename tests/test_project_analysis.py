@@ -135,3 +135,87 @@ int main() {
 
         # Verify complexity score is set (C++ specific)
         assert analysis.complexity_score >= 0
+
+
+class TestProjectAnalysisPythonIntegration:
+    """Test Python analyzer integration with project analysis."""
+
+    def test_python_project_analysis_integration(self, tmp_path: Path) -> None:
+        """Test that Python projects are correctly analyzed through project_analysis."""
+        # Create Python files to trigger language detection
+        py_file = tmp_path / "main.py"
+        py_file.write_text(
+            """
+from abc import ABC, abstractmethod
+
+class Shape(ABC):
+    @abstractmethod
+    def area(self):
+        pass
+    
+    @abstractmethod
+    def perimeter(self):
+        pass
+
+class Rectangle(Shape):
+    def __init__(self, width, height):
+        self._width = width
+        self._height = height
+    
+    def area(self):
+        return self._width * self._height
+    
+    def perimeter(self):
+        return 2 * (self._width + self._height)
+
+class Circle(Shape):
+    def __init__(self, radius):
+        self._radius = radius
+    
+    def area(self):
+        return 3.14159 * self._radius ** 2
+    
+    def perimeter(self):
+        return 2 * 3.14159 * self._radius
+
+def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+"""
+        )
+
+        # Analyze the project
+        analysis = analyze_project(tmp_path)
+
+        # Verify language detection
+        assert analysis.language == "Python"
+
+        # Verify Python analyzer ran
+        assert "python_result" in analysis.language_analysis
+
+        # Verify metrics were populated
+        assert analysis.total_files == 1
+        assert analysis.class_count == 3  # Shape, Rectangle, Circle
+        assert analysis.function_count > 0
+        assert analysis.lines_of_code > 0
+
+        # Verify all 4 OOP features detected
+        assert "Encapsulation" in analysis.oop_features
+        assert "Inheritance" in analysis.oop_features
+        assert "Polymorphism" in analysis.oop_features
+        assert "Abstraction" in analysis.oop_features
+        assert analysis.oop_score == 10.0  # All 4 principles = 4 * 2.5
+
+        # Verify recursion detected
+        assert "Recursion" in analysis.algorithms
+
+        # Verify data structures detected (at least some common ones)
+        # Note: May have false positives due to current implementation
+        assert isinstance(analysis.data_structures, set)
+
+        # Verify technical features from Python
+        python_result = analysis.language_analysis["python_result"]
+        assert "features" in python_result
+        assert "tech_stack" in python_result
+        assert "skills_demonstrated" in python_result

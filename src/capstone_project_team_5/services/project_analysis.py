@@ -102,8 +102,8 @@ def analyze_project(project_path: Path) -> ProjectAnalysis:
         _analyze_cpp_project(analysis)
     elif language == "Java":
         _analyze_java_project(analysis)
-    # Future: elif language == "Python":
-    #     _analyze_python_project(analysis)
+    elif language == "Python":
+        _analyze_python_project(analysis)
     # Future: elif language == "JavaScript":
     #     _analyze_javascript_project(analysis)
 
@@ -221,12 +221,59 @@ def _analyze_java_project(analysis: ProjectAnalysis) -> None:
 
 
 # Future: Add more language analyzers following the same pattern
-# def _analyze_python_project(analysis: ProjectAnalysis) -> None:
-#     """Run Python specific analysis."""
-#     try:
-#         from capstone_project_team_5.python_analyzer import analyze_python_project
-#         summary = analyze_python_project(analysis.project_path)
-#         analysis.language_analysis["python_summary"] = summary
-#         # Update aggregated fields...
-#     except ImportError:
-#         pass
+def _analyze_python_project(analysis: ProjectAnalysis) -> None:
+    """Run Python specific analysis and update the ProjectAnalysis object.
+
+    Args:
+        analysis: ProjectAnalysis object to update with Python specific data
+
+    TODO: Document which fields get populated (metrics, oop_score, features, etc.)
+    """
+    try:
+        from capstone_project_team_5.python_analyzer import analyze_python_project
+
+        result = analyze_python_project(analysis.project_path)
+
+        # Check for errors from analyzer
+        if "error" in result:
+            return
+
+        # Store raw result for Python-specific bullet generation
+        analysis.language_analysis["python_result"] = result
+
+        # Update aggregated metrics
+        analysis.total_files = result.get("total_files", 0)
+        analysis.lines_of_code = result.get("lines_of_code", 0)
+        analysis.function_count = result.get("methods_count", 0)
+        analysis.class_count = result.get("classes_count", 0)
+        # TODO: Add complexity_score calculation (currently always 0 for Python)
+
+        # Calculate OOP score based on principles detected
+        oop_principles = result.get("oop_principles", {})
+        oop_score = sum(oop_principles.values()) * 2.5  # 0-10 scale (4 principles * 2.5)
+        analysis.oop_score = oop_score
+
+        # Aggregate OOP features
+        if oop_principles.get("Encapsulation"):
+            analysis.oop_features.add("Encapsulation")
+        if oop_principles.get("Inheritance"):
+            analysis.oop_features.add("Inheritance")
+        if oop_principles.get("Polymorphism"):
+            analysis.oop_features.add("Polymorphism")
+        if oop_principles.get("Abstraction"):
+            analysis.oop_features.add("Abstraction")
+
+        # Aggregate technical features from detected features
+        features = result.get("features", [])
+        analysis.technical_features.update(features)
+
+        # TODO: Map tech_stack (frameworks, database, testing, tooling) to technical_features
+        # TODO: Map integrations (http, aws, cache, data) to technical_features or new field
+
+        # Copy design patterns, data structures, and algorithms
+        analysis.design_patterns.update(result.get("design_patterns", []))
+        analysis.data_structures.update(result.get("data_structures", []))
+        analysis.algorithms.update(result.get("algorithms", []))
+
+    except ImportError:
+        pass
