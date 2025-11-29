@@ -77,6 +77,14 @@ def generate_local_bullets(project_root: Path | str, *, max_bullets: int = 6) ->
         bullets.extend(c_bullets[:max_bullets])
         return bullets
 
+    # Use specialized analyzer for JavaScript/TypeScript projects
+    if language == "JavaScript" or language == "TypeScript":
+        from capstone_project_team_5.services.js_bullets import generate_js_project_bullets
+
+        js_bullets = generate_js_project_bullets(root, max_bullets=max_bullets)
+        bullets.extend(js_bullets)
+        return bullets
+
     # For other languages, generate generic bullets based on metrics
     bullets = _generate_generic_bullets(root, language, framework)
 
@@ -258,6 +266,10 @@ def generate_language_specific_bullets(
     """
     if language == "C/C++":
         return generate_c_bullets(summary, max_bullets=max_bullets)
+    elif language == "JavaScript" or language == "TypeScript":
+        from capstone_project_team_5.services.js_bullets import generate_js_bullets
+
+        return generate_js_bullets(summary, max_bullets=max_bullets)
     # Future languages - just add new elif blocks:
     # elif language == "Python":
     #     from capstone_project_team_5.services.python_bullets import generate_python_bullets

@@ -4,6 +4,7 @@ import sys
 import tempfile
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 from zipfile import ZipFile
 
 from capstone_project_team_5.collab_detect import CollabDetector
@@ -18,6 +19,7 @@ from capstone_project_team_5.services.bullet_generator import generate_resume_bu
 from capstone_project_team_5.services.code_analysis_persistence import (
     save_code_analysis_to_db,
 )
+from capstone_project_team_5.services.llm import generate_bullet_points_from_analysis
 from capstone_project_team_5.services.project_analysis import ProjectAnalysis
 from capstone_project_team_5.services.ranking import update_project_ranks
 from capstone_project_team_5.skill_detection import extract_project_tools_practices
@@ -177,42 +179,29 @@ def _display_project_analyses(
 def _display_root_analysis(extract_root: Path, consent_tool: ConsentTool) -> None:
     """Display analysis summary for the entire extraction root."""
 
-    walk_result = DirectoryWalker.walk(extract_root)
-    language, framework = identify_language_and_framework(extract_root)
-    skills = extract_project_tools_practices(extract_root)
-    tools = set(skills.get("tools", set()))
-    practices = set(skills.get("practices", set()))
-    combined_skills = tools | practices
-    ai_allowed, ai_warning = _ai_bullet_permission(consent_tool)
-    collab_summary = CollabDetector.collaborator_summary(extract_root)
-    collaborators = CollabDetector.format_collaborators(collab_summary)
-    project_duration = ContributionMetrics.get_project_duration(extract_root)[1]
-    contribution_metrics = ContributionMetrics.get_project_contribution_metrics(extract_root)
+    data = analyze_root_structured(extract_root, consent_tool)
 
     print("\n📊 Analysis Summary")
     print("-" * 60)
-    print(f"📅 Project Duration: {project_duration}")
-    print(collaborators)
-    print(f"🧑‍💻 Language: {language}")
-    print(f"🏗️ Framework: {framework or 'None detected'}")
-    skills_list = ", ".join(sorted(combined_skills)) or "None detected"
-    tools_list = ", ".join(sorted(tools)) or "None detected"
+    print(f"📅 Project Duration: {data['duration']}")
+    print(data["collaborators_display"])
+    print(f"🧑‍💻 Language: {data['language']}")
+    print(f"🏗️ Framework: {data['framework'] or 'None detected'}")
+    skills_list = ", ".join(data["skills"]) or "None detected"
+    tools_list = ", ".join(data["tools"]) or "None detected"
     print(f"🧠 Skills: {skills_list}")
     print(f"🧰 Tools: {tools_list}")
-    print(
-        ContributionMetrics.format_contribution_metrics(
-            contribution_metrics[0], contribution_metrics[1]
-        )
-    )
+    print(data["contribution_summary"])
 
     print("\n📂 File Analysis")
     print("-" * 60)
-    summary = DirectoryWalker.get_summary(walk_result)
-    total_size = _format_bytes(summary["total_size_bytes"])
-    print(f"Total: {summary['total_files']} files ({total_size})")
+    file_summary = data["file_summary"]
+    print(f"Total: {file_summary['total_files']} files ({file_summary['total_size']})")
 
+    ai_allowed, ai_warning = _ai_bullet_permission(consent_tool)
     _emit_ai_bullet_points(
         project_path=extract_root,
+        analysis=None,
         ai_allowed=ai_allowed,
         ai_warning=ai_warning,
         warning_printed=False,
@@ -335,6 +324,179 @@ def _format_bytes(size: int) -> str:
             return f"{size:.1f} {unit}"
         size /= 1024.0
     return f"{size:.1f} TB"
+
+
+def analyze_projects_structured(
+    extract_root: Path, projects: Sequence[DetectedProject], consent_tool: ConsentTool
+) -> list[dict[str, Any]]:
+    """Compute structured per-project analysis for all detected projects.
+
+    This is used by the TUI; the CLI continues to use the print-based
+    `_display_project_analyses` for backwards-compatible output.
+    """
+    ai_allowed, ai_warning_global = _ai_bullet_permission(consent_tool)
+    analyses: list[dict[str, Any]] = []
+
+    for project in projects:
+        project_path = _resolve_project_path(extract_root, project.rel_path)
+        if project_path is None or not project_path.is_dir():
+            continue
+
+        try:
+            walk_result = DirectoryWalker.walk(project_path)
+        except ValueError:
+            continue
+
+        language, framework = identify_language_and_framework(project_path)
+        skills = extract_project_tools_practices(project_path)
+        tools = set(skills.get("tools", set()))
+        practices = set(skills.get("practices", set()))
+        combined_skills = tools | practices
+
+        summary = DirectoryWalker.get_summary(walk_result)
+        total_size = _format_bytes(summary["total_size_bytes"])
+
+        collab_summary = CollabDetector.collaborator_summary(project_path)
+        collaborators_display = CollabDetector.format_collaborators(collab_summary)
+
+        duration_timedelta, duration_display = ContributionMetrics.get_project_duration(
+            project_path
+        )
+        contribution_metrics, metrics_source = ContributionMetrics.get_project_contribution_metrics(
+            project_path
+        )
+
+        score, breakdown = ContributionMetrics.calculate_importance_score(
+            contribution_metrics, duration_timedelta, project.file_count
+        )
+
+        ai_bullets: list[str] = []
+        ai_warning: str | None = None
+
+        if ai_allowed:
+            try:
+                ai_bullets = generate_bullet_points_from_analysis(
+                    language=language,
+                    framework=framework,
+                    skills=sorted(combined_skills),
+                    tools=sorted(tools),
+                    max_bullets=6,
+                )
+                if not ai_bullets:
+                    ai_warning = "AI Bullets: provider returned no content."
+            except Exception as exc:  # pragma: no cover - defensive
+                ai_warning = f"AI Bullets error: {exc}"
+        else:
+            ai_warning = ai_warning_global
+
+        analyses.append(
+            {
+                "name": project.name,
+                "rel_path": project.rel_path,
+                "language": language,
+                "framework": framework,
+                "skills": sorted(combined_skills),
+                "tools": sorted(tools),
+                "duration": duration_display,
+                "duration_timedelta": duration_timedelta,
+                "collaborators_display": collaborators_display,
+                "collaborators_raw": {
+                    "count": collab_summary[0],
+                    "identities": sorted(collab_summary[1]),
+                },
+                "file_summary": {
+                    "total_files": summary["total_files"],
+                    "total_size": total_size,
+                    "total_size_bytes": summary["total_size_bytes"],
+                },
+                "contribution": {
+                    "metrics": contribution_metrics,
+                    "source": metrics_source,
+                },
+                "contribution_summary": ContributionMetrics.format_contribution_metrics(
+                    contribution_metrics, metrics_source
+                ),
+                "score": score,
+                "score_breakdown": breakdown,
+                "ai_bullets": ai_bullets,
+                "ai_warning": ai_warning,
+            }
+        )
+
+    return analyses
+
+
+def analyze_root_structured(extract_root: Path, consent_tool: ConsentTool) -> dict[str, Any]:
+    """Compute a structured analysis summary for the extraction root.
+
+    This is used by the TUI and reused by the CLI printing path.
+    """
+    walk_result = DirectoryWalker.walk(extract_root)
+    language, framework = identify_language_and_framework(extract_root)
+    skills = extract_project_tools_practices(extract_root)
+    tools = set(skills.get("tools", set()))
+    practices = set(skills.get("practices", set()))
+    combined_skills = tools | practices
+
+    ai_allowed, ai_warning = _ai_bullet_permission(consent_tool)
+    collab_summary = CollabDetector.collaborator_summary(extract_root)
+    collaborators_display = CollabDetector.format_collaborators(collab_summary)
+
+    duration_timedelta, duration_display = ContributionMetrics.get_project_duration(extract_root)
+    contribution_metrics, metrics_source = ContributionMetrics.get_project_contribution_metrics(
+        extract_root
+    )
+    contribution_summary = ContributionMetrics.format_contribution_metrics(
+        contribution_metrics, metrics_source
+    )
+
+    summary = DirectoryWalker.get_summary(walk_result)
+    total_size = _format_bytes(summary["total_size_bytes"])
+
+    ai_bullets: list[str] = []
+    ai_warning_out: str | None = None
+
+    if ai_allowed:
+        try:
+            ai_bullets = generate_bullet_points_from_analysis(
+                language=language,
+                framework=framework,
+                skills=sorted(combined_skills),
+                tools=sorted(tools),
+                max_bullets=6,
+            )
+            if not ai_bullets:
+                ai_warning_out = "AI Bullets: provider returned no content."
+        except Exception as exc:  # pragma: no cover - defensive
+            ai_warning_out = f"AI Bullets error: {exc}"
+    else:
+        ai_warning_out = ai_warning
+
+    return {
+        "language": language,
+        "framework": framework,
+        "skills": sorted(combined_skills),
+        "tools": sorted(tools),
+        "duration": duration_display,
+        "duration_timedelta": duration_timedelta,
+        "collaborators_display": collaborators_display,
+        "collaborators_raw": {
+            "count": collab_summary[0],
+            "identities": sorted(collab_summary[1]),
+        },
+        "file_summary": {
+            "total_files": summary["total_files"],
+            "total_size": total_size,
+            "total_size_bytes": summary["total_size_bytes"],
+        },
+        "contribution": {
+            "metrics": contribution_metrics,
+            "source": metrics_source,
+        },
+        "contribution_summary": contribution_summary,
+        "ai_bullets": ai_bullets,
+        "ai_warning": ai_warning_out,
+    }
 
 
 def main() -> int:

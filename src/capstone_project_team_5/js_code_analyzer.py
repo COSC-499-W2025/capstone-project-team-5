@@ -16,30 +16,24 @@ from capstone_project_team_5.constants.skill_detection_constants import SKIP_DIR
 class JSProjectSummary:
     """Summary of JS/TS project analysis - preserves rich analyzer output."""
 
-    # Basic metrics
     total_files: int = 0
     total_lines_of_code: int = 0
     total_functions: int = 0
     total_classes: int = 0
 
-    # Rich analysis from JSTSAnalyzer (this is your actual value!)
-    tech_stack: dict = field(
-        default_factory=dict
-    )  # {frontend: [], backend: [], database: [], testing: [], tooling: []}
-    features: list[str] = field(
-        default_factory=list
-    )  # ["User Authentication", "Payment Processing", ...]
-    integrations: dict = field(default_factory=dict)  # {payment: [], auth: [], cloud: [], ...}
-    skills_demonstrated: list[str] = field(default_factory=list)  # ["React", "Node.js", ...]
+    tech_stack: dict = field(default_factory=dict)
 
-    # Feature flags (for compatibility with unified system)
+    features: list[str] = field(default_factory=list)
+
+    integrations: dict = field(default_factory=dict)
+    skills_demonstrated: list[str] = field(default_factory=list)
+
     uses_typescript: bool = False
     uses_react: bool = False
     uses_vue: bool = False
     uses_angular: bool = False
     uses_nodejs: bool = False
 
-    # These are less relevant for JS/TS but kept for compatibility
     design_patterns: set[str] = field(default_factory=set)
     data_structures: set[str] = field(default_factory=set)
     algorithms_used: set[str] = field(default_factory=set)
@@ -94,7 +88,6 @@ def analyze_js_project(
         if feature in feature_to_pattern:
             summary.design_patterns.add(feature_to_pattern[feature])
 
-    # Count metrics
     summary.total_files = _count_js_files(project_path)
     summary.total_lines_of_code = _count_lines_of_code(analyzer.all_code_content)
 
@@ -267,20 +260,19 @@ class JSTSAnalyzer:
 
         framework = self.context.get("framework", "")
 
-        if framework:
-            if framework in ["React", "Vue", "Angular", "Svelte", "Next.js"]:
-                stack.append(framework)
-        else:
-            # Fallback detection from deps
-            if "react" in all_deps:
-                version = all_deps["react"].replace("^", "").replace("~", "")
-                stack.append(f"React {version.split('.')[0]}")
-            elif "vue" in all_deps:
-                stack.append("Vue")
-            elif "@angular/core" in all_deps:
-                stack.append("Angular")
-            elif "svelte" in all_deps:
-                stack.append("Svelte")
+        if framework and framework in ["React", "Vue", "Angular", "Svelte", "Next.js"]:
+            stack.append(framework)
+        # Always check deps for frontend framework, even if a backend framework is detected
+
+        if "react" in all_deps and "React" not in " ".join(stack):
+            version = all_deps["react"].replace("^", "").replace("~", "")
+            stack.append(f"React {version.split('.')[0]}")
+        elif "vue" in all_deps and "Vue" not in " ".join(stack):
+            stack.append("Vue")
+        elif "@angular/core" in all_deps and "Angular" not in " ".join(stack):
+            stack.append("Angular")
+        elif "svelte" in all_deps and "Svelte" not in " ".join(stack):
+            stack.append("Svelte")
 
         # UI Libraries
         if "@mui/material" in all_deps or "@material-ui/core" in all_deps:
