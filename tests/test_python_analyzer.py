@@ -163,10 +163,9 @@ def test_no_python_files(tmp_path):
 
     result = PythonAnalyzer(str(tmp_path)).analyze()
 
-    assert isinstance(result["tech_stack"], dict)
-    assert isinstance(result["features"], list)
-    assert isinstance(result["integrations"], dict)
-    assert isinstance(result["skills_demonstrated"], list)
+    # Should return error when no Python files found
+    assert "error" in result
+    assert "No Python files found" in result["error"]
 
 
 # ---------------------------------------------------------
@@ -177,8 +176,43 @@ def test_no_python_files(tmp_path):
 def test_empty_directory(tmp_path):
     result = PythonAnalyzer(str(tmp_path)).analyze()
 
-    assert result["oop"]["classes"] == {}
-    assert result["tech_stack"] == {}
-    assert result["features"] == []
-    assert result["integrations"] == {}
-    assert result["skills_demonstrated"] == []
+    # Should return error when no Python files found
+    assert "error" in result
+    assert "No Python files found" in result["error"]
+
+
+def test_abstraction_detection(tmp_path):
+    """Test detection of abstraction through @abstractmethod and NotImplementedError."""
+    # Test with @abstractmethod decorator
+    file1 = tmp_path / "abstract1.py"
+    file1.write_text(
+        """
+from abc import ABC, abstractmethod
+
+class Animal(ABC):
+    @abstractmethod
+    def speak(self):
+        pass
+"""
+    )
+
+    result1 = PythonAnalyzer(str(tmp_path)).analyze()
+    assert result1["oop"]["abstraction"] is True
+
+    # Test with NotImplementedError
+    tmp_path2 = tmp_path / "subdir"
+    tmp_path2.mkdir()
+    file2 = tmp_path2 / "abstract2.py"
+    file2.write_text(
+        """
+class Base:
+    def must_override(self):
+        raise NotImplementedError("Subclasses must implement")
+"""
+    )
+
+    result2 = PythonAnalyzer(str(tmp_path)).analyze()
+    assert result2["oop"]["abstraction"] is True
+
+    # Verify it appears in skills
+    assert "Abstraction" in result2["skills_demonstrated"]
