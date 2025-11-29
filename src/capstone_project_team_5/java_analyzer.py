@@ -9,6 +9,7 @@ import tree_sitter_java as tsjava
 from tree_sitter import Language, Node, Parser, Tree
 
 from capstone_project_team_5.constants.java_analyzer_constants import (
+    CODING_PATTERNS,
     JAVA_COLLECTIONS,
     SKIP_DIRS,
 )
@@ -36,7 +37,16 @@ class JavaAnalyzer:
             "methods_count": 0,
             "classes_count": 0,
             "files_analyzed": 0,
+            "uses_recursion": False,
+            "uses_bfs": False,
+            "uses_dfs": False,
+            "coding_patterns": set(),
+            "imports": [],
         }
+        self.current_method_stack: list[str] = []  # Track method names for recursion
+        self.current_method_bodies: list[
+            tuple[Node, bytes]
+        ] = []  # Store method bodies for analysis
 
     def _initialize_parser(self) -> bool:
         """Initialize the Tree-sitter parser for Java.
@@ -125,6 +135,54 @@ class JavaAnalyzer:
         elif node_type == "method_declaration":
             self.result["methods_count"] += 1
 
+            # Get method name and body for analysis
+            name_node = node.child_by_field_name("name")
+            if name_node:
+                method_name = self._get_node_text(name_node, source_code)
+                self.current_method_stack.append(method_name)
+
+                # Store method body for later analysis
+                body_node = node.child_by_field_name("body")
+                if body_node:
+                    self.current_method_bodies.append((body_node, source_code))
+
+                # Detect coding patterns from method name
+                self._detect_coding_patterns_by_name(method_name)
+
+                # Analyze children then pop method name
+                for child in node.children:
+                    self._single_pass_analysis(child, source_code)
+
+                self.current_method_stack.pop()
+                return  # Don't recurse again
+
+        elif node_type == "method_invocation":
+            # Check for recursion
+            name_node = node.child_by_field_name("name")
+            if name_node:
+                invoked_method = self._get_node_text(name_node, source_code)
+                # Check if calling current method (recursion)
+                if invoked_method in self.current_method_stack:
+                    # Check if it's a recursive call (not on another object)
+                    object_node = node.child_by_field_name("object")
+                    if object_node:
+                        object_text = self._get_node_text(object_node, source_code)
+                        # Only 'this' qualifier indicates recursion on same instance
+                        if object_text == "this":
+                            self.result["uses_recursion"] = True
+                    else:
+                        # No object qualifier means direct call - this is recursion
+                        self.result["uses_recursion"] = True
+
+        elif node_type == "import_declaration":
+            # Track imports
+            for child in node.children:
+                if child.type in ("scoped_identifier", "identifier"):
+                    import_text = self._get_node_text(child, source_code)
+                    # Extract base package
+                    base_package = import_text.split(".")[0] if "." in import_text else import_text
+                    self.result["imports"].append(base_package)
+
         elif node_type == "type_identifier":
             # Data structures analysis
             text = self._get_node_text(node, source_code)
@@ -144,6 +202,14 @@ class JavaAnalyzer:
                     ):
                         self.result["oop_principles"]["Encapsulation"] = True
                         break
+
+            # Check field names for coding patterns
+            for child in node.children:
+                if child.type == "variable_declarator":
+                    name_node = child.child_by_field_name("name")
+                    if name_node:
+                        field_name = self._get_node_text(name_node, source_code)
+                        self._detect_coding_patterns_by_name(field_name)
 
         elif node_type == "interface_declaration":
             # Abstraction - interface
@@ -168,6 +234,117 @@ class JavaAnalyzer:
         for child in node.children:
             self._single_pass_analysis(child, source_code)
 
+    def _detect_coding_patterns_by_name(self, name: str) -> None:
+        """Detect coding patterns based on naming conventions.
+
+        Args:
+            name: Class, method, or field name
+        """
+        name_lower = name.lower()
+
+        # Check for coding patterns
+        for pattern_name, indicators in CODING_PATTERNS.items():
+            if any(indicator.lower() in name_lower for indicator in indicators):
+                self.result["coding_patterns"].add(pattern_name)
+
+    def _extract_base_type(self, type_node: Node, source_code: bytes) -> str:
+        """Extract base type identifier from type node, handling generics.
+
+        Args:
+            type_node: Type node from AST
+            source_code: Source code bytes
+
+        Returns:
+            Base type identifier (e.g., "Queue" from "Queue<Node>")
+        """
+        # Look for type_identifier child node
+        for child in type_node.children:
+            if child.type == "type_identifier":
+                return self._get_node_text(child, source_code)
+
+        # If generic_type, get the first type_identifier
+        if type_node.type == "generic_type":
+            for child in type_node.children:
+                if child.type == "type_identifier":
+                    return self._get_node_text(child, source_code)
+
+        # Fallback: get full text and extract first word
+        full_text = self._get_node_text(type_node, source_code)
+        # Handle "Queue<Node>" -> "Queue"
+        if "<" in full_text:
+            return full_text.split("<")[0].strip()
+        return full_text.strip()
+
+    def _detect_bfs_dfs_in_method(self, method_body: Node, source_code: bytes) -> None:
+        """Analyze method body to detect BFS or DFS algorithm usage using AST patterns.
+
+        Args:
+            method_body: Method body AST node
+            source_code: Source code bytes
+        """
+        # Analyze for Queue/Stack variable declarations and their usage patterns
+        self._analyze_algorithm_patterns(method_body, source_code)
+
+    def _analyze_algorithm_patterns(
+        self, node: Node, source_code: bytes
+    ) -> tuple[bool, bool, bool, bool]:
+        """Recursively analyze AST for BFS/DFS patterns.
+
+        Args:
+            node: AST node to analyze
+            source_code: Source code bytes
+
+        Returns:
+            Tuple of (has_queue_var, has_stack_var, queue_ops, stack_ops)
+        """
+        has_queue_var = False
+        has_stack_var = False
+        queue_operations = False
+        stack_operations = False
+
+        # Check for variable declarations
+        if node.type == "local_variable_declaration":
+            type_node = node.child_by_field_name("type")
+            if type_node:
+                # Extract type identifier, handling generics
+                type_identifier = self._extract_base_type(type_node, source_code)
+                # Exact match for Queue types (not substrings)
+                if type_identifier in ("Queue", "LinkedList", "ArrayDeque", "PriorityQueue"):
+                    has_queue_var = True
+                # Exact match for Stack
+                elif type_identifier == "Stack":
+                    has_stack_var = True
+
+        # Check for method invocations that indicate BFS/DFS operations
+        elif node.type == "method_invocation":
+            name_node = node.child_by_field_name("name")
+            if name_node:
+                method_name = self._get_node_text(name_node, source_code)
+                # Queue operations: offer, poll, add, remove, peek
+                if method_name in ("offer", "poll", "add", "remove", "peek"):
+                    queue_operations = True
+                # Stack operations: push, pop, peek
+                elif method_name in ("push", "pop"):
+                    stack_operations = True
+
+        # Recurse through children
+        for child in node.children:
+            child_hq, child_hs, child_qo, child_so = self._analyze_algorithm_patterns(
+                child, source_code
+            )
+            has_queue_var = has_queue_var or child_hq
+            has_stack_var = has_stack_var or child_hs
+            queue_operations = queue_operations or child_qo
+            stack_operations = stack_operations or child_so
+
+        # Update results based on patterns
+        if has_queue_var and queue_operations:
+            self.result["uses_bfs"] = True
+        if has_stack_var and stack_operations:
+            self.result["uses_dfs"] = True
+
+        return has_queue_var, has_stack_var, queue_operations, stack_operations
+
     def _analyze_file(self, file_path: Path) -> bool:
         """Analyze a single Java file and aggregate results.
 
@@ -188,6 +365,18 @@ class JavaAnalyzer:
 
         root = tree.root_node
         self._single_pass_analysis(root, source_code)
+
+        # After initial pass, analyze method bodies for BFS/DFS (only if not found yet)
+        if not self.result["uses_bfs"] or not self.result["uses_dfs"]:
+            for body_node, body_source in self.current_method_bodies:
+                if not (self.result["uses_bfs"] and self.result["uses_dfs"]):
+                    self._detect_bfs_dfs_in_method(body_node, body_source)
+                else:
+                    break  # Found both, no need to continue
+
+        # Clear method bodies for this file to free memory
+        self.current_method_bodies.clear()
+
         self.result["files_analyzed"] += 1
         return True
 
@@ -228,6 +417,17 @@ class JavaAnalyzer:
 
         # Convert data_structures set to sorted list
         self.result["data_structures"] = sorted(self.result["data_structures"])
+        self.result["coding_patterns"] = sorted(self.result["coding_patterns"])
+
+        # Count and get top imports
+        from collections import Counter
+
+        import_counts = Counter(self.result["imports"])
+        self.result["top_imports"] = [
+            {"package": pkg, "count": count} for pkg, count in import_counts.most_common(10)
+        ]
+        del self.result["imports"]  # Remove raw import list
+
         return self.result
 
 
@@ -255,6 +455,11 @@ def analyze_java_project(
             "methods_count": int,          # Total methods across all files
             "classes_count": int,          # Total classes across all files
             "files_analyzed": int,         # Number of .java files analyzed
+            "uses_recursion": bool,        # Whether recursion is detected
+            "uses_bfs": bool,              # Whether BFS algorithm is detected
+            "uses_dfs": bool,              # Whether DFS algorithm is detected
+            "coding_patterns": list[str],  # Detected coding patterns (6 patterns)
+            "top_imports": list[dict],     # Top 10 imported packages with counts
         }
         Or on error: {"error": str}
     """

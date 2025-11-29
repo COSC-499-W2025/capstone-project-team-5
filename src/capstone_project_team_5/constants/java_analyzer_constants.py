@@ -75,3 +75,19 @@ SKIP_DIRS: frozenset[str] = frozenset(
         "generated-test-sources",
     }
 )
+
+# Common coding patterns to detect
+CODING_PATTERNS: dict[str, list[str]] = {
+    "Singleton": ["getInstance", "instance", "INSTANCE"],
+    "Factory": ["create", "make", "newInstance", "build"],
+    "Observer": ["notify", "subscribe", "addListener", "removeListener", "observer"],
+    "Strategy": ["execute", "doAlgorithm", "strategy"],
+    "Builder": ["build", "builder", "withProperty", "setProperty"],
+    "Adapter": ["adapt", "adapter", "wrap", "wrapper"],
+}
+
+# Patterns for detecting specific algorithms in code
+ALGORITHM_INDICATORS: dict[str, list[str]] = {
+    "BFS": ["bfs", "breadthfirst", "breadth_first", "queue", "levelorder"],
+    "DFS": ["dfs", "depthfirst", "depth_first", "stack", "preorder", "postorder", "inorder"],
+}

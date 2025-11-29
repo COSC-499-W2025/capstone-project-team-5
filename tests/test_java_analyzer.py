@@ -599,3 +599,171 @@ public class Mixed {
     assert result["classes_count"] == 3
     # Should detect encapsulation ONLY because Mixed has a private field
     assert result["oop_principles"]["Encapsulation"] is True
+
+
+def test_recursion_detection(tmp_path: Path) -> None:
+    """Test detection of direct and qualified recursion."""
+    (tmp_path / "Recursive.java").write_text(
+        """
+public class Recursive {
+    public int factorial(int n) {
+        if (n <= 1) return 1;
+        return n * factorial(n - 1);  // Direct recursion
+    }
+    
+    public int fib(int n) {
+        if (n <= 1) return n;
+        return this.fib(n - 1) + this.fib(n - 2);  // Qualified recursion
+    }
+    
+    public void nonRecursive(int x) {
+        Helper h = new Helper();
+        h.process(x);  // NOT recursion - different object
+    }
+}
+
+class Helper {
+    void process(int x) { }
+}
+""",
+        encoding="utf-8",
+    )
+
+    result = analyze_java_project(tmp_path)
+
+    assert result["uses_recursion"] is True
+    assert result["classes_count"] == 2
+
+
+def test_no_recursion(tmp_path: Path) -> None:
+    """Test project with no recursion."""
+    (tmp_path / "Simple.java").write_text(
+        """
+public class Simple {
+    public void method1() { method2(); }
+    public void method2() { System.out.println("Done"); }
+}
+""",
+        encoding="utf-8",
+    )
+
+    result = analyze_java_project(tmp_path)
+    assert result["uses_recursion"] is False
+
+
+def test_bfs_detection(tmp_path: Path) -> None:
+    """Test detection of BFS algorithm using Queue."""
+    (tmp_path / "BFS.java").write_text(
+        """
+import java.util.Queue;
+import java.util.LinkedList;
+
+public class BFS {
+    public void breadthFirstSearch(Node root) {
+        Queue<Node> queue = new LinkedList<>();
+        queue.offer(root);
+        
+        while (!queue.isEmpty()) {
+            Node current = queue.poll();
+            for (Node child : current.children) {
+                queue.offer(child);
+            }
+        }
+    }
+}
+
+class Node {
+    Node[] children;
+}
+""",
+        encoding="utf-8",
+    )
+
+    result = analyze_java_project(tmp_path)
+
+    assert result["uses_bfs"] is True
+    assert "Queue" in result["data_structures"]
+
+
+def test_dfs_detection(tmp_path: Path) -> None:
+    """Test detection of DFS algorithm using Stack."""
+    (tmp_path / "DFS.java").write_text(
+        """
+import java.util.Stack;
+
+public class DFS {
+    public void depthFirstSearch(Node root) {
+        Stack<Node> stack = new Stack<>();
+        stack.push(root);
+        
+        while (!stack.isEmpty()) {
+            Node current = stack.pop();
+        }
+    }
+}
+
+class Node {
+    Node[] children;
+}
+""",
+        encoding="utf-8",
+    )
+
+    result = analyze_java_project(tmp_path)
+
+    assert result["uses_dfs"] is True
+    assert "Stack" in result["data_structures"]
+
+
+def test_queue_without_operations(tmp_path: Path) -> None:
+    """Test that declaring Queue without BFS operations doesn't trigger detection."""
+    (tmp_path / "QueueOnly.java").write_text(
+        """
+import java.util.Queue;
+import java.util.LinkedList;
+
+public class QueueOnly {
+    private Queue<String> queue = new LinkedList<>();
+}
+""",
+        encoding="utf-8",
+    )
+
+    result = analyze_java_project(tmp_path)
+    assert result["uses_bfs"] is False
+    assert "Queue" in result["data_structures"]
+
+
+def test_coding_patterns_detection(tmp_path: Path) -> None:
+    """Test detection of multiple design patterns."""
+    (tmp_path / "Patterns.java").write_text(
+        """
+public class Patterns {
+    private static Patterns instance;
+    
+    public static Patterns getInstance() { return instance; }  // Singleton
+    
+    public Object createObject(String type) { return new Object(); }  // Factory
+    
+    public Patterns builder() { return this; }  // Builder
+    
+    public void addListener(Object listener) { }  // Observer
+    
+    public void executeStrategy() { }  // Strategy
+    
+    public void adapt() { }  // Adapter
+}
+""",
+        encoding="utf-8",
+    )
+
+    result = analyze_java_project(tmp_path)
+
+    assert "Singleton" in result["coding_patterns"]
+    assert "Factory" in result["coding_patterns"]
+    assert "Builder" in result["coding_patterns"]
+    assert "Observer" in result["coding_patterns"]
+    assert "Strategy" in result["coding_patterns"]
+    assert "Adapter" in result["coding_patterns"]
+    assert len(result["coding_patterns"]) == 6
+    assert result["coding_patterns"] == sorted(result["coding_patterns"])
