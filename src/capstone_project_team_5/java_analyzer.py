@@ -37,6 +37,8 @@ class JavaAnalyzer:
             "methods_count": 0,
             "classes_count": 0,
             "files_analyzed": 0,
+            "total_files": 0,
+            "lines_of_code": 0,
             "uses_recursion": False,
             "uses_bfs": False,
             "uses_dfs": False,
@@ -285,6 +287,47 @@ class JavaAnalyzer:
         # Analyze for Queue/Stack variable declarations and their usage patterns
         self._analyze_algorithm_patterns(method_body, source_code)
 
+    def _count_code_lines(self, tree: Tree, source_code: bytes) -> int:
+        """Count source lines of code by analyzing line coverage from AST nodes.
+
+        Counts lines that contain actual code by tracking which lines have AST nodes,
+        excluding pure comment and blank lines.
+
+        Args:
+            tree: Parsed syntax tree
+            source_code: Source code bytes
+
+        Returns:
+            Number of lines containing code
+        """
+        if not tree or not tree.root_node:
+            return 0
+
+        # Track lines that contain code nodes
+        code_lines = set()
+
+        def collect_code_lines(node: Node) -> None:
+            """Recursively collect line numbers that contain code."""
+            # Skip comment nodes
+            if node.type in ("line_comment", "block_comment"):
+                return
+
+            # Add lines spanned by this node
+            start_line = node.start_point[0]
+            end_line = node.end_point[0]
+
+            # For meaningful nodes, add their lines
+            if node.type not in ("program", "}", "{", "(", ")", ";"):
+                for line_num in range(start_line, end_line + 1):
+                    code_lines.add(line_num)
+
+            # Recurse to children
+            for child in node.children:
+                collect_code_lines(child)
+
+        collect_code_lines(tree.root_node)
+        return len(code_lines)
+
     def _analyze_algorithm_patterns(
         self, node: Node, source_code: bytes
     ) -> tuple[bool, bool, bool, bool]:
@@ -357,11 +400,22 @@ class JavaAnalyzer:
         try:
             source_code = file_path.read_bytes()
         except (OSError, PermissionError):
+            # File cannot be read, skip it entirely
             return False
 
         tree = self._parse_code(source_code)
         if tree is None:
+            # Parsing failed, skip file
             return False
+
+        # Count lines of code using AST (more accurate than counting non-empty lines)
+        try:
+            loc = self._count_code_lines(tree, source_code)
+            self.result["lines_of_code"] += loc
+        except (UnicodeDecodeError, ValueError):
+            # If we can't decode for LOC counting, still continue with analysis
+            # but don't add to LOC count
+            pass
 
         root = tree.root_node
         self._single_pass_analysis(root, source_code)
@@ -390,7 +444,14 @@ class JavaAnalyzer:
                 "oop_principles": dict with Encapsulation/Inheritance/Polymorphism/Abstraction,
                 "methods_count": int,
                 "classes_count": int,
-                "files_analyzed": int
+                "files_analyzed": int,
+                "total_files": int,
+                "lines_of_code": int,
+                "uses_recursion": bool,
+                "uses_bfs": bool,
+                "uses_dfs": bool,
+                "coding_patterns": list[str],
+                "top_imports": list[dict]
             }
             On error: {"error": str}
         """
@@ -407,6 +468,7 @@ class JavaAnalyzer:
 
         # Find all Java files
         java_files = self._find_java_files()
+        self.result["total_files"] = len(java_files)
 
         if not java_files:
             return {"error": "No Java files found in project"}
@@ -454,7 +516,9 @@ def analyze_java_project(
             },
             "methods_count": int,          # Total methods across all files
             "classes_count": int,          # Total classes across all files
-            "files_analyzed": int,         # Number of .java files analyzed
+            "files_analyzed": int,         # Number of .java files successfully analyzed
+            "total_files": int,            # Total .java files found in project
+            "lines_of_code": int,          # Source lines of code (excluding comments/blanks)
             "uses_recursion": bool,        # Whether recursion is detected
             "uses_bfs": bool,              # Whether BFS algorithm is detected
             "uses_dfs": bool,              # Whether DFS algorithm is detected
@@ -462,5 +526,8 @@ def analyze_java_project(
             "top_imports": list[dict],     # Top 10 imported packages with counts
         }
         Or on error: {"error": str}
+
+        Note: total_files >= files_analyzed. The difference indicates files that
+        could not be parsed or read (e.g., permission errors, invalid syntax).
     """
     return JavaAnalyzer(project_root).analyze()
