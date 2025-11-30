@@ -212,14 +212,44 @@ ProgressBar {
             import tempfile
             from zipfile import ZipFile
 
+            # Local imports to avoid heavy top-level dependencies in the UI
+            from capstone_project_team_5.services.project_analysis import analyze_project
+            from capstone_project_team_5.services.code_analysis_persistence import (
+                save_code_analysis_to_db,
+            )
+
             result = upload_zip(zip_path)
 
+            saved_count = 0
             with tempfile.TemporaryDirectory() as tmpdir:
                 tmp = Path(tmpdir)
                 with ZipFile(zip_path) as archive:
                     archive.extractall(tmp)
 
+                # Compute structured analyses for UI display
                 project_analyses = analyze_projects_structured(tmp, result.projects, tool)
+
+                # Persist language-specific analyses for each detected project.
+                # This is best-effort: failures are ignored per-project to avoid
+                # aborting the whole worker.
+                for proj_meta in result.projects:
+                    try:
+                        # Resolve project path within the extraction dir
+                        proj_path = tmp.joinpath(*proj_meta.rel_path.split("/")) if proj_meta.rel_path else tmp
+                        if not proj_path.exists() or not proj_path.is_dir():
+                            continue
+
+                        analysis = analyze_project(proj_path)
+
+                        try:
+                            save_code_analysis_to_db(proj_meta.name, proj_meta.rel_path, analysis)
+                            saved_count += 1
+                        except Exception:
+                            # Ignore DB save errors for robustness
+                            pass
+                    except Exception:
+                        # Ignore per-project analysis errors
+                        continue
 
             return {
                 "upload": {
@@ -228,6 +258,7 @@ ProgressBar {
                     "file_count": result.file_count,
                 },
                 "projects": project_analyses,
+                "saved_count": saved_count,
             }
 
         self._worker = self.run_worker(
@@ -274,6 +305,8 @@ ProgressBar {
 
         def work() -> dict:
             # Import inside worker to avoid top-level DB dependency in the UI thread
+            import json
+
             from capstone_project_team_5.data.db import get_session
             from capstone_project_team_5.data.models import UploadRecord
 
@@ -295,17 +328,57 @@ ProgressBar {
                         "projects": [],
                     }
                     for p in up.projects:
-                        proj = {
-                            "id": p.id,
-                            "name": p.name,
-                            "rel_path": p.rel_path,
-                            "file_count": p.file_count,
-                            "importance_rank": p.importance_rank,
-                            "importance_score": p.importance_score,
-                            "analyses": [],
-                        }
+                        # Aggregate fields across any saved analyses for this project
+                        languages: set[str] = set()
+                        skills: set[str] = set()
+                        total_loc: int = 0
+                        analyses_list: list[dict] = []
+
                         for a in p.code_analyses:
-                            proj["analyses"].append(
+                            # Try to parse stored metrics JSON for structured info
+                            metrics: dict | None = None
+                            try:
+                                if getattr(a, "metrics_json", None):
+                                    metrics = json.loads(a.metrics_json)
+                            except Exception:
+                                metrics = None
+
+                            lang = None
+                            if isinstance(metrics, dict):
+                                lang = metrics.get("language") or metrics.get("language_name")
+                                tools = metrics.get("tools") or []
+                                practices = metrics.get("practices") or []
+                                loc = metrics.get("lines_of_code") or metrics.get("total_lines_of_code")
+                            else:
+                                tools = []
+                                practices = []
+                                loc = None
+
+                            if a.language:
+                                languages.add(a.language)
+                            if lang:
+                                languages.add(lang)
+
+                            for t in tools:
+                                try:
+                                    skills.add(str(t))
+                                except Exception:
+                                    pass
+                            for pr in practices:
+                                try:
+                                    skills.add(str(pr))
+                                except Exception:
+                                    pass
+
+                            try:
+                                if isinstance(loc, int):
+                                    total_loc += loc
+                                elif isinstance(loc, str) and loc.isdigit():
+                                    total_loc += int(loc)
+                            except Exception:
+                                pass
+
+                            analyses_list.append(
                                 {
                                     "id": a.id,
                                     "language": a.language,
@@ -313,6 +386,21 @@ ProgressBar {
                                     "created_at": str(a.created_at),
                                 }
                             )
+
+                        proj = {
+                            "id": p.id,
+                            "name": p.name,
+                            "rel_path": p.rel_path,
+                            "file_count": p.file_count,
+                            "importance_rank": p.importance_rank,
+                            "importance_score": p.importance_score,
+                            "analyses": analyses_list,
+                            "languages": sorted(languages),
+                            "skills": sorted(skills),
+                            "lines_of_code": total_loc if total_loc > 0 else None,
+                            "analyses_count": len(analyses_list),
+                        }
+
                         upd["projects"].append(proj)
 
                     results.append(upd)
@@ -355,6 +443,10 @@ ProgressBar {
                 md = self._render_markdown(upload, projects)
                 self._current_markdown = md
                 output.update(md)
+                # If we saved analyses to the DB, show a brief status note
+                saved_count = data.get("saved_count")
+                if isinstance(saved_count, int) and saved_count > 0:
+                    status.update(f"Analysis complete. Persisted {saved_count} analyses.")
                 return
 
             if detected is not None:
@@ -494,9 +586,21 @@ ProgressBar {
                 parts.append(f"- **{p.get('name')}** — `{p.get('rel_path')}` ({p.get('file_count')} files)")
                 if p.get("importance_rank") is not None:
                     parts.append(f"  - Rank: {p.get('importance_rank')} — Score: {p.get('importance_score')}")
+
+                # Languages / skills / LOC summary
+                langs = p.get("languages") or []
+                if langs:
+                    parts.append(f"  - Languages: {', '.join(langs)}")
+                skills = p.get("skills") or []
+                if skills:
+                    parts.append(f"  - Skills/Tools: {', '.join(skills[:12])}")
+                loc = p.get("lines_of_code")
+                if loc is not None:
+                    parts.append(f"  - Lines of code (sum of analyses): {loc}")
+
                 analyses = p.get("analyses", [])
                 if analyses:
-                    parts.append("  - Analyses:")
+                    parts.append(f"  - Analyses ({p.get('analyses_count', len(analyses))}):")
                     for a in analyses:
                         txt = a.get("summary_text") or "(no summary)"
                         parts.append(f"    - {a.get('language')} @ {a.get('created_at')}: {txt[:120]}")
