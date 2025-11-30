@@ -377,3 +377,30 @@ __all__ = [
     "list_changed_files",
     "list_commit_dates",
 ]
+
+
+def get_current_git_identity(repo: Path | str) -> tuple[str | None, str | None]:
+    """Return the current Git user identity (name, email) for a repo.
+
+    This uses ``git config user.name`` and ``git config user.email`` inside
+    the given repository. When the repo is not a Git working tree or the
+    config values are missing, returns (None, None).
+    """
+    repo_path = Path(repo)
+    if not is_git_repo(repo_path):
+        return None, None
+
+    name: str | None = None
+    email: str | None = None
+
+    with suppress(RuntimeError):
+        out = run_git(repo_path, "config", "--get", "user.name").strip()
+        if out:
+            name = out
+
+    with suppress(RuntimeError):
+        out = run_git(repo_path, "config", "--get", "user.email").strip()
+        if out:
+            email = out
+
+    return name, email

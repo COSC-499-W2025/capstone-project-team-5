@@ -16,5 +16,16 @@ from capstone_project_team_5.data.models.consent_record import ConsentRecord
 from capstone_project_team_5.data.models.portfolio_item import PortfolioItem
 from capstone_project_team_5.data.models.project import Project
 from capstone_project_team_5.data.models.upload_record import UploadRecord
+from capstone_project_team_5.data.models.user import User
+from capstone_project_team_5.data.models.user_code_analysis import UserCodeAnalysis
 
-__all__ = ["Base", "CodeAnalysis", "ConsentRecord", "PortfolioItem", "Project", "UploadRecord"]
+__all__ = [
+    "Base",
+    "CodeAnalysis",
+    "ConsentRecord",
+    "PortfolioItem",
+    "Project",
+    "UploadRecord",
+    "User",
+    "UserCodeAnalysis",
+]

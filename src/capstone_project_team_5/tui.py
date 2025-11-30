@@ -9,7 +9,10 @@ from textual.widgets import (
     Button,
     Footer,
     Header,
+    Input,
     Label,
+    ListItem,
+    ListView,
     Markdown,
     ProgressBar,
     Static,
@@ -20,6 +23,7 @@ from textual.worker import Worker, WorkerState
 from capstone_project_team_5.cli import analyze_projects_structured
 from capstone_project_team_5.consent_tool import ConsentTool
 from capstone_project_team_5.services import upload_zip
+from capstone_project_team_5.services.auth import authenticate_user, create_user
 from capstone_project_team_5.utils import prompt_for_zip_file
 
 
@@ -39,7 +43,32 @@ Screen {
     background: $background;
 }
 
-/* Top: header stays default */
+/* Auth screen centered content */
+#auth-screen {
+    height: 1fr;
+    layout: vertical;
+    align-horizontal: center;
+    align-vertical: middle;
+}
+
+#auth-card {
+    padding: 2;
+    border: heavy $primary;
+    background: $panel;
+    width: 40;
+    align-horizontal: center;
+}
+
+#auth-card Static {
+    text-align: center;
+    margin-bottom: 1;
+}
+
+#auth-card Button,
+#auth-card Input {
+    width: 100%;
+    margin-top: 1;
+}
 
 /* Middle split: sidebar + main output */
 #middle {
@@ -72,6 +101,7 @@ Screen {
     background: $surface;
     height: 1fr;
     padding: 1;
+    layout: horizontal;
 }
 
 #output-container {
@@ -104,43 +134,76 @@ ProgressBar {
         self._consent_tool: ConsentTool | None = None
         self._worker: Worker[dict] | None = None
         self._current_markdown: str = ""
+        self._current_user: str | None = None
+        self._auth_mode: str | None = None
+        self._upload_summary: dict | None = None
+        self._projects: list[dict] = []
+        self._ranks: dict[int, int] = {}
 
     def compose(self) -> ComposeResult:
         yield Header()
 
         yield Container(
-            # Middle region: sidebar + main scroll area
+            # Auth screen (shown first)
             Container(
-                # Sidebar
                 Container(
-                    Static("Zip2Job\nAnalyzer", id="title"),
-                    Button("Analyze ZIP", id="btn-analyze", variant="primary"),
-                    Button("Edit View", id="btn-edit", variant="default"),
-                    Button("Exit", id="btn-exit", variant="error"),
-                    id="sidebar",
-                ),
-                # Main area
-                Container(
-                    VerticalScroll(
-                        Markdown("", id="output"),
-                        TextArea(
-                            "",
-                            id="editor",
-                            # Use plain text to avoid missing language errors.
-                            language=None,
-                            placeholder="Edit analysis markdown...",
-                        ),
-                        id="output-container",
+                    Static("Zip2Job Analyzer", id="auth-title"),
+                    Button("Login", id="auth-btn-login", variant="primary"),
+                    Button("Sign Up", id="auth-btn-signup", variant="default"),
+                    Input(placeholder="Username", id="auth-username"),
+                    Input(
+                        placeholder="Password",
+                        password=True,
+                        id="auth-password",
                     ),
-                    id="main",
+                    Button("Submit", id="auth-btn-submit", variant="success"),
+                    id="auth-card",
                 ),
-                id="middle",
+                id="auth-screen",
             ),
-            # Status bar
+            # Main app screen (hidden until login)
             Container(
-                Label("Ready.", id="status"),
-                ProgressBar(total=100, id="progress"),
-                id="statusbar",
+                # Middle region: sidebar + main scroll area
+                Container(
+                    # Sidebar
+                    Container(
+                        Static("Zip2Job\nAnalyzer", id="title"),
+                        Label("Hi, -", id="user-label"),
+                        Button("Log Out", id="btn-logout", variant="default"),
+                        Button("Analyze ZIP", id="btn-analyze", variant="primary"),
+                        Button("Configure Consent", id="btn-config", variant="default"),
+                        Button("Edit View", id="btn-edit", variant="default"),
+                        Button("Exit", id="btn-exit", variant="error"),
+                        id="sidebar",
+                    ),
+                    # Main area
+                    Container(
+                        # Project list + detail pane
+                        Container(
+                            ListView(id="project-list"),
+                            VerticalScroll(
+                                Markdown("", id="output"),
+                                TextArea(
+                                    "",
+                                    id="editor",
+                                    # Use plain text to avoid missing language errors.
+                                    language=None,
+                                    placeholder="Edit analysis markdown...",
+                                ),
+                                id="output-container",
+                            ),
+                            id="main",
+                        ),
+                    ),
+                    id="middle",
+                ),
+                # Status bar
+                Container(
+                    Label("Ready.", id="status"),
+                    ProgressBar(total=100, id="progress"),
+                    id="statusbar",
+                ),
+                id="app-screen",
             ),
         )
 
@@ -148,15 +211,114 @@ ProgressBar {
 
     def on_mount(self) -> None:
         editor = self.query_one("#editor", TextArea)
+        username_input = self.query_one("#auth-username", Input)
+        password_input = self.query_one("#auth-password", Input)
+        submit_btn = self.query_one("#auth-btn-submit", Button)
+        app_screen = self.query_one("#app-screen", Container)
+
         editor.display = False
+        # Auth inputs are hidden until user chooses login or signup.
+        username_input.display = False
+        password_input.display = False
+        submit_btn.display = False
+        # Hide main app screen until a user logs in.
+        app_screen.display = False
 
     # ---------------------------------------------------------------------
     # EVENTS
     # ---------------------------------------------------------------------
 
+    # ---- Auth buttons ---------------------------------------------------
+
+    @on(Button.Pressed, "#auth-btn-login")
+    def handle_login_button(self) -> None:
+        """Start the login flow by showing auth inputs."""
+        self._auth_mode = "login"
+        status = self.query_one("#status", Label)
+        username_input = self.query_one("#auth-username", Input)
+        password_input = self.query_one("#auth-password", Input)
+        submit_btn = self.query_one("#auth-btn-submit", Button)
+
+        username_input.value = ""
+        password_input.value = ""
+        username_input.display = True
+        password_input.display = True
+        submit_btn.display = True
+        username_input.focus()
+        status.update("Login: enter username and password, then Submit.")
+
+    @on(Button.Pressed, "#auth-btn-signup")
+    def handle_signup_button(self) -> None:
+        """Start the signup flow by showing auth inputs."""
+        self._auth_mode = "signup"
+        status = self.query_one("#status", Label)
+        username_input = self.query_one("#auth-username", Input)
+        password_input = self.query_one("#auth-password", Input)
+        submit_btn = self.query_one("#auth-btn-submit", Button)
+
+        username_input.value = ""
+        password_input.value = ""
+        username_input.display = True
+        password_input.display = True
+        submit_btn.display = True
+        username_input.focus()
+        status.update("Sign up: choose username and password, then Submit.")
+
+    @on(Button.Pressed, "#auth-btn-submit")
+    def handle_auth_submit(self) -> None:
+        """Handle login/signup submission from the sidebar inputs."""
+        status = self.query_one("#status", Label)
+        user_label = self.query_one("#user-label", Label)
+        username_input = self.query_one("#auth-username", Input)
+        password_input = self.query_one("#auth-password", Input)
+        submit_btn = self.query_one("#auth-btn-submit", Button)
+        auth_screen = self.query_one("#auth-screen", Container)
+        app_screen = self.query_one("#app-screen", Container)
+
+        mode = self._auth_mode
+        if mode is None:
+            status.update("Choose Login or Sign Up first.")
+            return
+
+        username = username_input.value.strip()
+        password = password_input.value
+
+        if not username or not password:
+            status.update("Username and password are required.")
+            return
+
+        if mode == "signup":
+            ok, error = create_user(username, password)
+            if not ok:
+                status.update(error or "Could not create user.")
+                return
+            self._current_user = username
+            user_label.update(f"User: {username}")
+            status.update(f"Account created. Logged in as {username}.")
+        else:
+            ok, error = authenticate_user(username, password)
+            if not ok:
+                status.update(error or "Login failed.")
+                return
+            self._current_user = username
+            user_label.update(f"User: {username}")
+            status.update(f"Logged in as {username}.")
+
+        # Hide auth UI after successful auth and show main app screen
+        username_input.display = False
+        password_input.display = False
+        submit_btn.display = False
+        self._auth_mode = None
+        auth_screen.display = False
+        app_screen.display = True
+
     @on(Button.Pressed, "#btn-analyze")
     def handle_analyze_zip(self) -> None:
         status = self.query_one("#status", Label)
+
+        if self._current_user is None:
+            status.update("Please log in before analyzing.")
+            return
         status.update("Requesting consent...")
 
         if self._consent_tool is None:
@@ -182,10 +344,12 @@ ProgressBar {
     # ---------------------------------------------------------------------
 
     def _run_analysis(self, zip_path: Path) -> None:
+        project_list = self.query_one("#project-list", ListView)
         output = self.query_one("#output", Markdown)
         progress = self.query_one("#progress", ProgressBar)
         status = self.query_one("#status", Label)
 
+        project_list.clear()
         output.update("")
         progress.update(progress=5)
         status.update("Uploading ZIP...")
@@ -203,7 +367,9 @@ ProgressBar {
                 with ZipFile(zip_path) as archive:
                     archive.extractall(tmp)
 
-                project_analyses = analyze_projects_structured(tmp, result.projects, tool)
+                project_analyses = analyze_projects_structured(
+                    tmp, result.projects, tool, self._current_user
+                )
 
             return {
                 "upload": {
@@ -229,7 +395,6 @@ ProgressBar {
 
         progress = self.query_one("#progress", ProgressBar)
         status = self.query_one("#status", Label)
-        output = self.query_one("#output", Markdown)
 
         if event.state == WorkerState.RUNNING:
             progress.update(progress=40)
@@ -241,12 +406,42 @@ ProgressBar {
             status.update("Analysis complete.")
 
             data = event.worker.result
-            upload = data["upload"]
-            projects = data["projects"]
+            self._upload_summary = data["upload"]
+            self._projects = data["projects"]
 
-            md = self._render_markdown(upload, projects)
-            self._current_markdown = md
-            output.update(md)
+            # Populate project list
+            project_list = self.query_one("#project-list", ListView)
+            project_list.clear()
+
+            if self._projects:
+                # Compute local ranks based on importance scores, descending.
+                indexed_scores = [
+                    (i, proj.get("score", 0.0)) for i, proj in enumerate(self._projects)
+                ]
+                ranked = sorted(indexed_scores, key=lambda pair: pair[1], reverse=True)
+                current_rank = 1
+                previous_score: float | None = None
+                self._ranks = {}
+                for position, (idx, score) in enumerate(ranked):
+                    if previous_score is not None and score < previous_score:
+                        current_rank = position + 1
+                    self._ranks[idx] = current_rank
+                    previous_score = score
+
+                for idx, proj in enumerate(self._projects):
+                    rank = self._ranks.get(idx)
+                    score = proj.get("score")
+                    label = proj["name"]
+                    if rank is not None:
+                        label = f"#{rank} {label}"
+                    if score is not None:
+                        label = f"{label} (score {score:.1f})"
+                    project_list.append(ListItem(Label(label)))
+
+                # Select first project by default
+                project_list.index = 0
+                self._show_project_detail(0)
+
             return
 
         if event.state == WorkerState.ERROR:
@@ -258,49 +453,124 @@ ProgressBar {
             progress.update(progress=0)
 
     # ---------------------------------------------------------------------
-    # MARKDOWN RENDERING
+    # PROJECT DETAIL RENDERING
     # ---------------------------------------------------------------------
 
-    def _render_markdown(self, upload, projects) -> str:
-        parts = []
+    def _show_project_detail(self, index: int) -> None:
+        """Render details for a single selected project into the markdown view."""
+        if not self._projects or self._upload_summary is None:
+            return
+        if index < 0 or index >= len(self._projects):
+            return
 
-        parts.append(f"# {upload['filename']}\n")
+        proj = self._projects[index]
+        rank = self._ranks.get(index)
+        md = self._render_project_markdown(self._upload_summary, proj, rank)
+        self._current_markdown = md
+        self.query_one("#output", Markdown).update(md)
 
-        parts.append("## Upload Summary")
-        parts.append(f"- **Size**: {upload['size_bytes']:,} bytes")
-        parts.append(f"- **Files**: {upload['file_count']}")
-        parts.append(f"- **Projects detected**: {len(projects)}\n")
+    def _render_project_markdown(self, upload: dict, proj: dict, rank: int | None) -> str:
+        parts: list[str] = []
 
-        # Projects
-        if projects:
-            parts.append("\n## Projects")
-            for proj in projects:
-                parts.append(f"\n### {proj['name']}  \n`{proj['rel_path']}`")
-                parts.append(f"- Duration: {proj['duration']}")
-                parts.append(f"- Language: {proj['language']}")
-                parts.append(f"- Framework: {proj['framework']}")
-                parts.append(
-                    f"- Files: {proj['file_summary']['total_files']} "
-                    f"({proj['file_summary']['total_size']})"
-                )
+        title = upload["filename"]
+        parts.append(f"# {title}\n")
 
-                parts.append("\n**Skills**")
-                parts.extend(f"- {s}" for s in proj["skills"])
+        heading = f"{proj['name']} (Rank #{rank})" if rank is not None else proj["name"]
+        parts.append(f"## {heading}\n`{proj['rel_path']}`\n")
 
-                parts.append("\n**Tools**")
-                parts.extend(f"- {t}" for t in proj["tools"])
+        parts.append("### Summary")
+        parts.append(f"- Duration: {proj['duration']}")
+        parts.append(f"- Language: {proj['language']}")
+        other = proj.get("other_languages") or []
+        if other:
+            parts.append(f"- Other languages: {', '.join(other)}")
+        parts.append(f"- Framework: {proj['framework']}")
+        parts.append(
+            f"- Files: {proj['file_summary']['total_files']} ({proj['file_summary']['total_size']})"
+        )
+        score = proj.get("score")
+        if score is not None:
+            parts.append(f"- Importance score: {score:.1f}")
 
-                if proj["ai_bullets"]:
-                    parts.append("\n**AI Bullet Points**")
-                    parts.extend(f"- {b}" for b in proj["ai_bullets"])
-                elif proj["ai_warning"]:
-                    parts.append(f"\n> {proj['ai_warning']}")
+        parts.append("\n### Skills")
+        if proj["skills"]:
+            parts.extend(f"- {s}" for s in proj["skills"])
+        else:
+            parts.append("- None detected")
+
+        parts.append("\n### Tools")
+        if proj["tools"]:
+            parts.extend(f"- {t}" for t in proj["tools"])
+        else:
+            parts.append("- None detected")
+
+        timeline = proj.get("skill_timeline") or []
+        if timeline:
+            parts.append("\n### Skill Development Over Time")
+            for entry in timeline:
+                date = entry.get("date", "")
+                skills = entry.get("skills") or []
+                if not skills:
+                    continue
+                parts.append(f"- {date}: {', '.join(skills)}")
+
+        bullets = proj.get("resume_bullets") or []
+        source = proj.get("resume_bullet_source") or "unknown"
+        if bullets:
+            parts.append(f"\n### Resume Bullet Points ({source} Generation)")
+            parts.extend(f"- {b}" for b in bullets)
+
+        git_info = proj.get("git") or {}
+        if git_info.get("is_repo"):
+            current = git_info.get("current_author_contribution") or {}
+            authors = git_info.get("author_contributions") or []
+            if authors:
+                parts.append("\n### Git Contributions")
+                if current:
+                    parts.append(
+                        f"- You: {current.get('commits', 0)} commits, "
+                        f"+{current.get('added', 0)} / -{current.get('deleted', 0)} lines"
+                    )
+
+                for ac in authors:
+                    author = ac.get("author")
+                    if (
+                        git_info.get("current_author")
+                        and author
+                        and author.strip().lower()
+                        == str(git_info.get("current_author")).strip().lower()
+                    ):
+                        continue
+                    parts.append(
+                        f"- {author}: {ac.get('commits', 0)} commits, "
+                        f"+{ac.get('added', 0)} / -{ac.get('deleted', 0)} lines"
+                    )
+
+            chart_lines = git_info.get("activity_chart") or []
+            if chart_lines:
+                parts.append("\n### Weekly Activity (last 12 weeks)")
+                parts.append("```")
+                parts.extend(chart_lines)
+                parts.append("```")
 
         return "\n".join(parts)
 
     # ---------------------------------------------------------------------
     # EDIT MODE ACTIONS
     # ---------------------------------------------------------------------
+
+    @on(Button.Pressed, "#btn-config")
+    def handle_config_button(self) -> None:
+        """Re-run the consent/config sequence on demand."""
+        status = self.query_one("#status", Label)
+
+        tool = ConsentTool()
+        if not tool.generate_consent_form():
+            status.update("Consent configuration cancelled; previous settings kept.")
+            return
+
+        self._consent_tool = tool
+        status.update("Consent configuration updated.")
 
     @on(Button.Pressed, "#btn-edit")
     def handle_edit_button(self) -> None:
@@ -357,6 +627,27 @@ ProgressBar {
         editor.display = False
         output.display = True
         status.update("Edit cancelled.")
+
+    @on(Button.Pressed, "#btn-logout")
+    def handle_logout(self) -> None:
+        """Log out current user and return to auth screen."""
+        self._current_user = None
+        self._auth_mode = None
+        status = self.query_one("#status", Label)
+        user_label = self.query_one("#user-label", Label)
+        auth_screen = self.query_one("#auth-screen", Container)
+        app_screen = self.query_one("#app-screen", Container)
+        project_list = self.query_one("#project-list", ListView)
+        output = self.query_one("#output", Markdown)
+        progress = self.query_one("#progress", ProgressBar)
+
+        user_label.update("Hi, -")
+        project_list.clear()
+        output.update("")
+        progress.update(progress=0)
+        auth_screen.display = True
+        app_screen.display = False
+        status.update("Logged out. Please log in again.")
 
     @on(Button.Pressed, "#btn-exit")
     def exit_app(self) -> None:

@@ -60,6 +60,8 @@ def _ensure_tables_created() -> None:
         portfolio_item,
         project,
         upload_record,
+        user,
+        user_code_analysis,
     )
 
     Base.metadata.create_all(bind=_engine)
