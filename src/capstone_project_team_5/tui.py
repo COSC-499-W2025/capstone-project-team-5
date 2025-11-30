@@ -115,7 +115,7 @@ ProgressBar {
                 Container(
                     Static("Zip2Job\nAnalyzer", id="title"),
                     Button("Analyze ZIP", id="btn-analyze", variant="primary"),
-                    Button("Retrieve Projects", id="btn-retrieve", variant="secondary"),
+                    Button("Retrieve Projects", id="btn-retrieve", variant="default"),
                     Button("Edit View", id="btn-edit", variant="default"),
                     Button("Exit", id="btn-exit", variant="error"),
                     id="sidebar",
@@ -180,26 +180,18 @@ ProgressBar {
 
     @on(Button.Pressed, "#btn-retrieve")
     def handle_retrieve_projects(self) -> None:
+        """List persisted uploads/projects/analyses from the database.
+
+        This action intentionally does not prompt for a ZIP. Use
+        "Analyze ZIP" when you want to upload and analyze a new archive.
+        """
         status = self.query_one("#status", Label)
-        status.update("Requesting consent for retrieval...")
+        status.update("Querying saved uploads...")
 
-        if self._consent_tool is None:
-            tool = ConsentTool()
-            if not tool.generate_consent_form():
-                status.update("Consent denied.")
-                return
-            self._consent_tool = tool
-
-        selected = prompt_for_zip_file()
-        if selected is None:
-            status.update("No file selected.")
-            return
-
-        if not selected.exists() or not selected.is_file():
-            status.update("Invalid file.")
-            return
-
-        self._run_retrieve(selected)
+        try:
+            self._run_list_saved()
+        except Exception as exc:
+            status.update(f"Error querying saved uploads: {exc}")
 
     # ---------------------------------------------------------------------
     # WORKER
@@ -259,17 +251,76 @@ ProgressBar {
 
             result = upload_zip(zip_path)
 
-            with tempfile.TemporaryDirectory() as tmpdir:
-                tmp = Path(tmpdir)
-                with ZipFile(zip_path) as archive:
-                    archive.extractall(tmp)
+            detected = [
+                {"name": p.name, "rel_path": p.rel_path, "file_count": p.file_count}
+                for p in result.projects
+            ]
 
-                project_analyses = analyze_projects_structured(tmp, result.projects, tool)
-
-            return {"projects": project_analyses}
+            return {"detected": detected}
 
         self._worker = self.run_worker(
             work, name="retrieve", exclusive=True, thread=True, exit_on_error=False
+        )
+
+    def _run_list_saved(self) -> None:
+        """Background worker to query persisted uploads/projects/analyses from the DB."""
+        output = self.query_one("#output", Markdown)
+        progress = self.query_one("#progress", ProgressBar)
+        status = self.query_one("#status", Label)
+
+        output.update("")
+        progress.update(progress=5)
+        status.update("Querying saved uploads...")
+
+        def work() -> dict:
+            # Import inside worker to avoid top-level DB dependency in the UI thread
+            from capstone_project_team_5.data.db import get_session
+            from capstone_project_team_5.data.models import UploadRecord
+
+            results: list[dict] = []
+            with get_session() as session:
+                uploads = (
+                    session.query(UploadRecord)
+                    .order_by(UploadRecord.created_at.desc())
+                    .all()
+                )
+
+                for up in uploads:
+                    upd: dict = {
+                        "id": up.id,
+                        "filename": up.filename,
+                        "size_bytes": up.size_bytes,
+                        "file_count": up.file_count,
+                        "created_at": str(up.created_at),
+                        "projects": [],
+                    }
+                    for p in up.projects:
+                        proj = {
+                            "id": p.id,
+                            "name": p.name,
+                            "rel_path": p.rel_path,
+                            "file_count": p.file_count,
+                            "importance_rank": p.importance_rank,
+                            "importance_score": p.importance_score,
+                            "analyses": [],
+                        }
+                        for a in p.code_analyses:
+                            proj["analyses"].append(
+                                {
+                                    "id": a.id,
+                                    "language": a.language,
+                                    "summary_text": a.summary_text,
+                                    "created_at": str(a.created_at),
+                                }
+                            )
+                        upd["projects"].append(proj)
+
+                    results.append(upd)
+
+            return {"saved": results}
+
+        self._worker = self.run_worker(
+            work, name="saved_list", exclusive=True, thread=True, exit_on_error=False
         )
 
     # ---------------------------------------------------------------------
@@ -295,17 +346,33 @@ ProgressBar {
             status.update("Analysis complete.")
 
             data = event.worker.result
-            projects = data.get("projects")
             upload = data.get("upload")
+            detected = data.get("detected")
+            saved = data.get("saved")
+            projects = data.get("projects")
 
             if upload:
                 md = self._render_markdown(upload, projects)
                 self._current_markdown = md
                 output.update(md)
-            else:
-                table = self._render_table(projects or [])
-                self._current_markdown = table
-                output.update(table)
+                return
+
+            if detected is not None:
+                md = self._render_detected_list(detected)
+                self._current_markdown = md
+                output.update(md)
+                return
+
+            if saved is not None:
+                md = self._render_saved_list(saved)
+                self._current_markdown = md
+                output.update(md)
+                return
+
+            # fallback: render full project analyses table if present
+            table = self._render_table(projects or [])
+            self._current_markdown = table
+            output.update(table)
             return
 
         if event.state == WorkerState.ERROR:
@@ -386,6 +453,57 @@ ProgressBar {
             lines.append(fmt_row(r))
 
         return "```\n" + "\n".join(lines) + "\n```"
+
+    def _render_detected_list(self, detected: list[dict]) -> str:
+        """Render a simple markdown list of detected projects (name + rel_path)."""
+        parts: list[str] = ["# Detected Projects", ""]
+        if not detected:
+            parts.append("(No projects detected)")
+            return "\n".join(parts)
+
+        for p in detected:
+            name = p.get("name", "<unnamed>")
+            rel = p.get("rel_path", "")
+            files = p.get("file_count", "?")
+            parts.append(f"- **{name}** — `{rel}` ({files} files)")
+
+        return "\n".join(parts)
+
+    def _render_saved_list(self, saved: list[dict]) -> str:
+        """Render persisted uploads, their projects, and any saved analyses."""
+        parts: list[str] = ["# Saved Uploads", ""]
+        if not saved:
+            parts.append("(No saved uploads found)")
+            return "\n".join(parts)
+
+        for up in saved:
+            parts.append(f"## Upload: {up.get('filename')}  ")
+            parts.append(f"- **ID**: {up.get('id')}  ")
+            parts.append(f"- **Files**: {up.get('file_count')}  ")
+            parts.append(f"- **Size**: {up.get('size_bytes'):,} bytes  ")
+            parts.append(f"- **Created**: {up.get('created_at')}  ")
+            projects = up.get("projects", [])
+            if not projects:
+                parts.append("- (No projects recorded for this upload)")
+                parts.append("")
+                continue
+
+            parts.append("")
+            parts.append("### Projects")
+            for p in projects:
+                parts.append(f"- **{p.get('name')}** — `{p.get('rel_path')}` ({p.get('file_count')} files)")
+                if p.get("importance_rank") is not None:
+                    parts.append(f"  - Rank: {p.get('importance_rank')} — Score: {p.get('importance_score')}")
+                analyses = p.get("analyses", [])
+                if analyses:
+                    parts.append("  - Analyses:")
+                    for a in analyses:
+                        txt = a.get("summary_text") or "(no summary)"
+                        parts.append(f"    - {a.get('language')} @ {a.get('created_at')}: {txt[:120]}")
+
+            parts.append("")
+
+        return "\n".join(parts)
 
     # ---------------------------------------------------------------------
     # EDIT MODE ACTIONS
