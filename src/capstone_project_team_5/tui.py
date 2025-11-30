@@ -213,10 +213,10 @@ ProgressBar {
             from zipfile import ZipFile
 
             # Local imports to avoid heavy top-level dependencies in the UI
-            from capstone_project_team_5.services.project_analysis import analyze_project
             from capstone_project_team_5.services.code_analysis_persistence import (
                 save_code_analysis_to_db,
             )
+            from capstone_project_team_5.services.project_analysis import analyze_project
 
             result = upload_zip(zip_path)
 
@@ -278,12 +278,7 @@ ProgressBar {
         progress.update(progress=5)
         status.update("Retrieving projects...")
 
-        tool = self._consent_tool or ConsentTool()
-
         def work() -> dict:
-            import tempfile
-            from zipfile import ZipFile
-
             result = upload_zip(zip_path)
 
             detected = [
@@ -337,11 +332,11 @@ ProgressBar {
                         for a in p.code_analyses:
                             # Try to parse stored metrics JSON for structured info
                             metrics: dict | None = None
-                            try:
-                                if getattr(a, "metrics_json", None):
+                            from contextlib import suppress
+
+                            if getattr(a, "metrics_json", None):
+                                with suppress(Exception):
                                     metrics = json.loads(a.metrics_json)
-                            except Exception:
-                                metrics = None
 
                             lang = None
                             if isinstance(metrics, dict):
@@ -361,16 +356,14 @@ ProgressBar {
                             if lang:
                                 languages.add(lang)
 
-                            for t in tools:
-                                try:
-                                    skills.add(str(t))
-                                except Exception:
-                                    pass
-                            for pr in practices:
-                                try:
-                                    skills.add(str(pr))
-                                except Exception:
-                                    pass
+                                from contextlib import suppress
+
+                                for t in tools:
+                                    with suppress(Exception):
+                                        skills.add(str(t))
+                                for pr in practices:
+                                    with suppress(Exception):
+                                        skills.add(str(pr))
 
                             try:
                                 if isinstance(loc, int):
