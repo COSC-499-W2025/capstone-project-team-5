@@ -51,11 +51,11 @@ def generate_resume_bullets(
     if use_ai and ai_available:
         ai_bullets = _try_ai_generation(analysis, max_bullets)
         if ai_bullets:
-            return ai_bullets, "AI"
+            return _append_testing_bullet(ai_bullets, analysis), "AI"
 
     # Step 3: Fall back to local generation
     local_bullets = _generate_local_bullets(analysis, max_bullets)
-    return local_bullets, "Local"
+    return _append_testing_bullet(local_bullets, analysis), "Local"
 
 
 def _try_ai_generation(analysis: ProjectAnalysis, max_bullets: int) -> list[str]:
@@ -120,3 +120,67 @@ def _generate_local_bullets(analysis: ProjectAnalysis, max_bullets: int) -> list
 
     # Fall back to generic local generation
     return generate_generic_bullets(analysis, max_bullets)
+
+
+def _append_testing_bullet(bullets: list[str], analysis: ProjectAnalysis) -> list[str]:
+    """Append the standardized testing bullet if available."""
+
+    testing_bullet = build_testing_bullet(analysis)
+    if not testing_bullet:
+        return bullets
+
+    updated = list(bullets)
+    updated.append(testing_bullet)
+    return updated
+
+
+def build_testing_bullet(analysis: ProjectAnalysis) -> str | None:
+    """Construct the mandatory testing bullet from aggregated metrics."""
+
+    if analysis.test_case_count == 0 and analysis.test_file_count == 0:
+        return None
+
+    unit = analysis.unit_test_count
+    integration = analysis.integration_test_count
+
+    if unit and integration:
+        summary = f"Implemented {unit:,} unit and {integration:,} integration tests"
+    elif analysis.test_case_count:
+        summary = f"Implemented {analysis.test_case_count:,} automated tests"
+    elif analysis.test_file_count:
+        summary = f"Maintained {analysis.test_file_count:,} dedicated test files"
+    else:
+        return None
+
+    language_fragment = _format_language_fragment(analysis.tests_by_language)
+    if language_fragment:
+        summary = f"{summary} across {language_fragment}"
+
+    return f"{summary} to guard critical workflows and prevent regressions."
+
+
+def _format_language_fragment(tests_by_language: dict[str, int]) -> str:
+    """Return a readable fragment describing covered languages."""
+
+    if not tests_by_language:
+        return ""
+
+    ordered = sorted(
+        tests_by_language.items(),
+        key=lambda item: item[1],
+        reverse=True,
+    )
+    languages = [name for name, count in ordered if count > 0 and name and name != "Unknown"]
+    if not languages:
+        languages = [name for name, _ in ordered if name and name != "Unknown"]
+
+    if not languages:
+        return ""
+
+    if len(languages) == 1:
+        return f"{languages[0]} modules"
+
+    if len(languages) == 2:
+        return f"{languages[0]} and {languages[1]} modules"
+
+    return f"{languages[0]}, {languages[1]}, and {len(languages) - 2} other stacks"
