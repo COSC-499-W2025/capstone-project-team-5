@@ -100,6 +100,8 @@ def analyze_project(project_path: Path) -> ProjectAnalysis:
     # Step 4: Run language-specific analyzer if available
     if language == "C/C++":
         _analyze_cpp_project(analysis)
+    elif language == "Java":
+        _analyze_java_project(analysis)
     # Future: elif language == "Python":
     #     _analyze_python_project(analysis)
     # Future: elif language == "JavaScript":
@@ -159,6 +161,62 @@ def _analyze_cpp_project(analysis: ProjectAnalysis) -> None:
 
     except ImportError:
         # C analyzer not available, skip
+        pass
+
+
+def _analyze_java_project(analysis: ProjectAnalysis) -> None:
+    """Run Java specific analysis and update the ProjectAnalysis object.
+
+    Args:
+        analysis: ProjectAnalysis object to update with Java specific data
+    """
+    try:
+        from capstone_project_team_5.java_analyzer import analyze_java_project
+
+        result = analyze_java_project(analysis.project_path)
+
+        # Check for errors from analyzer
+        if "error" in result:
+            return
+
+        # Store raw result for Java-specific bullet generation
+        analysis.language_analysis["java_result"] = result
+
+        # Update aggregated metrics
+        analysis.total_files = result.get("total_files", 0)
+        analysis.lines_of_code = result.get("lines_of_code", 0)
+        analysis.function_count = result.get("methods_count", 0)
+        analysis.class_count = result.get("classes_count", 0)
+
+        # Calculate OOP score based on principles detected
+        oop_principles = result.get("oop_principles", {})
+        oop_score = sum(oop_principles.values()) * 2.5  # 0-10 scale (4 principles * 2.5)
+        analysis.oop_score = oop_score
+
+        # Aggregate technical features
+        if result.get("uses_recursion"):
+            analysis.algorithms.add("Recursion")
+        if result.get("uses_bfs"):
+            analysis.algorithms.add("BFS")
+        if result.get("uses_dfs"):
+            analysis.algorithms.add("DFS")
+
+        # Aggregate OOP features
+        if oop_principles.get("Encapsulation"):
+            analysis.oop_features.add("Encapsulation")
+        if oop_principles.get("Inheritance"):
+            analysis.oop_features.add("Inheritance")
+        if oop_principles.get("Polymorphism"):
+            analysis.oop_features.add("Polymorphism")
+        if oop_principles.get("Abstraction"):
+            analysis.oop_features.add("Abstraction")
+
+        # Copy design patterns and data structures
+        analysis.design_patterns.update(result.get("coding_patterns", []))
+        analysis.data_structures.update(result.get("data_structures", []))
+
+    except ImportError:
+        # Java analyzer not available, skip
         pass
 
 
