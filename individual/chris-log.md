@@ -182,3 +182,28 @@ Coming back from reading week, we started the week off by reorienting the group 
 | Further Planning | In Progress | Discuss next steps with group with regards to final integration prior to Milestone #1 completion. |
 | Write Code for Deep Analysis | Not Yet Started | Write and finalize code for deeper code analysis on any necessary missing programming languages. |
 </details>
+
+## Week 13 | 23 November - 30 November 2025
+
+<details>
+  <summary><h3></h3></summary>
+
+
+
+This week we spent integrating code, and preparing for next week's presentation. To this end, came together to plan and create a Text UI. My part of building the Text UI was writing the code that ensures that previously saved projects and analyses are able to be accessed from the database with a button click. Next week we will conduct our presentations, discuss next steps for the project following the presentations, and write and sign the Team Contract which is due at the end of the semester.
+
+### Previous Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Reorganize GitHub Branches | In Progress | Merge develop into main (possibly wait for Milestone #1 completion). |
+| Further Planning | Completed | Discuss next steps with group with regards to final integration prior to Milestone #1 completion. |
+| Write Code for TUI | Completed | Feature: Retrieve previously generated projects and analyses in the TUI. |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Presentations | Not Yet Started | Conduct presentations in class. |
+| Further Planning | In Progress | Discuss next steps following the presentation. |
+| Team Contract | In Progress | Write and sign the Team Contract due at the end of semester. |
+</details>
