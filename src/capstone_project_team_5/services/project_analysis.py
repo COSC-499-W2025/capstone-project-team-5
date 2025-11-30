@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from capstone_project_team_5.detection import identify_language_and_framework
+from capstone_project_team_5.services.test_analysis import analyze_tests
 from capstone_project_team_5.skill_detection import extract_project_tools_practices
 
 
@@ -61,6 +62,15 @@ class ProjectAnalysis:
     # Scores/ratings
     oop_score: float = 0.0  # 0-10 scale
     complexity_score: float = 0.0
+
+    # Testing metrics
+    test_file_count: int = 0
+    test_case_count: int = 0
+    unit_test_count: int = 0
+    integration_test_count: int = 0
+    test_frameworks: set[str] = field(default_factory=set)
+    tests_by_language: dict[str, int] = field(default_factory=dict)
+    tests_by_framework: dict[str, int] = field(default_factory=dict)
 
 
 def analyze_project(project_path: Path) -> ProjectAnalysis:
@@ -107,7 +117,23 @@ def analyze_project(project_path: Path) -> ProjectAnalysis:
     # Future: elif language == "JavaScript":
     #     _analyze_javascript_project(analysis)
 
+    _populate_test_metrics(analysis)
+
     return analysis
+
+
+def _populate_test_metrics(analysis: ProjectAnalysis) -> None:
+    """Populate aggregated testing metrics for the project."""
+
+    test_result = analyze_tests(analysis.project_path)
+    analysis.test_file_count = test_result.test_file_count
+    analysis.test_case_count = test_result.test_case_count
+    analysis.unit_test_count = test_result.unit_test_count
+    analysis.integration_test_count = test_result.integration_test_count
+    analysis.tests_by_language = dict(test_result.tests_by_language)
+    analysis.tests_by_framework = dict(test_result.tests_by_framework)
+    analysis.test_frameworks.update(test_result.frameworks)
+    analysis.language_analysis["test_files"] = [str(item.path) for item in test_result.files]
 
 
 def _analyze_cpp_project(analysis: ProjectAnalysis) -> None:
@@ -215,6 +241,9 @@ def _analyze_java_project(analysis: ProjectAnalysis) -> None:
         analysis.design_patterns.update(result.get("coding_patterns", []))
         analysis.data_structures.update(result.get("data_structures", []))
 
+        testing_stack = result.get("tech_stack", {}).get("testing", [])
+        analysis.test_frameworks.update(testing_stack)
+
     except ImportError:
         # Java analyzer not available, skip
         pass
@@ -274,6 +303,9 @@ def _analyze_python_project(analysis: ProjectAnalysis) -> None:
         analysis.design_patterns.update(result.get("design_patterns", []))
         analysis.data_structures.update(result.get("data_structures", []))
         analysis.algorithms.update(result.get("algorithms", []))
+
+        testing_stack = result.get("tech_stack", {}).get("testing", [])
+        analysis.test_frameworks.update(testing_stack)
 
     except ImportError:
         pass
