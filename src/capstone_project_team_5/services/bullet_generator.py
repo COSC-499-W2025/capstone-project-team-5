@@ -143,15 +143,18 @@ def build_testing_bullet(analysis: ProjectAnalysis) -> str | None:
     unit = analysis.unit_test_count
     integration = analysis.integration_test_count
 
-    if unit and integration:
+    if unit > 0 and integration > 0:
         summary = f"Implemented {unit:,} unit and {integration:,} integration tests"
+    elif unit > 0:
+        summary = f"Implemented {unit:,} unit tests"
+    elif integration > 0:
+        summary = f"Implemented {integration:,} integration tests"
     elif analysis.test_case_count:
         summary = f"Implemented {analysis.test_case_count:,} automated tests"
     elif analysis.test_file_count:
         summary = f"Maintained {analysis.test_file_count:,} dedicated test files"
     else:
         return None
-
     language_fragment = _format_language_fragment(analysis.tests_by_language)
     if language_fragment:
         summary = f"{summary} across {language_fragment}"
