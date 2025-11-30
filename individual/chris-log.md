@@ -187,7 +187,7 @@ Coming back from reading week, we started the week off by reorienting the group 
 
 <details>
   <summary><h3></h3></summary>
-
+<img alt="Screenshot 2025-11-30 145121" src="https://github.com/user-attachments/assets/24b90dc0-bec2-4f21-9a29-94699ce16207" />
 
 
 This week we spent integrating code, and preparing for next week's presentation. To this end, came together to plan and create a Text UI. My part of building the Text UI was writing the code that ensures that previously saved projects and analyses are able to be accessed from the database with a button click. Next week we will conduct our presentations, discuss next steps for the project following the presentations, and write and sign the Team Contract which is due at the end of the semester.
