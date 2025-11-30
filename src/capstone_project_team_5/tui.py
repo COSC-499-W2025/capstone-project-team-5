@@ -235,7 +235,11 @@ ProgressBar {
                 for proj_meta in result.projects:
                     try:
                         # Resolve project path within the extraction dir
-                        proj_path = tmp.joinpath(*proj_meta.rel_path.split("/")) if proj_meta.rel_path else tmp
+                        proj_path = (
+                            tmp.joinpath(*proj_meta.rel_path.split("/"))
+                            if proj_meta.rel_path
+                            else tmp
+                        )
                         if not proj_path.exists() or not proj_path.is_dir():
                             continue
 
@@ -312,11 +316,7 @@ ProgressBar {
 
             results: list[dict] = []
             with get_session() as session:
-                uploads = (
-                    session.query(UploadRecord)
-                    .order_by(UploadRecord.created_at.desc())
-                    .all()
-                )
+                uploads = session.query(UploadRecord).order_by(UploadRecord.created_at.desc()).all()
 
                 for up in uploads:
                     upd: dict = {
@@ -348,7 +348,9 @@ ProgressBar {
                                 lang = metrics.get("language") or metrics.get("language_name")
                                 tools = metrics.get("tools") or []
                                 practices = metrics.get("practices") or []
-                                loc = metrics.get("lines_of_code") or metrics.get("total_lines_of_code")
+                                loc = metrics.get("lines_of_code") or metrics.get(
+                                    "total_lines_of_code"
+                                )
                             else:
                                 tools = []
                                 practices = []
@@ -583,9 +585,13 @@ ProgressBar {
             parts.append("")
             parts.append("### Projects")
             for p in projects:
-                parts.append(f"- **{p.get('name')}** — `{p.get('rel_path')}` ({p.get('file_count')} files)")
+                parts.append(
+                    f"- **{p.get('name')}** — `{p.get('rel_path')}` ({p.get('file_count')} files)"
+                )
                 if p.get("importance_rank") is not None:
-                    parts.append(f"  - Rank: {p.get('importance_rank')} — Score: {p.get('importance_score')}")
+                    parts.append(
+                        f"  - Rank: {p.get('importance_rank')} — Score: {p.get('importance_score')}"
+                    )
 
                 # Languages / skills / LOC summary
                 langs = p.get("languages") or []
@@ -603,7 +609,9 @@ ProgressBar {
                     parts.append(f"  - Analyses ({p.get('analyses_count', len(analyses))}):")
                     for a in analyses:
                         txt = a.get("summary_text") or "(no summary)"
-                        parts.append(f"    - {a.get('language')} @ {a.get('created_at')}: {txt[:120]}")
+                        parts.append(
+                            f"    - {a.get('language')} @ {a.get('created_at')}: {txt[:120]}"
+                        )
 
             parts.append("")
 
