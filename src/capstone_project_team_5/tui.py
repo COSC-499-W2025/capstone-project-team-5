@@ -115,6 +115,7 @@ ProgressBar {
                 Container(
                     Static("Zip2Job\nAnalyzer", id="title"),
                     Button("Analyze ZIP", id="btn-analyze", variant="primary"),
+                    Button("Retrieve Projects", id="btn-retrieve", variant="secondary"),
                     Button("Edit View", id="btn-edit", variant="default"),
                     Button("Exit", id="btn-exit", variant="error"),
                     id="sidebar",
@@ -177,6 +178,29 @@ ProgressBar {
 
         self._run_analysis(selected)
 
+    @on(Button.Pressed, "#btn-retrieve")
+    def handle_retrieve_projects(self) -> None:
+        status = self.query_one("#status", Label)
+        status.update("Requesting consent for retrieval...")
+
+        if self._consent_tool is None:
+            tool = ConsentTool()
+            if not tool.generate_consent_form():
+                status.update("Consent denied.")
+                return
+            self._consent_tool = tool
+
+        selected = prompt_for_zip_file()
+        if selected is None:
+            status.update("No file selected.")
+            return
+
+        if not selected.exists() or not selected.is_file():
+            status.update("Invalid file.")
+            return
+
+        self._run_retrieve(selected)
+
     # ---------------------------------------------------------------------
     # WORKER
     # ---------------------------------------------------------------------
@@ -218,6 +242,36 @@ ProgressBar {
             work, name="analysis", exclusive=True, thread=True, exit_on_error=False
         )
 
+    def _run_retrieve(self, zip_path: Path) -> None:
+        output = self.query_one("#output", Markdown)
+        progress = self.query_one("#progress", ProgressBar)
+        status = self.query_one("#status", Label)
+
+        output.update("")
+        progress.update(progress=5)
+        status.update("Retrieving projects...")
+
+        tool = self._consent_tool or ConsentTool()
+
+        def work() -> dict:
+            import tempfile
+            from zipfile import ZipFile
+
+            result = upload_zip(zip_path)
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                tmp = Path(tmpdir)
+                with ZipFile(zip_path) as archive:
+                    archive.extractall(tmp)
+
+                project_analyses = analyze_projects_structured(tmp, result.projects, tool)
+
+            return {"projects": project_analyses}
+
+        self._worker = self.run_worker(
+            work, name="retrieve", exclusive=True, thread=True, exit_on_error=False
+        )
+
     # ---------------------------------------------------------------------
     # WORKER STATE HANDLER
     # ---------------------------------------------------------------------
@@ -241,12 +295,17 @@ ProgressBar {
             status.update("Analysis complete.")
 
             data = event.worker.result
-            upload = data["upload"]
-            projects = data["projects"]
+            projects = data.get("projects")
+            upload = data.get("upload")
 
-            md = self._render_markdown(upload, projects)
-            self._current_markdown = md
-            output.update(md)
+            if upload:
+                md = self._render_markdown(upload, projects)
+                self._current_markdown = md
+                output.update(md)
+            else:
+                table = self._render_table(projects or [])
+                self._current_markdown = table
+                output.update(table)
             return
 
         if event.state == WorkerState.ERROR:
@@ -297,6 +356,36 @@ ProgressBar {
                     parts.append(f"\n> {proj['ai_warning']}")
 
         return "\n".join(parts)
+
+    def _render_table(self, projects: list[dict]) -> str:
+        """Render a simple ASCII table summary for retrieved projects."""
+        headers = ["Name", "Path", "Language", "Framework", "Duration", "Files", "Skills", "Tools"]
+        rows: list[list[str]] = []
+        for p in projects:
+            name = str(p.get("name", ""))
+            rel = str(p.get("rel_path", ""))
+            lang = str(p.get("language", ""))
+            fw = str(p.get("framework", ""))
+            duration = str(p.get("duration", ""))
+            files = str(p.get("file_summary", {}).get("total_files", ""))
+            skills = ",".join(p.get("skills", []))
+            tools = ",".join(p.get("tools", []))
+            rows.append([name, rel, lang, fw, duration, files, skills, tools])
+
+        col_widths = [len(h) for h in headers]
+        for r in rows:
+            for i, cell in enumerate(r):
+                col_widths[i] = max(col_widths[i], len(cell))
+
+        def fmt_row(row: list[str]) -> str:
+            return " | ".join(cell.ljust(col_widths[i]) for i, cell in enumerate(row))
+
+        sep = "-+-".join("-" * w for w in col_widths)
+        lines = [fmt_row(headers), sep]
+        for r in rows:
+            lines.append(fmt_row(r))
+
+        return "```\n" + "\n".join(lines) + "\n```"
 
     # ---------------------------------------------------------------------
     # EDIT MODE ACTIONS
