@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from pathlib import Path
 
 from textual import on
@@ -333,30 +334,43 @@ ProgressBar {
     def handle_analyze_zip(self) -> None:
         status = self.query_one("#status", Label)
 
-        if self._current_user is None:
-            status.update("Please log in before analyzing.")
-            return
-        status.update("Requesting consent...")
+        try:
+            if self._current_user is None:
+                status.update("Please log in before analyzing.")
+                return
 
-        # Ensure we have a consent tool scoped to the current user.
-        if self._consent_tool is None or self._consent_tool.username != self._current_user:
-            self._consent_tool = ConsentTool(username=self._current_user)
-            self._consent_tool.load_existing_consent()
+            # Ensure we have a consent tool scoped to the current user and
+            # attempt to load any existing consent configuration.
+            if self._consent_tool is None or self._consent_tool.username != self._current_user:
+                self._consent_tool = ConsentTool(username=self._current_user)
+                # If loading fails, fall back to requiring explicit
+                # configuration via the dedicated button.
+                with suppress(Exception):
+                    self._consent_tool.load_existing_consent()
 
-        if not self._consent_tool.consent_given and not self._consent_tool.generate_consent_form():
-            status.update("Consent denied.")
-            return
+            # Do NOT open the consent GUI from here; that can appear as a hang
+            # inside the TUI. Require users to configure consent explicitly.
+            if self._consent_tool is None or not self._consent_tool.consent_given:
+                status.update("Consent not configured. Use 'Configure Consent' before analyzing.")
+                return
 
-        selected = prompt_for_zip_file()
-        if selected is None:
-            status.update("No file selected.")
-            return
+            status.update("Select a ZIP file to analyze...")
 
-        if not selected.exists() or not selected.is_file():
-            status.update("Invalid file.")
-            return
+            selected = prompt_for_zip_file()
+            if selected is None:
+                status.update("No file selected.")
+                return
 
-        self._run_analysis(selected)
+            if not selected.exists() or not selected.is_file():
+                status.update("Invalid file.")
+                return
+
+            self._run_analysis(selected)
+        except Exception as exc:  # pragma: no cover - defensive
+            import traceback
+
+            traceback.print_exc()
+            status.update(f"Error during Analyze ZIP: {exc}")
 
     @on(Button.Pressed, "#btn-retrieve")
     def handle_retrieve_projects(self) -> None:

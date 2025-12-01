@@ -199,6 +199,13 @@ def _prepare_generic_data(analysis: ProjectAnalysis) -> tuple[dict[str, any], st
         "design_patterns": list(analysis.design_patterns),
         "data_structures": list(analysis.data_structures),
         "algorithms": list(analysis.algorithms),
+        "test_file_count": analysis.test_file_count,
+        "test_case_count": analysis.test_case_count,
+        "unit_test_count": analysis.unit_test_count,
+        "integration_test_count": analysis.integration_test_count,
+        "test_frameworks": sorted(analysis.test_frameworks),
+        "tests_by_language": analysis.tests_by_language,
+        "tests_by_framework": analysis.tests_by_framework,
     }
 
     # Generate a simple summary

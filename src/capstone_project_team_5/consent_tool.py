@@ -502,18 +502,30 @@ You can add custom patterns later."""
 
         with get_session() as session:
             user_id: int | None = None
-            if self.username is not None:
+            if self.username is not None and self.username.strip():
                 user = session.query(User).filter(User.username == self.username.strip()).first()
                 if user is not None:
                     user_id = user.id
 
-            query = session.query(ConsentRecord)
-            if user_id is not None:
-                query = query.filter(ConsentRecord.user_id == user_id)
-            else:
-                query = query.filter(ConsentRecord.user_id.is_(None))
+            record: ConsentRecord | None = None
 
-            record = query.order_by(ConsentRecord.created_at.desc()).first()
+            # Prefer a consent record scoped to this user if one exists.
+            if user_id is not None:
+                record = (
+                    session.query(ConsentRecord)
+                    .filter(ConsentRecord.user_id == user_id)
+                    .order_by(ConsentRecord.created_at.desc())
+                    .first()
+                )
+
+            # Fall back to the most recent global (unscoped) consent record.
+            if record is None:
+                record = (
+                    session.query(ConsentRecord)
+                    .filter(ConsentRecord.user_id.is_(None))
+                    .order_by(ConsentRecord.created_at.desc())
+                    .first()
+                )
 
             if record is None:
                 return False

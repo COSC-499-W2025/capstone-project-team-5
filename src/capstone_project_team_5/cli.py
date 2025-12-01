@@ -16,12 +16,15 @@ from capstone_project_team_5.file_walker import DirectoryWalker
 from capstone_project_team_5.models import InvalidZipError
 from capstone_project_team_5.models.upload import DetectedProject
 from capstone_project_team_5.services import upload_zip
-from capstone_project_team_5.services.bullet_generator import generate_resume_bullets
+from capstone_project_team_5.services.bullet_generator import (
+    build_testing_bullet,
+    generate_resume_bullets,
+)
 from capstone_project_team_5.services.code_analysis_persistence import (
     save_code_analysis_to_db,
 )
 from capstone_project_team_5.services.llm import generate_bullet_points_from_analysis
-from capstone_project_team_5.services.project_analysis import ProjectAnalysis
+from capstone_project_team_5.services.project_analysis import ProjectAnalysis, analyze_project
 from capstone_project_team_5.services.ranking import update_project_ranks
 from capstone_project_team_5.skill_detection import extract_project_tools_practices
 from capstone_project_team_5.utils import display_upload_result, prompt_for_zip_file
@@ -112,8 +115,6 @@ def _display_project_analyses(
             continue
 
         # Run unified analysis once (includes language detection, skills, C++ analyzer, etc.)
-        from capstone_project_team_5.services.project_analysis import analyze_project
-
         analysis = analyze_project(project_path)
         language = analysis.language
         framework = analysis.framework
@@ -415,13 +416,19 @@ def analyze_projects_structured(
         if project_path is None or not project_path.is_dir():
             continue
 
+        project_analysis: ProjectAnalysis | None = None
+        try:
+            project_analysis = analyze_project(project_path)
+        except Exception:
+            project_analysis = None
+
         try:
             walk_result = DirectoryWalker.walk(project_path)
         except ValueError:
             continue
 
         # Unified analysis object (language, skills, language-specific metrics).
-        analysis = analyze_project(project_path)
+        analysis = project_analysis or analyze_project(project_path)
         language = analysis.language
         framework = analysis.framework
         tools = set(analysis.tools)
@@ -528,6 +535,14 @@ def analyze_projects_structured(
         save_code_analysis_to_db(project.name, project.rel_path, analysis, username=current_user)
         skill_timeline = _get_skill_timeline_for_project(project.name, project.rel_path)
 
+        # Optionally add a testing-focused bullet derived from the full project
+        # analysis, ensuring it appears alongside any other AI bullets.
+        if project_analysis:
+            testing_bullet = build_testing_bullet(project_analysis)
+            if testing_bullet:
+                ai_bullets = list(ai_bullets)
+                ai_bullets.append(testing_bullet)
+
         analyses.append(
             {
                 "name": project.name,
@@ -581,6 +596,12 @@ def analyze_root_structured(extract_root: Path, consent_tool: ConsentTool) -> di
 
     This is used by the TUI and reused by the CLI printing path.
     """
+    project_analysis: ProjectAnalysis | None = None
+    try:
+        project_analysis = analyze_project(extract_root)
+    except Exception:
+        project_analysis = None
+
     walk_result = DirectoryWalker.walk(extract_root)
     language, framework = identify_language_and_framework(extract_root)
     skills = extract_project_tools_practices(extract_root)
@@ -621,6 +642,12 @@ def analyze_root_structured(extract_root: Path, consent_tool: ConsentTool) -> di
             ai_warning_out = f"AI Bullets error: {exc}"
     else:
         ai_warning_out = ai_warning
+
+    if project_analysis:
+        testing_bullet = build_testing_bullet(project_analysis)
+        if testing_bullet:
+            ai_bullets = list(ai_bullets)
+            ai_bullets.append(testing_bullet)
 
     return {
         "language": language,
