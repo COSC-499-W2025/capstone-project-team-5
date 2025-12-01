@@ -89,6 +89,11 @@ Screen {
     width: 100%;
 }
 
+#btn-delete-analysis {
+    margin-left: 2;
+    width: 18;
+}
+
 #title {
     text-align: center;
     margin-bottom: 2;
@@ -143,6 +148,7 @@ ProgressBar {
         self._saved_uploads: list[dict] = []
         self._saved_projects: list[dict] = []
         self._saved_active_project_index: int | None = None
+        self._analysis_selected: bool = False
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -176,6 +182,7 @@ ProgressBar {
                         Button("Log Out", id="btn-logout", variant="default"),
                         Button("Analyze ZIP", id="btn-analyze", variant="primary"),
                         Button("Retrieve Projects", id="btn-retrieve", variant="default"),
+                        Button("Delete Analysis", id="btn-delete-analysis", variant="error"),
                         Button("Configure Consent", id="btn-config", variant="default"),
                         Button("Edit View", id="btn-edit", variant="default"),
                         Button("Exit", id="btn-exit", variant="error"),
@@ -226,9 +233,11 @@ ProgressBar {
         password_input = self.query_one("#auth-password", Input)
         submit_btn = self.query_one("#auth-btn-submit", Button)
         app_screen = self.query_one("#app-screen", Container)
+        delete_btn = self.query_one("#btn-delete-analysis", Button)
 
         editor.display = False
         analysis_list.display = False
+        delete_btn.display = False
         # Auth inputs are hidden until user chooses login or signup.
         username_input.display = False
         password_input.display = False
@@ -377,6 +386,55 @@ ProgressBar {
         except Exception as exc:
             status.update(f"Error querying saved uploads: {exc}")
 
+    @on(Button.Pressed, "#btn-delete-analysis")
+    def handle_delete_analysis(self) -> None:
+        """Delete the currently selected code analysis."""
+        status = self.query_one("#status", Label)
+        analysis_list = self.query_one("#analysis-list", ListView)
+
+        if not self._analysis_selected:
+            status.update("No analysis selected to delete.")
+            return
+
+        if self._saved_active_project_index is None:
+            status.update("Please select a project first.")
+            return
+
+        if analysis_list.index is None or analysis_list.index < 0:
+            status.update("Please select an analysis to delete.")
+            return
+
+        project = self._saved_projects[self._saved_active_project_index]
+        analyses = project.get("analyses") or []
+        if analysis_list.index >= len(analyses):
+            status.update("Invalid analysis selection.")
+            return
+
+        analysis = analyses[analysis_list.index]
+        analysis_id = analysis.get("id")
+        if analysis_id is None:
+            status.update("Cannot delete: analysis ID not found.")
+            return
+
+        # Delete the analysis from database
+        from capstone_project_team_5.services.code_analysis_persistence import (
+            delete_code_analysis,
+        )
+
+        if delete_code_analysis(analysis_id):
+            status.update(f"Deleted analysis {analysis_id}.")
+            # Clear selection state and hide button
+            self._analysis_selected = False
+            delete_btn = self.query_one("#btn-delete-analysis", Button)
+            delete_btn.display = False
+            # Refresh the saved projects list
+            try:
+                self._run_list_saved()
+            except Exception as exc:
+                status.update(f"Analysis deleted but error refreshing list: {exc}")
+        else:
+            status.update(f"Failed to delete analysis {analysis_id}.")
+
     @on(Button.Pressed, "#btn-load-latest")
     def handle_load_latest_saved(self) -> None:
         """Load the latest saved analysis for the current user into project view."""
@@ -405,6 +463,7 @@ ProgressBar {
 
         # Switch to live analysis mode.
         self._view_mode = "analysis"
+        self._analysis_selected = False
         analysis_list.display = False
         analysis_list.clear()
         project_list.display = True
@@ -412,6 +471,10 @@ ProgressBar {
         output.update("")
         progress.update(progress=5)
         status.update("Uploading ZIP...")
+
+        # Hide delete button when switching to analysis mode
+        delete_btn = self.query_one("#btn-delete-analysis", Button)
+        delete_btn.display = False
 
         tool = self._consent_tool or ConsentTool()
 
@@ -475,6 +538,7 @@ ProgressBar {
         status = self.query_one("#status", Label)
 
         self._view_mode = "saved"
+        self._analysis_selected = False
         project_list.display = True
         analysis_list.display = True
         project_list.clear()
@@ -482,6 +546,10 @@ ProgressBar {
         output.update("")
         progress.update(progress=5)
         status.update("Querying saved uploads...")
+
+        # Hide delete button initially (until an analysis is selected)
+        delete_btn = self.query_one("#btn-delete-analysis", Button)
+        delete_btn.display = False
 
         def work() -> dict:
             # Import inside worker to avoid top-level DB dependency in the UI thread
@@ -951,6 +1019,11 @@ ProgressBar {
     def handle_project_selected(self, event: ListView.Selected) -> None:
         """Update detail pane when the user selects a project in the list."""
         if self._view_mode == "saved":
+            # Hide delete button when switching projects (no analysis selected yet)
+            self._analysis_selected = False
+            delete_btn = self.query_one("#btn-delete-analysis", Button)
+            delete_btn.display = False
+
             self._saved_active_project_index = event.index
             self._show_saved_project(event.index)
         else:
@@ -972,6 +1045,11 @@ ProgressBar {
         analyses = project.get("analyses") or []
         if not analyses or event.index < 0 or event.index >= len(analyses):
             return
+
+        # Show delete button when an analysis is selected
+        self._analysis_selected = True
+        delete_btn = self.query_one("#btn-delete-analysis", Button)
+        delete_btn.display = True
 
         analysis = analyses[event.index]
 
@@ -1387,6 +1465,11 @@ ProgressBar {
         """Re-run the consent/config sequence on demand."""
         status = self.query_one("#status", Label)
 
+        # Hide delete button when switching to config
+        self._analysis_selected = False
+        delete_btn = self.query_one("#btn-delete-analysis", Button)
+        delete_btn.display = False
+
         if self._current_user is None:
             status.update("Please log in before configuring consent.")
             return
@@ -1401,6 +1484,11 @@ ProgressBar {
 
     @on(Button.Pressed, "#btn-edit")
     def handle_edit_button(self) -> None:
+        # Hide delete button when switching to edit view
+        self._analysis_selected = False
+        delete_btn = self.query_one("#btn-delete-analysis", Button)
+        delete_btn.display = False
+
         self.action_toggle_edit()
 
     def action_toggle_edit(self) -> None:
