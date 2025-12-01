@@ -76,3 +76,13 @@ This week time was spenting coding specific analysis for each major programming 
 | JS/TS | Done | JS/TS project analysis to create resume-relevant insights. |
 
 ![screenshot](Week12_checklist.png)
+
+## Week #13 (November 24 - November 30)
+
+This week time was spent integrating past JS/TS specific language analysis feature. The feature is fully integated into the project flow, matching the unified programming language analysis output class as well as specific local bullet point generation for JS/TS projects. Time was spent outlining the presentation and creating slides. The plan for next sprint is to cleanup any lose ends to have all requirements completed for video demo / checklist.
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| JS/TS Integration | Done | Fully integrated into project flow. |
+
+![screenshot](Week13_checklist.png)
