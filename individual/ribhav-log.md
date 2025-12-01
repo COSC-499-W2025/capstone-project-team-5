@@ -251,6 +251,40 @@ Added local analysis for python files and started plugging in programming langua
 | Review PRs | ❌ Not Started    |  |
 | Finish integrating contribution integration | ❌ Not Started | |
 
+## Week 12 | November 24-28, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1596" height="918" alt="image" src="https://github.com/user-attachments/assets/d1f0775b-74ec-4bbc-8f0b-853abf936b28" />
+
+</details>
+
+### Task Progress this week
+
+Made big refactoring changes by adding a TUI into our workflow. Integrated individual contributions into the main flow, added authentication and other UX improvements. Prepared for the milestone and presentation. I think we are done with Milestone 1 work!
+
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Review PRs | ✅ Done     |  |
+| Learn about Tauri | ⏳ In Progress      | Need to choose between the Tauri python plugin, or an API first approach. |
+| Add Python Analysis | ✅ Done |  |
+| Finish integrating contribution integration | ✅ Done | |
+| Add TUI | ✅ Done | |
+| Add user management | ✅ Done | |
+| Prepare for Milestone Presentation | ✅ Done | |
+
+
+### Next week's plans
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Review PRs | ❌ Not Started    |  |
+| Polish Milestone 1 requirements | ❌ Not Started    |  |
+
+
+
+
+
 
 
 
