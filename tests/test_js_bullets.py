@@ -7,6 +7,7 @@ Tests the bullet generation from JSProjectSummary objects.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from capstone_project_team_5.js_code_analyzer import JSProjectSummary
@@ -238,7 +239,12 @@ class TestGenerateJSBullets:
         # Should still generate at least 1 bullet
         assert len(bullets) >= 1
         assert any("JavaScript" in b for b in bullets)
-        assert any("5" in b.split() for b in bullets)
+
+        has_file_count = any(
+            re.search(r"\b5\b", b) and ("file" in b.lower() or "component" in b.lower())
+            for b in bullets
+        )
+        assert has_file_count, f"Expected file count in bullets. Got: {bullets}"
 
     def test_max_bullets_limit(self):
         """Test that max_bullets parameter is respected."""
