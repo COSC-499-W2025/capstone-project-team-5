@@ -227,6 +227,56 @@ def _prepare_generic_data(analysis: ProjectAnalysis) -> tuple[dict[str, any], st
     return metrics, summary_text
 
 
+def delete_code_analysis(analysis_id: int) -> bool:
+    """Delete a specific code analysis by ID.
+
+    This removes only the code analysis record, not the underlying
+    project data.
+
+    Args:
+        analysis_id: Primary key of the code analysis to delete.
+
+    Returns:
+        bool: True if the analysis was deleted, False if it didn't exist.
+    """
+    from capstone_project_team_5.data.db import get_session
+    from capstone_project_team_5.data.models import CodeAnalysis
+
+    with get_session() as session:
+        result = (
+            session.query(CodeAnalysis)
+            .filter(CodeAnalysis.id == analysis_id)
+            .delete(synchronize_session=False)
+        )
+        session.commit()
+        return result > 0
+
+
+def delete_code_analyses_by_project(project_id: int) -> int:
+    """Delete all code analyses for a specific project.
+
+    This removes all code analysis records associated with a project,
+    but preserves the project data itself.
+
+    Args:
+        project_id: ID of the project whose code analyses should be deleted.
+
+    Returns:
+        int: The number of code analyses deleted.
+    """
+    from capstone_project_team_5.data.db import get_session
+    from capstone_project_team_5.data.models import CodeAnalysis
+
+    with get_session() as session:
+        count = (
+            session.query(CodeAnalysis)
+            .filter(CodeAnalysis.project_id == project_id)
+            .delete(synchronize_session=False)
+        )
+        session.commit()
+        return count
+
+
 # Future: Add more language-specific data preparation functions
 # def _prepare_python_data(summary: any) -> tuple[dict[str, any], str]:
 #     """Prepare Python specific metrics for database storage."""
