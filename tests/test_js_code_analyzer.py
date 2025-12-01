@@ -3,7 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from capstone_project_team_5.js_code_analyzer import JSTSAnalyzer
+from capstone_project_team_5.js_code_analyzer import (
+    JSProjectSummary,
+    JSTSAnalyzer,
+    analyze_js_project,
+)
 
 
 def create_package_json(path: Path, dependencies=None, dev_dependencies=None):
@@ -271,3 +275,120 @@ def test_node_modules_ignored(tmp_path):
 
     all_output = str(result)
     assert "should-not-appear" not in all_output
+
+
+def test_JSProjectSummary(tmp_path):
+    """
+    Tests that the JSProjectSummary is built correctly for the below project.
+    Test React + TypeScript + Express full-stack project detection.
+    """
+
+    create_package_json(
+        tmp_path / "package.json",
+        dependencies={
+            "react": "^18.2.0",
+            "react-dom": "^18.2.0",
+            "express": "^4.18.0",
+            "@prisma/client": "^5.0.0",
+        },
+        dev_dependencies={
+            "typescript": "^5.0.0",
+            "vite": "^4.0.0",
+            "eslint": "^8.0.0",
+        },
+    )
+
+    create_code_file(
+        tmp_path / "src" / "App.tsx",
+        """
+        import React, { useState } from 'react';
+        
+        function App() {
+            const [user, setUser] = useState(null);
+            return <div>Hello World</div>;
+        }
+        
+        export default App;
+        """,
+    )
+
+    create_code_file(
+        tmp_path / "server" / "index.ts",
+        """
+        import express from 'express';
+        const app = express();
+        
+        app.get('/api/users', async (req, res) => {
+            res.json({ users: [] });
+        });
+        """,
+    )
+
+    summary = analyze_js_project(tmp_path, "TypeScript", "Express")
+
+    assert isinstance(summary, JSProjectSummary)
+    assert summary.uses_typescript is True
+    assert summary.total_files > 0
+
+    assert "frontend" in summary.tech_stack
+    assert "backend" in summary.tech_stack
+    assert "database" in summary.tech_stack
+
+    frontend = summary.tech_stack["frontend"]
+    assert any("TypeScript" in item for item in frontend)
+    assert any("React" in item for item in frontend), f"React not in frontend: {frontend}"
+
+    backend = summary.tech_stack["backend"]
+    assert "Node.js" in backend
+    assert "Express" in backend
+
+    assert summary.uses_react is True, "uses_react should be True when React is in dependencies"
+    assert summary.uses_nodejs is True
+
+
+def test_skills_generation(tmp_path):
+    """Test that skills list is generated from tech stack."""
+
+    create_package_json(
+        tmp_path / "package.json",
+        dependencies={
+            "react": "^18.2.0",
+            "express": "^4.18.0",
+            "prisma": "^5.0.0",
+            "stripe": "^12.0.0",
+        },
+        dev_dependencies={
+            "jest": "^29.0.0",
+        },
+    )
+
+    summary = analyze_js_project(tmp_path, "TypeScript", "React")
+
+    skills = summary.skills_demonstrated
+    assert "React 18" in skills or "React" in skills
+    assert "Express" in skills
+    assert "Node.js" in skills
+    assert "Prisma" in skills
+    assert "Jest" in skills
+
+
+def test_integration_detection(tmp_path):
+    """Test third-party integration detection."""
+    create_package_json(
+        tmp_path / "package.json",
+        dependencies={
+            "stripe": "^12.0.0",
+            "aws-sdk": "^2.0.0",
+            "socket.io": "^4.0.0",
+        },
+    )
+
+    summary = analyze_js_project(tmp_path, "JavaScript", None)
+
+    integrations = summary.integrations
+    assert "payment" in integrations
+    assert "Stripe" in integrations["payment"]
+    assert "cloud" in integrations
+    assert "AWS SDK" in integrations["cloud"]
+    assert "realtime" in integrations
+    assert "Socket.IO" in integrations["realtime"]

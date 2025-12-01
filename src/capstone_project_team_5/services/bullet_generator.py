@@ -112,6 +112,11 @@ def _generate_local_bullets(analysis: ProjectAnalysis, max_bullets: int) -> list
     if analysis.language == "C/C++" and "c_cpp_summary" in analysis.language_analysis:
         summary = analysis.language_analysis["c_cpp_summary"]
         return generate_language_specific_bullets(summary, "C/C++", max_bullets)
+    elif (
+        analysis.language == "JavaScript" or analysis.language == "TypeScript"
+    ) and "js_ts_summary" in analysis.language_analysis:
+        summary = analysis.language_analysis["js_ts_summary"]
+        return generate_language_specific_bullets(summary, analysis.language, max_bullets)
 
     # Future languages will automatically work:
     # elif analysis.language == "Python" and "python_summary" in analysis.language_analysis:

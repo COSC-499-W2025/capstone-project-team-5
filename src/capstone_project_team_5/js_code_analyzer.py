@@ -2,6 +2,7 @@ import json
 import os
 import re
 from collections import defaultdict
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from capstone_project_team_5.constants.js_ts_analysis_constants import (
@@ -9,6 +10,109 @@ from capstone_project_team_5.constants.js_ts_analysis_constants import (
     INTEGRATION_MAP,
 )
 from capstone_project_team_5.constants.skill_detection_constants import SKIP_DIRS
+
+
+@dataclass
+class JSProjectSummary:
+    """Summary of JS/TS project analysis - preserves rich analyzer output."""
+
+    total_files: int = 0
+    total_lines_of_code: int = 0
+    total_functions: int = 0
+    total_classes: int = 0
+
+    tech_stack: dict = field(default_factory=dict)
+
+    features: list[str] = field(default_factory=list)
+
+    integrations: dict = field(default_factory=dict)
+    skills_demonstrated: list[str] = field(default_factory=list)
+
+    uses_typescript: bool = False
+    uses_react: bool = False
+    uses_vue: bool = False
+    uses_angular: bool = False
+    uses_nodejs: bool = False
+
+    design_patterns: set[str] = field(default_factory=set)
+    data_structures: set[str] = field(default_factory=set)
+    algorithms_used: set[str] = field(default_factory=set)
+
+
+def analyze_js_project(
+    project_path: Path, language: str, framework: str | None
+) -> JSProjectSummary:
+    """
+    Analyze a JS/TS project and return unified summary.
+
+    This wraps the JSTSAnalyzer and preserves all its rich output
+    while providing compatibility with the unified analysis system.
+
+    Args:
+        project_path: Path to the project directory
+
+    Returns:
+        JSProjectSummary with all analysis data
+    """
+
+    existing_content = {"language": language, "framework": framework}
+
+    analyzer = JSTSAnalyzer(str(project_path), existing_content)
+    results = analyzer.analyze()
+
+    summary = JSProjectSummary()
+    summary.tech_stack = results.get("tech_stack", {})
+    summary.features = results.get("features", [])
+    summary.integrations = results.get("integrations", {})
+    summary.skills_demonstrated = results.get("skills_demonstrated", [])
+
+    summary.uses_typescript = language == "TypeScript"
+
+    frontend = summary.tech_stack.get("frontend", [])
+    backend = summary.tech_stack.get("backend", [])
+
+    summary.uses_react = any("React" in item for item in frontend)
+    summary.uses_vue = any("Vue" in item for item in frontend)
+    summary.uses_angular = any("Angular" in item for item in frontend)
+    summary.uses_nodejs = any("Node.js" in item for item in backend)
+
+    feature_to_pattern = {
+        "State Management": "State Management Pattern",
+        "User Authentication": "Authentication Pattern",
+        "CRUD Operations": "Repository Pattern",
+        "Client-side Routing": "Router Pattern",
+        "Form Validation": "Validation Pattern",
+    }
+
+    for feature in summary.features:
+        if feature in feature_to_pattern:
+            summary.design_patterns.add(feature_to_pattern[feature])
+
+    summary.total_files = _count_js_files(project_path)
+    summary.total_lines_of_code = _count_lines_of_code(analyzer.all_code_content)
+
+    return summary
+
+
+def _count_js_files(project_path: Path) -> int:
+    """Count JS/TS files in project."""
+    from capstone_project_team_5.constants.skill_detection_constants import SKIP_DIRS
+
+    extensions = {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"}
+    count = 0
+
+    for _root, dirs, files in project_path.walk():
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+        count += sum(1 for f in files if Path(f).suffix in extensions)
+
+    return count
+
+
+def _count_lines_of_code(code_content: str) -> int:
+    """Count non-empty lines of code."""
+    if not code_content:
+        return 0
+    return sum(1 for line in code_content.split("\n") if line.strip())
 
 
 class JSTSAnalyzer:
@@ -156,20 +260,19 @@ class JSTSAnalyzer:
 
         framework = self.context.get("framework", "")
 
-        if framework:
-            if framework in ["React", "Vue", "Angular", "Svelte", "Next.js"]:
-                stack.append(framework)
-        else:
-            # Fallback detection from deps
-            if "react" in all_deps:
-                version = all_deps["react"].replace("^", "").replace("~", "")
-                stack.append(f"React {version.split('.')[0]}")
-            elif "vue" in all_deps:
-                stack.append("Vue")
-            elif "@angular/core" in all_deps:
-                stack.append("Angular")
-            elif "svelte" in all_deps:
-                stack.append("Svelte")
+        if framework and framework in ["React", "Vue", "Angular", "Svelte", "Next.js"]:
+            stack.append(framework)
+        # Always check deps for frontend framework, even if a backend framework is detected
+
+        if "react" in all_deps and "React" not in " ".join(stack):
+            version = all_deps["react"].replace("^", "").replace("~", "")
+            stack.append(f"React {version.split('.')[0]}")
+        elif "vue" in all_deps and "Vue" not in " ".join(stack):
+            stack.append("Vue")
+        elif "@angular/core" in all_deps and "Angular" not in " ".join(stack):
+            stack.append("Angular")
+        elif "svelte" in all_deps and "Svelte" not in " ".join(stack):
+            stack.append("Svelte")
 
         # UI Libraries
         if "@mui/material" in all_deps or "@material-ui/core" in all_deps:
