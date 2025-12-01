@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, Integer
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
 from capstone_project_team_5.data.db import Base
@@ -36,6 +36,11 @@ class ConsentRecord(Base):
     __tablename__ = "consent_records"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     consent_given: Mapped[bool] = mapped_column(Boolean, nullable=False)
     use_external_services: Mapped[bool] = mapped_column(Boolean, nullable=False)
     external_services: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)

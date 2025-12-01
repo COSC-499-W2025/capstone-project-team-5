@@ -134,11 +134,15 @@ ProgressBar {
         self._consent_tool: ConsentTool | None = None
         self._worker: Worker[dict] | None = None
         self._current_markdown: str = ""
+        self._view_mode: str = "analysis"  # "analysis" or "saved"
         self._current_user: str | None = None
         self._auth_mode: str | None = None
         self._upload_summary: dict | None = None
         self._projects: list[dict] = []
         self._ranks: dict[int, int] = {}
+        self._saved_uploads: list[dict] = []
+        self._saved_projects: list[dict] = []
+        self._saved_active_project_index: int | None = None
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -172,7 +176,6 @@ ProgressBar {
                         Button("Log Out", id="btn-logout", variant="default"),
                         Button("Analyze ZIP", id="btn-analyze", variant="primary"),
                         Button("Retrieve Projects", id="btn-retrieve", variant="default"),
-                        Button("Load Latest Saved", id="btn-load-latest", variant="default"),
                         Button("Configure Consent", id="btn-config", variant="default"),
                         Button("Edit View", id="btn-edit", variant="default"),
                         Button("Exit", id="btn-exit", variant="error"),
@@ -180,9 +183,14 @@ ProgressBar {
                     ),
                     # Main area
                     Container(
-                        # Project list + detail pane
                         Container(
-                            ListView(id="project-list"),
+                            # Left: project + analysis lists
+                            Container(
+                                ListView(id="project-list"),
+                                ListView(id="analysis-list"),
+                                id="list-column",
+                            ),
+                            # Right: detail markdown/editor
                             VerticalScroll(
                                 Markdown("", id="output"),
                                 TextArea(
@@ -213,12 +221,14 @@ ProgressBar {
 
     def on_mount(self) -> None:
         editor = self.query_one("#editor", TextArea)
+        analysis_list = self.query_one("#analysis-list", ListView)
         username_input = self.query_one("#auth-username", Input)
         password_input = self.query_one("#auth-password", Input)
         submit_btn = self.query_one("#auth-btn-submit", Button)
         app_screen = self.query_one("#app-screen", Container)
 
         editor.display = False
+        analysis_list.display = False
         # Auth inputs are hidden until user chooses login or signup.
         username_input.display = False
         password_input.display = False
@@ -295,6 +305,9 @@ ProgressBar {
                 status.update(error or "Could not create user.")
                 return
             self._current_user = username
+            # Initialize consent tool scoped to this user and load existing consent if any.
+            self._consent_tool = ConsentTool(username=username)
+            self._consent_tool.load_existing_consent()
             user_label.update(f"User: {username}")
             status.update(f"Account created. Logged in as {username}.")
         else:
@@ -303,6 +316,8 @@ ProgressBar {
                 status.update(error or "Login failed.")
                 return
             self._current_user = username
+            self._consent_tool = ConsentTool(username=username)
+            self._consent_tool.load_existing_consent()
             user_label.update(f"User: {username}")
             status.update(f"Logged in as {username}.")
 
@@ -323,12 +338,14 @@ ProgressBar {
             return
         status.update("Requesting consent...")
 
-        if self._consent_tool is None:
-            tool = ConsentTool()
-            if not tool.generate_consent_form():
-                status.update("Consent denied.")
-                return
-            self._consent_tool = tool
+        # Ensure we have a consent tool scoped to the current user.
+        if self._consent_tool is None or self._consent_tool.username != self._current_user:
+            self._consent_tool = ConsentTool(username=self._current_user)
+            self._consent_tool.load_existing_consent()
+
+        if not self._consent_tool.consent_given and not self._consent_tool.generate_consent_form():
+            status.update("Consent denied.")
+            return
 
         selected = prompt_for_zip_file()
         if selected is None:
@@ -381,11 +398,15 @@ ProgressBar {
 
     def _run_analysis(self, zip_path: Path) -> None:
         project_list = self.query_one("#project-list", ListView)
+        analysis_list = self.query_one("#analysis-list", ListView)
         output = self.query_one("#output", Markdown)
         progress = self.query_one("#progress", ProgressBar)
         status = self.query_one("#status", Label)
 
-        # Ensure project list is visible in analysis mode.
+        # Switch to live analysis mode.
+        self._view_mode = "analysis"
+        analysis_list.display = False
+        analysis_list.clear()
         project_list.display = True
         project_list.clear()
         output.update("")
@@ -448,14 +469,16 @@ ProgressBar {
     def _run_list_saved(self) -> None:
         """Background worker to query persisted uploads/projects/analyses from the DB."""
         project_list = self.query_one("#project-list", ListView)
+        analysis_list = self.query_one("#analysis-list", ListView)
         output = self.query_one("#output", Markdown)
         progress = self.query_one("#progress", ProgressBar)
         status = self.query_one("#status", Label)
 
-        # Clear and hide project list so saved view uses the full width.
+        self._view_mode = "saved"
+        project_list.display = True
+        analysis_list.display = True
         project_list.clear()
-        project_list.display = False
-
+        analysis_list.clear()
         output.update("")
         progress.update(progress=5)
         status.update("Querying saved uploads...")
@@ -585,6 +608,11 @@ ProgressBar {
                                     "created_at": str(a.created_at),
                                 }
                             )
+
+                        # Only keep projects that have at least one analysis
+                        # linked for this user (or any user when no login).
+                        if not analyses_list:
+                            continue
 
                         proj = {
                             "id": p.id,
@@ -861,11 +889,41 @@ ProgressBar {
 
             if event.worker.name == "saved_list":
                 progress.update(progress=100)
-                status.update("Loaded saved analyses.")
                 saved = data.get("saved") or []
-                md = self._render_saved_list(saved)
-                self._current_markdown = md
-                output.update(md)
+
+                self._saved_uploads = saved
+                self._saved_projects = []
+                self._saved_active_project_index = None
+
+                project_list = self.query_one("#project-list", ListView)
+                analysis_list = self.query_one("#analysis-list", ListView)
+                project_list.clear()
+                analysis_list.clear()
+
+                for up in saved:
+                    upload_name = up.get("filename")
+                    upload_id = up.get("id")
+                    for p in up.get("projects", []):
+                        proj = dict(p)
+                        proj["upload_filename"] = upload_name
+                        proj["upload_id"] = upload_id
+                        self._saved_projects.append(proj)
+
+                if not self._saved_projects:
+                    status.update("No saved uploads found for this user.")
+                    output.update("# Saved Uploads\n\n(No saved uploads found)")
+                    return
+
+                # Populate project list with saved projects
+                for proj in self._saved_projects:
+                    label = f"{proj.get('upload_filename')} / {proj.get('name')}"
+                    project_list.append(ListItem(Label(label)))
+
+                # Select first project and show its analyses
+                project_list.index = 0
+                self._saved_active_project_index = 0
+                self._show_saved_project(0)
+                status.update("Loaded saved analyses.")
                 return
 
             if event.worker.name == "retrieve":
@@ -892,7 +950,235 @@ ProgressBar {
     @on(ListView.Selected, "#project-list")
     def handle_project_selected(self, event: ListView.Selected) -> None:
         """Update detail pane when the user selects a project in the list."""
-        self._show_project_detail(event.index)
+        if self._view_mode == "saved":
+            self._saved_active_project_index = event.index
+            self._show_saved_project(event.index)
+        else:
+            self._show_project_detail(event.index)
+
+    @on(ListView.Selected, "#analysis-list")
+    def handle_saved_analysis_selected(self, event: ListView.Selected) -> None:
+        """Render an individual saved analysis snapshot with detailed metrics."""
+        if self._view_mode != "saved":
+            return
+        if self._saved_active_project_index is None:
+            return
+        if self._saved_active_project_index < 0 or self._saved_active_project_index >= len(
+            self._saved_projects
+        ):
+            return
+
+        project = self._saved_projects[self._saved_active_project_index]
+        analyses = project.get("analyses") or []
+        if not analyses or event.index < 0 or event.index >= len(analyses):
+            return
+
+        analysis = analyses[event.index]
+
+        analysis_id = analysis.get("id")
+        if analysis_id is None:
+            return
+
+        # Fetch full CodeAnalysis + metrics from the database for this snapshot.
+        try:
+            import json
+
+            from capstone_project_team_5.data.db import get_session
+            from capstone_project_team_5.data.models import CodeAnalysis, Project
+
+            with get_session() as session:
+                ca = session.query(CodeAnalysis).filter(CodeAnalysis.id == analysis_id).first()
+                if ca is None:
+                    summary_text = analysis.get("summary_text") or "(no summary available)"
+                    md = f"# Saved Analysis\n\n{summary_text}"
+                else:
+                    metrics: dict | None = None
+                    if getattr(ca, "metrics_json", None):
+                        try:
+                            metrics = json.loads(ca.metrics_json)
+                        except Exception:  # pragma: no cover - defensive
+                            metrics = None
+
+                    proj_row = (
+                        session.query(Project)
+                        .filter(Project.id == getattr(ca, "project_id", -1))
+                        .first()
+                    )
+
+                    md = self._render_saved_analysis_detail(
+                        project_dict=project,
+                        analysis_row=ca,
+                        metrics=metrics or {},
+                        project_row=proj_row,
+                    )
+        except Exception:
+            summary_text = analysis.get("summary_text") or "(no summary available)"
+            md = f"# Saved Analysis\n\n{summary_text}"
+
+        self._current_markdown = md
+        self.query_one("#output", Markdown).update(md)
+
+    def _show_saved_project(self, index: int) -> None:
+        """Populate analyses list and summary for a saved project."""
+        if not self._saved_projects:
+            return
+        if index < 0 or index >= len(self._saved_projects):
+            return
+
+        project = self._saved_projects[index]
+        analysis_list = self.query_one("#analysis-list", ListView)
+        output = self.query_one("#output", Markdown)
+
+        analyses = project.get("analyses") or []
+
+        analysis_list.clear()
+        for a in analyses:
+            label = f"{a.get('language')} @ {a.get('created_at')}"
+            analysis_list.append(ListItem(Label(label)))
+
+        # Show a brief project summary in the markdown pane.
+        parts: list[str] = []
+        parts.append("# Saved Project\n")
+        parts.append(
+            f"## {project.get('name')}  \n"
+            f"`{project.get('rel_path')}` (Upload: {project.get('upload_filename')})\n"
+        )
+        parts.append(f"- Files: {project.get('file_count')}")
+        parts.append(f"- Upload ID: {project.get('upload_id')}")
+        langs = project.get("languages") or []
+        if langs:
+            parts.append(f"- Languages: {', '.join(langs)}")
+        skills = project.get("skills") or []
+        if skills:
+            parts.append(f"- Skills/Tools: {', '.join(skills[:12])}")
+        loc = project.get("lines_of_code")
+        if loc is not None:
+            parts.append(f"- Lines of code (sum of analyses): {loc}")
+
+        parts.append("")
+        if analyses:
+            parts.append("Select an analysis on the left to view its detailed summary.")
+        else:
+            parts.append("No analyses have been saved for this project yet.")
+
+        md = "\n".join(parts)
+        self._current_markdown = md
+        output.update(md)
+
+    def _render_saved_analysis_detail(
+        self,
+        *,
+        project_dict: dict,
+        analysis_row,
+        metrics: dict,
+        project_row=None,
+    ) -> str:
+        """Render detailed markdown for a saved analysis snapshot."""
+        parts: list[str] = []
+
+        title = project_dict.get("upload_filename") or "Saved Analysis"
+        parts.append(f"# {title}\n")
+
+        parts.append(
+            f"## {project_dict.get('name')}  \n"
+            f"`{project_dict.get('rel_path')}` "
+            f"(Upload ID: {project_dict.get('upload_id')})\n"
+        )
+
+        parts.append("### Summary")
+        parts.append(f"- Analysis ID: {analysis_row.id}")
+        parts.append(f"- Timestamp: {analysis_row.created_at}")
+
+        language = (
+            metrics.get("language")
+            or metrics.get("language_name")
+            or getattr(analysis_row, "language", None)
+            or "Unknown"
+        )
+        framework = metrics.get("framework")
+        parts.append(f"- Language: {language}")
+        parts.append(f"- Framework: {framework or 'None detected'}")
+
+        total_files = (
+            metrics.get("total_files")
+            or metrics.get("total_files_count")
+            or project_dict.get("file_count")
+            or 0
+        )
+        parts.append(f"- Files: {int(total_files)}")
+
+        loc = metrics.get("lines_of_code") or metrics.get("total_lines_of_code")
+        if isinstance(loc, int):
+            parts.append(f"- Lines of code: {loc}")
+
+        if project_row is not None and project_row.importance_score is not None:
+            parts.append(f"- Importance score: {project_row.importance_score:.1f}")
+
+        # Skills and tools
+        tools = set(metrics.get("tools", []))
+        practices = set(metrics.get("practices", []))
+        combined_skills = sorted(tools | practices)
+
+        parts.append("\n### Skills")
+        if combined_skills:
+            parts.extend(f"- {s}" for s in combined_skills)
+        else:
+            # Fall back to aggregated skills from project_dict if any.
+            fallback_skills = project_dict.get("skills") or []
+            if fallback_skills:
+                parts.extend(f"- {s}" for s in fallback_skills)
+            else:
+                parts.append("- None detected")
+
+        parts.append("\n### Tools")
+        if tools:
+            parts.extend(f"- {t}" for t in sorted(tools))
+        else:
+            parts.append("- None detected")
+
+        # Generic metrics (if present)
+        oop_score = metrics.get("oop_score")
+        complexity_score = metrics.get("complexity_score")
+        if oop_score is not None or complexity_score is not None:
+            parts.append("\n### Code Quality Metrics")
+            if oop_score is not None:
+                parts.append(f"- OOP score: {oop_score}")
+            if complexity_score is not None:
+                parts.append(f"- Complexity score: {complexity_score}")
+
+        # Lightweight resume-style bullets reconstructed from saved metrics.
+        bullets: list[str] = []
+        if language != "Unknown":
+            if framework:
+                bullets.append(
+                    f"Built a {language} project using {framework} with approximately "
+                    f"{int(total_files)} files."
+                )
+            else:
+                bullets.append(
+                    f"Built a {language} project with approximately {int(total_files)} files."
+                )
+        if tools:
+            top_tools = ", ".join(sorted(tools)[:5])
+            bullets.append(f"Used tools and technologies such as {top_tools}.")
+        if combined_skills:
+            top_skills = ", ".join(combined_skills[:8])
+            bullets.append(f"Demonstrated skills in {top_skills}.")
+        if isinstance(loc, int) and loc > 0:
+            bullets.append(f"Worked with roughly {loc} lines of code in this snapshot.")
+
+        parts.append("\n### Resume Bullet Points (from saved analysis)")
+        if bullets:
+            parts.extend(f"- {b}" for b in bullets)
+        else:
+            parts.append("- Not enough data to infer bullet points.")
+
+        # Original summary text
+        summary = analysis_row.summary_text or "(no summary available)"
+        parts.append("\n### Summary Text")
+        parts.append(summary)
+
+        return "\n".join(parts)
 
     def _show_project_detail(self, index: int) -> None:
         """Render details for a single selected project into the markdown view."""
@@ -1101,7 +1387,11 @@ ProgressBar {
         """Re-run the consent/config sequence on demand."""
         status = self.query_one("#status", Label)
 
-        tool = ConsentTool()
+        if self._current_user is None:
+            status.update("Please log in before configuring consent.")
+            return
+
+        tool = self._consent_tool or ConsentTool(username=self._current_user)
         if not tool.generate_consent_form():
             status.update("Consent configuration cancelled; previous settings kept.")
             return
