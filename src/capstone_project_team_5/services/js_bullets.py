@@ -109,7 +109,7 @@ def generate_js_bullets(summary: JSProjectSummary, max_bullets: int = 6) -> list
                 f"Designed RESTful APIs with {db_str} persistence layer "
                 f"for efficient data operations"
             )
-        elif "GraphQL" in str(backend_stack):
+        elif any("GraphQL" in item for item in backend_stack):
             bullets.append(
                 "Architected a GraphQL API schema enabling flexible client queries "
                 "and optimized data fetching"
