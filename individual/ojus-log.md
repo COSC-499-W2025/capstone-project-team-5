@@ -205,6 +205,93 @@
 ---
 
 <details>
+  <summary><h3>Week 14</h3></summary>
+<img width="1325" height="774" alt="image" src="https://github.com/user-attachments/assets/b67b9633-10de-4d4e-8870-bab8c981a8a1" />
+
+### What Went Well
+  - Enhanced Java Analyzer and Python analyzer to prepare them for integration
+  - Integrated Java and python analyzer into cli workflow
+  - Added deletion logic to code anlaysis persistence layer
+  - Opened PR for OpenAI LLM Provider integration (will be closed next week)
+
+  ### What Didn't Go Well
+  - ALl good :)
+
+  ### Planning for Next Week
+  - Improve TUI integration in the project
+  - Fix OpenAI LLM merge conflicts
+  - Code cleanup + Cover Edge cases in code logic + Complete remiaing Todos
+
+</details>
+
+</details>
+
+---
+
+<details>
+  <summary><h3>December</h3></summary>
+
+<details>
+  <summary><h3>Week X</h3></summary>
+
+### What Went Well
+  - 
+
+  ### What Didn't Go Well
+  - 
+
+  ### Planning for Next Week
+  - 
+</details>
+
+---
+
+<details>
+  <summary><h3>Week X</h3></summary>
+
+### What Went Well
+  - 
+
+  ### What Didn't Go Well
+  - 
+
+  ### Planning for Next Week
+  - 
+</details>
+
+---
+
+<details>
+  <summary><h3>Week X</h3></summary>
+
+### What Went Well
+  - 
+
+  ### What Didn't Go Well
+  - 
+
+  ### Planning for Next Week
+  - 
+</details>
+
+---
+
+<details>
+  <summary><h3>Week X</h3></summary>
+
+### What Went Well
+  - 
+
+  ### What Didn't Go Well
+  - 
+
+  ### Planning for Next Week
+  - 
+</details>
+
+---
+
+<details>
   <summary><h3>Week X</h3></summary>
 
 ### What Went Well
@@ -218,4 +305,5 @@
 </details>
 
 </details>
+
 
