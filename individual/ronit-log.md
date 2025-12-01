@@ -2,7 +2,39 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-_Last Updated:_ November 23, 2025
+_Last Updated:_ November 30, 2025
+
+---
+
+## Week 13 | November 24-30, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1086" height="636" alt="image" src="https://github.com/user-attachments/assets/b15a1cfe-54ed-4e8e-805f-7f99bc73a10f" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Implemented language-agnostic test analysis pipeline | ✅ Done | Added pipeline that walks every project, counts unit/integration tests per language |
+| Wired testing metrics into CLI/TUI flows and bullet generator | ✅ Done | |
+| Added regression tests for test analyzer, bullet generation, and persistence | ✅ Done | Updated expectations to cover new UX |
+| Worked on presentation materials | ✅ Done | Prepared for milestone #1 presentation |
+| Conducted code reviews | ✅ Done | Ongoing task |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Complete video demo | ❌ Not Started | Video work for milestone #1 |
+| Complete milestone #1 submissions | ❌ Not Started | Video demo, team contract, self-reflection, deliverable, peer evaluation (of other teams) |
+| Continue code reviews | ❌ Not Started | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Prepare for presentation/video demo | 🚧 In Progress | Presentation materials done, video demo pending |
+| Pending integration stuff | ❌ Not Started |  |
+| Continue code reviews | ✅ Done | Ongoing task |
 
 ---
 
