@@ -265,3 +265,127 @@ def test_code_analysis_cascade_delete(sample_c_project: Path):
     with get_session() as session:
         analyses = session.query(CodeAnalysis).filter(CodeAnalysis.project_id == project_id).all()
         assert len(analyses) == 0
+
+
+def test_delete_code_analysis_by_id():
+    """Test deleting a code analysis by ID."""
+    from capstone_project_team_5.services.code_analysis_persistence import (
+        delete_code_analysis,
+    )
+
+    init_db()
+
+    with get_session() as session:
+        # Create upload and project
+        upload = UploadRecord(
+            filename="test.zip",
+            size_bytes=100,
+            file_count=1,
+        )
+        session.add(upload)
+        session.flush()
+
+        project = Project(
+            upload_id=upload.id,
+            name="test",
+            rel_path="test",
+            has_git_repo=False,
+            file_count=1,
+        )
+        session.add(project)
+        session.flush()
+
+        # Create analysis
+        analysis = CodeAnalysis(
+            project_id=project.id,
+            language="C/C++",
+            analysis_type="local",
+            metrics_json='{"test": true}',
+        )
+        session.add(analysis)
+        session.commit()
+
+        analysis_id = analysis.id
+        project_id = project.id
+
+    # Delete analysis
+    result = delete_code_analysis(analysis_id)
+    assert result is True
+
+    # Verify analysis was deleted
+    with get_session() as session:
+        analysis = session.query(CodeAnalysis).filter(CodeAnalysis.id == analysis_id).first()
+        assert analysis is None
+
+        # Verify project still exists
+        project = session.query(Project).filter(Project.id == project_id).first()
+        assert project is not None
+
+    # Try deleting non-existent analysis
+    result = delete_code_analysis(99999)
+    assert result is False
+
+
+def test_delete_code_analyses_by_project():
+    """Test deleting all code analyses for a project."""
+    from capstone_project_team_5.services.code_analysis_persistence import (
+        delete_code_analyses_by_project,
+    )
+
+    init_db()
+
+    with get_session() as session:
+        # Create upload and project
+        upload = UploadRecord(
+            filename="test.zip",
+            size_bytes=100,
+            file_count=1,
+        )
+        session.add(upload)
+        session.flush()
+
+        project = Project(
+            upload_id=upload.id,
+            name="test",
+            rel_path="test",
+            has_git_repo=False,
+            file_count=1,
+        )
+        session.add(project)
+        session.flush()
+
+        # Create multiple analyses for the project
+        analysis1 = CodeAnalysis(
+            project_id=project.id,
+            language="C/C++",
+            analysis_type="local",
+            metrics_json='{"test": 1}',
+        )
+        analysis2 = CodeAnalysis(
+            project_id=project.id,
+            language="Python",
+            analysis_type="local",
+            metrics_json='{"test": 2}',
+        )
+        session.add(analysis1)
+        session.add(analysis2)
+        session.commit()
+
+        project_id = project.id
+
+    # Delete all analyses for project
+    count = delete_code_analyses_by_project(project_id)
+    assert count == 2
+
+    # Verify analyses were deleted
+    with get_session() as session:
+        analyses = session.query(CodeAnalysis).filter(CodeAnalysis.project_id == project_id).all()
+        assert len(analyses) == 0
+
+        # Verify project still exists
+        project = session.query(Project).filter(Project.id == project_id).first()
+        assert project is not None
+
+    # Try deleting from non-existent project
+    count = delete_code_analyses_by_project(99999)
+    assert count == 0
