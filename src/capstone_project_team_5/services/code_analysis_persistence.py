@@ -238,18 +238,24 @@ def delete_code_analysis(analysis_id: int) -> bool:
 
     Returns:
         bool: True if the analysis was deleted, False if it didn't exist.
-    """
-    from capstone_project_team_5.data.db import get_session
-    from capstone_project_team_5.data.models import CodeAnalysis
 
-    with get_session() as session:
-        result = (
-            session.query(CodeAnalysis)
-            .filter(CodeAnalysis.id == analysis_id)
-            .delete(synchronize_session=False)
-        )
-        session.commit()
-        return result > 0
+    Note:
+        Silently returns False if any database error occurs.
+    """
+    try:
+        from capstone_project_team_5.data.db import get_session
+        from capstone_project_team_5.data.models import CodeAnalysis
+
+        with get_session() as session:
+            result = (
+                session.query(CodeAnalysis)
+                .filter(CodeAnalysis.id == analysis_id)
+                .delete(synchronize_session=False)
+            )
+            session.commit()
+            return result > 0
+    except Exception:
+        return False
 
 
 def delete_code_analyses_by_project(project_id: int) -> int:
@@ -263,18 +269,24 @@ def delete_code_analyses_by_project(project_id: int) -> int:
 
     Returns:
         int: The number of code analyses deleted.
-    """
-    from capstone_project_team_5.data.db import get_session
-    from capstone_project_team_5.data.models import CodeAnalysis
 
-    with get_session() as session:
-        count = (
-            session.query(CodeAnalysis)
-            .filter(CodeAnalysis.project_id == project_id)
-            .delete(synchronize_session=False)
-        )
-        session.commit()
-        return count
+    Note:
+        Silently returns 0 if any database error occurs.
+    """
+    try:
+        from capstone_project_team_5.data.db import get_session
+        from capstone_project_team_5.data.models import CodeAnalysis
+
+        with get_session() as session:
+            count = (
+                session.query(CodeAnalysis)
+                .filter(CodeAnalysis.project_id == project_id)
+                .delete(synchronize_session=False)
+            )
+            session.commit()
+            return count
+    except Exception:
+        return 0
 
 
 # Future: Add more language-specific data preparation functions
