@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from pathlib import Path
 
 from textual import on
@@ -9,7 +10,10 @@ from textual.widgets import (
     Button,
     Footer,
     Header,
+    Input,
     Label,
+    ListItem,
+    ListView,
     Markdown,
     ProgressBar,
     Static,
@@ -20,6 +24,7 @@ from textual.worker import Worker, WorkerState
 from capstone_project_team_5.cli import analyze_projects_structured
 from capstone_project_team_5.consent_tool import ConsentTool
 from capstone_project_team_5.services import upload_zip
+from capstone_project_team_5.services.auth import authenticate_user, create_user
 from capstone_project_team_5.utils import prompt_for_zip_file
 
 
@@ -39,7 +44,32 @@ Screen {
     background: $background;
 }
 
-/* Top: header stays default */
+/* Auth screen centered content */
+#auth-screen {
+    height: 1fr;
+    layout: vertical;
+    align-horizontal: center;
+    align-vertical: middle;
+}
+
+#auth-card {
+    padding: 2;
+    border: heavy $primary;
+    background: $panel;
+    width: 40;
+    align-horizontal: center;
+}
+
+#auth-card Static {
+    text-align: center;
+    margin-bottom: 1;
+}
+
+#auth-card Button,
+#auth-card Input {
+    width: 100%;
+    margin-top: 1;
+}
 
 /* Middle split: sidebar + main output */
 #middle {
@@ -72,6 +102,7 @@ Screen {
     background: $surface;
     height: 1fr;
     padding: 1;
+    layout: horizontal;
 }
 
 #output-container {
@@ -104,44 +135,86 @@ ProgressBar {
         self._consent_tool: ConsentTool | None = None
         self._worker: Worker[dict] | None = None
         self._current_markdown: str = ""
+        self._view_mode: str = "analysis"  # "analysis" or "saved"
+        self._current_user: str | None = None
+        self._auth_mode: str | None = None
+        self._upload_summary: dict | None = None
+        self._projects: list[dict] = []
+        self._ranks: dict[int, int] = {}
+        self._saved_uploads: list[dict] = []
+        self._saved_projects: list[dict] = []
+        self._saved_active_project_index: int | None = None
 
     def compose(self) -> ComposeResult:
         yield Header()
 
         yield Container(
-            # Middle region: sidebar + main scroll area
+            # Auth screen (shown first)
             Container(
-                # Sidebar
                 Container(
-                    Static("Zip2Job\nAnalyzer", id="title"),
-                    Button("Analyze ZIP", id="btn-analyze", variant="primary"),
-                    Button("Retrieve Projects", id="btn-retrieve", variant="default"),
-                    Button("Edit View", id="btn-edit", variant="default"),
-                    Button("Exit", id="btn-exit", variant="error"),
-                    id="sidebar",
-                ),
-                # Main area
-                Container(
-                    VerticalScroll(
-                        Markdown("", id="output"),
-                        TextArea(
-                            "",
-                            id="editor",
-                            # Use plain text to avoid missing language errors.
-                            language=None,
-                            placeholder="Edit analysis markdown...",
-                        ),
-                        id="output-container",
+                    Static("Zip2Job Analyzer", id="auth-title"),
+                    Button("Login", id="auth-btn-login", variant="primary"),
+                    Button("Sign Up", id="auth-btn-signup", variant="default"),
+                    Input(placeholder="Username", id="auth-username"),
+                    Input(
+                        placeholder="Password",
+                        password=True,
+                        id="auth-password",
                     ),
-                    id="main",
+                    Button("Submit", id="auth-btn-submit", variant="success"),
+                    id="auth-card",
                 ),
-                id="middle",
+                id="auth-screen",
             ),
-            # Status bar
+            # Main app screen (hidden until login)
             Container(
-                Label("Ready.", id="status"),
-                ProgressBar(total=100, id="progress"),
-                id="statusbar",
+                # Middle region: sidebar + main scroll area
+                Container(
+                    # Sidebar
+                    Container(
+                        Static("Zip2Job\nAnalyzer", id="title"),
+                        Label("Hi, -", id="user-label"),
+                        Button("Log Out", id="btn-logout", variant="default"),
+                        Button("Analyze ZIP", id="btn-analyze", variant="primary"),
+                        Button("Retrieve Projects", id="btn-retrieve", variant="default"),
+                        Button("Configure Consent", id="btn-config", variant="default"),
+                        Button("Edit View", id="btn-edit", variant="default"),
+                        Button("Exit", id="btn-exit", variant="error"),
+                        id="sidebar",
+                    ),
+                    # Main area
+                    Container(
+                        Container(
+                            # Left: project + analysis lists
+                            Container(
+                                ListView(id="project-list"),
+                                ListView(id="analysis-list"),
+                                id="list-column",
+                            ),
+                            # Right: detail markdown/editor
+                            VerticalScroll(
+                                Markdown("", id="output"),
+                                TextArea(
+                                    "",
+                                    id="editor",
+                                    # Use plain text to avoid missing language errors.
+                                    language=None,
+                                    placeholder="Edit analysis markdown...",
+                                ),
+                                id="output-container",
+                            ),
+                            id="main",
+                        ),
+                    ),
+                    id="middle",
+                ),
+                # Status bar
+                Container(
+                    Label("Ready.", id="status"),
+                    ProgressBar(total=100, id="progress"),
+                    id="statusbar",
+                ),
+                id="app-screen",
             ),
         )
 
@@ -149,34 +222,155 @@ ProgressBar {
 
     def on_mount(self) -> None:
         editor = self.query_one("#editor", TextArea)
+        analysis_list = self.query_one("#analysis-list", ListView)
+        username_input = self.query_one("#auth-username", Input)
+        password_input = self.query_one("#auth-password", Input)
+        submit_btn = self.query_one("#auth-btn-submit", Button)
+        app_screen = self.query_one("#app-screen", Container)
+
         editor.display = False
+        analysis_list.display = False
+        # Auth inputs are hidden until user chooses login or signup.
+        username_input.display = False
+        password_input.display = False
+        submit_btn.display = False
+        # Hide main app screen until a user logs in.
+        app_screen.display = False
 
     # ---------------------------------------------------------------------
     # EVENTS
     # ---------------------------------------------------------------------
 
+    # ---- Auth buttons ---------------------------------------------------
+
+    @on(Button.Pressed, "#auth-btn-login")
+    def handle_login_button(self) -> None:
+        """Start the login flow by showing auth inputs."""
+        self._auth_mode = "login"
+        status = self.query_one("#status", Label)
+        username_input = self.query_one("#auth-username", Input)
+        password_input = self.query_one("#auth-password", Input)
+        submit_btn = self.query_one("#auth-btn-submit", Button)
+
+        username_input.value = ""
+        password_input.value = ""
+        username_input.display = True
+        password_input.display = True
+        submit_btn.display = True
+        username_input.focus()
+        status.update("Login: enter username and password, then Submit.")
+
+    @on(Button.Pressed, "#auth-btn-signup")
+    def handle_signup_button(self) -> None:
+        """Start the signup flow by showing auth inputs."""
+        self._auth_mode = "signup"
+        status = self.query_one("#status", Label)
+        username_input = self.query_one("#auth-username", Input)
+        password_input = self.query_one("#auth-password", Input)
+        submit_btn = self.query_one("#auth-btn-submit", Button)
+
+        username_input.value = ""
+        password_input.value = ""
+        username_input.display = True
+        password_input.display = True
+        submit_btn.display = True
+        username_input.focus()
+        status.update("Sign up: choose username and password, then Submit.")
+
+    @on(Button.Pressed, "#auth-btn-submit")
+    def handle_auth_submit(self) -> None:
+        """Handle login/signup submission from the sidebar inputs."""
+        status = self.query_one("#status", Label)
+        user_label = self.query_one("#user-label", Label)
+        username_input = self.query_one("#auth-username", Input)
+        password_input = self.query_one("#auth-password", Input)
+        submit_btn = self.query_one("#auth-btn-submit", Button)
+        auth_screen = self.query_one("#auth-screen", Container)
+        app_screen = self.query_one("#app-screen", Container)
+
+        mode = self._auth_mode
+        if mode is None:
+            status.update("Choose Login or Sign Up first.")
+            return
+
+        username = username_input.value.strip()
+        password = password_input.value
+
+        if not username or not password:
+            status.update("Username and password are required.")
+            return
+
+        if mode == "signup":
+            ok, error = create_user(username, password)
+            if not ok:
+                status.update(error or "Could not create user.")
+                return
+            self._current_user = username
+            # Initialize consent tool scoped to this user and load existing consent if any.
+            self._consent_tool = ConsentTool(username=username)
+            self._consent_tool.load_existing_consent()
+            user_label.update(f"User: {username}")
+            status.update(f"Account created. Logged in as {username}.")
+        else:
+            ok, error = authenticate_user(username, password)
+            if not ok:
+                status.update(error or "Login failed.")
+                return
+            self._current_user = username
+            self._consent_tool = ConsentTool(username=username)
+            self._consent_tool.load_existing_consent()
+            user_label.update(f"User: {username}")
+            status.update(f"Logged in as {username}.")
+
+        # Hide auth UI after successful auth and show main app screen
+        username_input.display = False
+        password_input.display = False
+        submit_btn.display = False
+        self._auth_mode = None
+        auth_screen.display = False
+        app_screen.display = True
+
     @on(Button.Pressed, "#btn-analyze")
     def handle_analyze_zip(self) -> None:
         status = self.query_one("#status", Label)
-        status.update("Requesting consent...")
 
-        if self._consent_tool is None:
-            tool = ConsentTool()
-            if not tool.generate_consent_form():
-                status.update("Consent denied.")
+        try:
+            if self._current_user is None:
+                status.update("Please log in before analyzing.")
                 return
-            self._consent_tool = tool
 
-        selected = prompt_for_zip_file()
-        if selected is None:
-            status.update("No file selected.")
-            return
+            # Ensure we have a consent tool scoped to the current user and
+            # attempt to load any existing consent configuration.
+            if self._consent_tool is None or self._consent_tool.username != self._current_user:
+                self._consent_tool = ConsentTool(username=self._current_user)
+                # If loading fails, fall back to requiring explicit
+                # configuration via the dedicated button.
+                with suppress(Exception):
+                    self._consent_tool.load_existing_consent()
 
-        if not selected.exists() or not selected.is_file():
-            status.update("Invalid file.")
-            return
+            # Do NOT open the consent GUI from here; that can appear as a hang
+            # inside the TUI. Require users to configure consent explicitly.
+            if self._consent_tool is None or not self._consent_tool.consent_given:
+                status.update("Consent not configured. Use 'Configure Consent' before analyzing.")
+                return
 
-        self._run_analysis(selected)
+            status.update("Select a ZIP file to analyze...")
+
+            selected = prompt_for_zip_file()
+            if selected is None:
+                status.update("No file selected.")
+                return
+
+            if not selected.exists() or not selected.is_file():
+                status.update("Invalid file.")
+                return
+
+            self._run_analysis(selected)
+        except Exception as exc:  # pragma: no cover - defensive
+            import traceback
+
+            traceback.print_exc()
+            status.update(f"Error during Analyze ZIP: {exc}")
 
     @on(Button.Pressed, "#btn-retrieve")
     def handle_retrieve_projects(self) -> None:
@@ -186,6 +380,10 @@ ProgressBar {
         "Analyze ZIP" when you want to upload and analyze a new archive.
         """
         status = self.query_one("#status", Label)
+        if self._current_user is None:
+            status.update("Please log in before retrieving saved analyses.")
+            return
+
         status.update("Querying saved uploads...")
 
         try:
@@ -193,15 +391,38 @@ ProgressBar {
         except Exception as exc:
             status.update(f"Error querying saved uploads: {exc}")
 
+    @on(Button.Pressed, "#btn-load-latest")
+    def handle_load_latest_saved(self) -> None:
+        """Load the latest saved analysis for the current user into project view."""
+        status = self.query_one("#status", Label)
+        if self._current_user is None:
+            status.update("Please log in before loading saved analyses.")
+            return
+
+        status.update("Loading latest saved analysis...")
+
+        try:
+            self._run_load_latest_saved()
+        except Exception as exc:  # pragma: no cover - defensive
+            status.update(f"Error loading latest analysis: {exc}")
+
     # ---------------------------------------------------------------------
     # WORKER
     # ---------------------------------------------------------------------
 
     def _run_analysis(self, zip_path: Path) -> None:
+        project_list = self.query_one("#project-list", ListView)
+        analysis_list = self.query_one("#analysis-list", ListView)
         output = self.query_one("#output", Markdown)
         progress = self.query_one("#progress", ProgressBar)
         status = self.query_one("#status", Label)
 
+        # Switch to live analysis mode.
+        self._view_mode = "analysis"
+        analysis_list.display = False
+        analysis_list.clear()
+        project_list.display = True
+        project_list.clear()
         output.update("")
         progress.update(progress=5)
         status.update("Uploading ZIP...")
@@ -212,48 +433,16 @@ ProgressBar {
             import tempfile
             from zipfile import ZipFile
 
-            # Local imports to avoid heavy top-level dependencies in the UI
-            from capstone_project_team_5.services.code_analysis_persistence import (
-                save_code_analysis_to_db,
-            )
-            from capstone_project_team_5.services.project_analysis import analyze_project
-
             result = upload_zip(zip_path)
 
-            saved_count = 0
             with tempfile.TemporaryDirectory() as tmpdir:
                 tmp = Path(tmpdir)
                 with ZipFile(zip_path) as archive:
                     archive.extractall(tmp)
 
-                # Compute structured analyses for UI display
-                project_analyses = analyze_projects_structured(tmp, result.projects, tool)
-
-                # Persist language-specific analyses for each detected project.
-                # This is best-effort: failures are ignored per-project to avoid
-                # aborting the whole worker.
-                for proj_meta in result.projects:
-                    try:
-                        # Resolve project path within the extraction dir
-                        proj_path = (
-                            tmp.joinpath(*proj_meta.rel_path.split("/"))
-                            if proj_meta.rel_path
-                            else tmp
-                        )
-                        if not proj_path.exists() or not proj_path.is_dir():
-                            continue
-
-                        analysis = analyze_project(proj_path)
-
-                        try:
-                            save_code_analysis_to_db(proj_meta.name, proj_meta.rel_path, analysis)
-                            saved_count += 1
-                        except Exception:
-                            # Ignore DB save errors for robustness
-                            pass
-                    except Exception:
-                        # Ignore per-project analysis errors
-                        continue
+                project_analyses = analyze_projects_structured(
+                    tmp, result.projects, tool, self._current_user
+                )
 
             return {
                 "upload": {
@@ -262,7 +451,6 @@ ProgressBar {
                     "file_count": result.file_count,
                 },
                 "projects": project_analyses,
-                "saved_count": saved_count,
             }
 
         self._worker = self.run_worker(
@@ -294,10 +482,17 @@ ProgressBar {
 
     def _run_list_saved(self) -> None:
         """Background worker to query persisted uploads/projects/analyses from the DB."""
+        project_list = self.query_one("#project-list", ListView)
+        analysis_list = self.query_one("#analysis-list", ListView)
         output = self.query_one("#output", Markdown)
         progress = self.query_one("#progress", ProgressBar)
         status = self.query_one("#status", Label)
 
+        self._view_mode = "saved"
+        project_list.display = True
+        analysis_list.display = True
+        project_list.clear()
+        analysis_list.clear()
         output.update("")
         progress.update(progress=5)
         status.update("Querying saved uploads...")
@@ -307,11 +502,46 @@ ProgressBar {
             import json
 
             from capstone_project_team_5.data.db import get_session
-            from capstone_project_team_5.data.models import UploadRecord
+            from capstone_project_team_5.data.models import (
+                CodeAnalysis,
+                Project,
+                UploadRecord,
+                User,
+                UserCodeAnalysis,
+            )
 
             results: list[dict] = []
+            current_username = self._current_user
+
             with get_session() as session:
-                uploads = session.query(UploadRecord).order_by(UploadRecord.created_at.desc()).all()
+                user = None
+                if current_username is not None:
+                    user = (
+                        session.query(User)
+                        .filter(User.username == current_username.strip())
+                        .first()
+                    )
+
+                # If we have a logged-in user, restrict uploads to those where
+                # they have at least one linked analysis. Otherwise, show all.
+                if user is not None:
+                    uploads = (
+                        session.query(UploadRecord)
+                        .join(Project, Project.upload_id == UploadRecord.id)
+                        .join(CodeAnalysis, CodeAnalysis.project_id == Project.id)
+                        .join(
+                            UserCodeAnalysis,
+                            UserCodeAnalysis.analysis_id == CodeAnalysis.id,
+                        )
+                        .filter(UserCodeAnalysis.user_id == user.id)
+                        .order_by(UploadRecord.created_at.desc())
+                        .distinct()
+                        .all()
+                    )
+                else:
+                    uploads = (
+                        session.query(UploadRecord).order_by(UploadRecord.created_at.desc()).all()
+                    )
 
                 for up in uploads:
                     upd: dict = {
@@ -323,13 +553,26 @@ ProgressBar {
                         "projects": [],
                     }
                     for p in up.projects:
-                        # Aggregate fields across any saved analyses for this project
+                        # Aggregate fields across any saved analyses for this project,
+                        # restricted to the current user when available.
                         languages: set[str] = set()
                         skills: set[str] = set()
                         total_loc: int = 0
                         analyses_list: list[dict] = []
 
                         for a in p.code_analyses:
+                            if user is not None:
+                                link = (
+                                    session.query(UserCodeAnalysis)
+                                    .filter(
+                                        UserCodeAnalysis.user_id == user.id,
+                                        UserCodeAnalysis.analysis_id == a.id,
+                                    )
+                                    .first()
+                                )
+                                if link is None:
+                                    continue
+
                             # Try to parse stored metrics JSON for structured info
                             metrics: dict | None = None
                             from contextlib import suppress
@@ -356,8 +599,6 @@ ProgressBar {
                             if lang:
                                 languages.add(lang)
 
-                                from contextlib import suppress
-
                                 for t in tools:
                                     with suppress(Exception):
                                         skills.add(str(t))
@@ -382,6 +623,11 @@ ProgressBar {
                                 }
                             )
 
+                        # Only keep projects that have at least one analysis
+                        # linked for this user (or any user when no login).
+                        if not analyses_list:
+                            continue
+
                         proj = {
                             "id": p.id,
                             "name": p.name,
@@ -398,12 +644,176 @@ ProgressBar {
 
                         upd["projects"].append(proj)
 
-                    results.append(upd)
+                    if upd["projects"]:
+                        results.append(upd)
 
             return {"saved": results}
 
         self._worker = self.run_worker(
             work, name="saved_list", exclusive=True, thread=True, exit_on_error=False
+        )
+
+    def _run_load_latest_saved(self) -> None:
+        """Background worker to load the latest saved upload into project view."""
+        project_list = self.query_one("#project-list", ListView)
+        output = self.query_one("#output", Markdown)
+        progress = self.query_one("#progress", ProgressBar)
+        status = self.query_one("#status", Label)
+
+        project_list.display = True
+        project_list.clear()
+        output.update("")
+        progress.update(progress=5)
+        status.update("Loading latest saved analysis...")
+
+        current_username = self._current_user
+
+        def work() -> dict:
+            import json
+
+            from capstone_project_team_5.data.db import get_session
+            from capstone_project_team_5.data.models import (
+                CodeAnalysis,
+                Project,
+                UploadRecord,
+                User,
+                UserCodeAnalysis,
+            )
+
+            if current_username is None:
+                return {"upload": None, "projects": []}
+
+            with get_session() as session:
+                user = session.query(User).filter(User.username == current_username.strip()).first()
+                if user is None:
+                    return {"upload": None, "projects": []}
+
+                uploads = (
+                    session.query(UploadRecord)
+                    .join(Project)
+                    .join(CodeAnalysis)
+                    .join(
+                        UserCodeAnalysis,
+                        UserCodeAnalysis.analysis_id == CodeAnalysis.id,
+                    )
+                    .filter(UserCodeAnalysis.user_id == user.id)
+                    .order_by(UploadRecord.created_at.desc())
+                    .all()
+                )
+
+                if not uploads:
+                    return {"upload": None, "projects": []}
+
+                upload = uploads[0]
+                projects = (
+                    session.query(Project)
+                    .filter(Project.upload_id == upload.id)
+                    .order_by(Project.id.asc())
+                    .all()
+                )
+
+                project_dicts: list[dict] = []
+
+                for proj in projects:
+                    # Latest analysis for this project and user
+                    ca = (
+                        session.query(CodeAnalysis)
+                        .join(
+                            UserCodeAnalysis,
+                            UserCodeAnalysis.analysis_id == CodeAnalysis.id,
+                        )
+                        .filter(
+                            CodeAnalysis.project_id == proj.id,
+                            UserCodeAnalysis.user_id == user.id,
+                        )
+                        .order_by(CodeAnalysis.created_at.desc())
+                        .first()
+                    )
+                    if ca is None:
+                        continue
+
+                    metrics: dict = {}
+                    if getattr(ca, "metrics_json", None):
+                        try:
+                            metrics = json.loads(ca.metrics_json)
+                        except Exception:  # pragma: no cover - defensive
+                            metrics = {}
+
+                    language = (
+                        metrics.get("language")
+                        or metrics.get("language_name")
+                        or ca.language
+                        or "Unknown"
+                    )
+                    framework = metrics.get("framework")
+                    tools = set(metrics.get("tools", []))
+                    practices = set(metrics.get("practices", []))
+                    combined_skills = sorted(tools | practices)
+
+                    total_files = (
+                        metrics.get("total_files")
+                        or metrics.get("total_files_count")
+                        or proj.file_count
+                        or 0
+                    )
+
+                    file_summary = {
+                        "total_files": int(total_files),
+                        "total_size": "Unknown (loaded from saved analysis)",
+                    }
+
+                    project_dicts.append(
+                        {
+                            "name": proj.name,
+                            "rel_path": proj.rel_path,
+                            "language": language,
+                            "framework": framework,
+                            "other_languages": [],
+                            "skills": combined_skills,
+                            "tools": sorted(tools),
+                            "duration": "Unknown (loaded from saved analysis)",
+                            "duration_timedelta": None,
+                            "collaborators_display": "",
+                            "collaborators_raw": {
+                                "count": 0,
+                                "identities": [],
+                            },
+                            "file_summary": file_summary,
+                            "contribution": {
+                                "metrics": None,
+                                "source": "saved",
+                            },
+                            "contribution_summary": "Loaded from saved analysis.",
+                            "score": proj.importance_score or 0.0,
+                            "score_breakdown": {},
+                            "ai_bullets": [],
+                            "ai_warning": None,
+                            "resume_bullets": [],
+                            "resume_bullet_source": "saved",
+                            "skill_timeline": [],
+                            "git": {
+                                "is_repo": proj.has_git_repo,
+                                "current_author": None,
+                                "author_contributions": [],
+                                "current_author_contribution": None,
+                                "activity_chart": [],
+                            },
+                        }
+                    )
+
+                if not project_dicts:
+                    return {"upload": None, "projects": []}
+
+                upload_summary = {
+                    "filename": upload.filename,
+                    "size_bytes": upload.size_bytes,
+                    "file_count": upload.file_count,
+                }
+
+                return {"upload": upload_summary, "projects": project_dicts}
+
+        self._worker = self.run_worker(
+            work, name="load_latest", exclusive=True, thread=True, exit_on_error=False
         )
 
     # ---------------------------------------------------------------------
@@ -421,46 +831,123 @@ ProgressBar {
 
         if event.state == WorkerState.RUNNING:
             progress.update(progress=40)
-            status.update("Analyzing...")
+            if event.worker.name == "saved_list":
+                status.update("Loading saved analyses...")
+            elif event.worker.name == "retrieve":
+                status.update("Retrieving projects...")
+            else:
+                status.update("Analyzing...")
             return
 
         if event.state == WorkerState.SUCCESS:
-            progress.update(progress=100)
-            status.update("Analysis complete.")
-
             data = event.worker.result
-            upload = data.get("upload")
-            detected = data.get("detected")
-            saved = data.get("saved")
-            projects = data.get("projects")
 
-            if upload:
-                md = self._render_markdown(upload, projects)
-                self._current_markdown = md
-                output.update(md)
-                # If we saved analyses to the DB, show a brief status note
-                saved_count = data.get("saved_count")
-                if isinstance(saved_count, int) and saved_count > 0:
-                    status.update(f"Analysis complete. Persisted {saved_count} analyses.")
+            if event.worker.name in {"analysis", "load_latest"}:
+                upload = data.get("upload")
+                projects = data.get("projects") or []
+
+                if not upload or not projects:
+                    progress.update(progress=0)
+                    msg = (
+                        "No saved analyses found."
+                        if event.worker.name == "load_latest"
+                        else "No projects analyzed."
+                    )
+                    status.update(msg)
+                    return
+
+                self._upload_summary = upload
+                self._projects = projects
+
+                if event.worker.name == "analysis":
+                    status.update("Analysis complete.")
+                else:
+                    status.update("Loaded latest saved analysis.")
+
+                progress.update(progress=100)
+
+                # Populate project list
+                project_list = self.query_one("#project-list", ListView)
+                project_list.clear()
+
+                if self._projects:
+                    # Compute local ranks based on importance scores, descending.
+                    indexed_scores = [
+                        (i, proj.get("score", 0.0)) for i, proj in enumerate(self._projects)
+                    ]
+                    ranked = sorted(indexed_scores, key=lambda pair: pair[1], reverse=True)
+                    current_rank = 1
+                    previous_score: float | None = None
+                    self._ranks = {}
+                    for position, (idx, score) in enumerate(ranked):
+                        if previous_score is not None and score < previous_score:
+                            current_rank = position + 1
+                        self._ranks[idx] = current_rank
+                        previous_score = score
+
+                    for idx, proj in enumerate(self._projects):
+                        rank = self._ranks.get(idx)
+                        score = proj.get("score")
+                        label = proj["name"]
+                        if rank is not None:
+                            label = f"#{rank} {label}"
+                        if score is not None:
+                            label = f"{label} (score {score:.1f})"
+                        project_list.append(ListItem(Label(label)))
+
+                    # Select first project by default
+                    project_list.index = 0
+                    self._show_project_detail(0)
+
                 return
 
-            if detected is not None:
+            if event.worker.name == "saved_list":
+                progress.update(progress=100)
+                saved = data.get("saved") or []
+
+                self._saved_uploads = saved
+                self._saved_projects = []
+                self._saved_active_project_index = None
+
+                project_list = self.query_one("#project-list", ListView)
+                analysis_list = self.query_one("#analysis-list", ListView)
+                project_list.clear()
+                analysis_list.clear()
+
+                for up in saved:
+                    upload_name = up.get("filename")
+                    upload_id = up.get("id")
+                    for p in up.get("projects", []):
+                        proj = dict(p)
+                        proj["upload_filename"] = upload_name
+                        proj["upload_id"] = upload_id
+                        self._saved_projects.append(proj)
+
+                if not self._saved_projects:
+                    status.update("No saved uploads found for this user.")
+                    output.update("# Saved Uploads\n\n(No saved uploads found)")
+                    return
+
+                # Populate project list with saved projects
+                for proj in self._saved_projects:
+                    label = f"{proj.get('upload_filename')} / {proj.get('name')}"
+                    project_list.append(ListItem(Label(label)))
+
+                # Select first project and show its analyses
+                project_list.index = 0
+                self._saved_active_project_index = 0
+                self._show_saved_project(0)
+                status.update("Loaded saved analyses.")
+                return
+
+            if event.worker.name == "retrieve":
+                progress.update(progress=100)
+                status.update("Retrieve complete.")
+                detected = data.get("detected") or []
                 md = self._render_detected_list(detected)
                 self._current_markdown = md
                 output.update(md)
                 return
-
-            if saved is not None:
-                md = self._render_saved_list(saved)
-                self._current_markdown = md
-                output.update(md)
-                return
-
-            # fallback: render full project analyses table if present
-            table = self._render_table(projects or [])
-            self._current_markdown = table
-            output.update(table)
-            return
 
         if event.state == WorkerState.ERROR:
             status.update(f"Error: {event.worker.error}")
@@ -471,43 +958,338 @@ ProgressBar {
             progress.update(progress=0)
 
     # ---------------------------------------------------------------------
-    # MARKDOWN RENDERING
+    # PROJECT DETAIL RENDERING
     # ---------------------------------------------------------------------
 
-    def _render_markdown(self, upload, projects) -> str:
-        parts = []
+    @on(ListView.Selected, "#project-list")
+    def handle_project_selected(self, event: ListView.Selected) -> None:
+        """Update detail pane when the user selects a project in the list."""
+        if self._view_mode == "saved":
+            self._saved_active_project_index = event.index
+            self._show_saved_project(event.index)
+        else:
+            self._show_project_detail(event.index)
 
-        parts.append(f"# {upload['filename']}\n")
+    @on(ListView.Selected, "#analysis-list")
+    def handle_saved_analysis_selected(self, event: ListView.Selected) -> None:
+        """Render an individual saved analysis snapshot with detailed metrics."""
+        if self._view_mode != "saved":
+            return
+        if self._saved_active_project_index is None:
+            return
+        if self._saved_active_project_index < 0 or self._saved_active_project_index >= len(
+            self._saved_projects
+        ):
+            return
 
-        parts.append("## Upload Summary")
-        parts.append(f"- **Size**: {upload['size_bytes']:,} bytes")
-        parts.append(f"- **Files**: {upload['file_count']}")
-        parts.append(f"- **Projects detected**: {len(projects)}\n")
+        project = self._saved_projects[self._saved_active_project_index]
+        analyses = project.get("analyses") or []
+        if not analyses or event.index < 0 or event.index >= len(analyses):
+            return
 
-        # Projects
-        if projects:
-            parts.append("\n## Projects")
-            for proj in projects:
-                parts.append(f"\n### {proj['name']}  \n`{proj['rel_path']}`")
-                parts.append(f"- Duration: {proj['duration']}")
-                parts.append(f"- Language: {proj['language']}")
-                parts.append(f"- Framework: {proj['framework']}")
-                parts.append(
-                    f"- Files: {proj['file_summary']['total_files']} "
-                    f"({proj['file_summary']['total_size']})"
+        analysis = analyses[event.index]
+
+        analysis_id = analysis.get("id")
+        if analysis_id is None:
+            return
+
+        # Fetch full CodeAnalysis + metrics from the database for this snapshot.
+        try:
+            import json
+
+            from capstone_project_team_5.data.db import get_session
+            from capstone_project_team_5.data.models import CodeAnalysis, Project
+
+            with get_session() as session:
+                ca = session.query(CodeAnalysis).filter(CodeAnalysis.id == analysis_id).first()
+                if ca is None:
+                    summary_text = analysis.get("summary_text") or "(no summary available)"
+                    md = f"# Saved Analysis\n\n{summary_text}"
+                else:
+                    metrics: dict | None = None
+                    if getattr(ca, "metrics_json", None):
+                        try:
+                            metrics = json.loads(ca.metrics_json)
+                        except Exception:  # pragma: no cover - defensive
+                            metrics = None
+
+                    proj_row = (
+                        session.query(Project)
+                        .filter(Project.id == getattr(ca, "project_id", -1))
+                        .first()
+                    )
+
+                    md = self._render_saved_analysis_detail(
+                        project_dict=project,
+                        analysis_row=ca,
+                        metrics=metrics or {},
+                        project_row=proj_row,
+                    )
+        except Exception:
+            summary_text = analysis.get("summary_text") or "(no summary available)"
+            md = f"# Saved Analysis\n\n{summary_text}"
+
+        self._current_markdown = md
+        self.query_one("#output", Markdown).update(md)
+
+    def _show_saved_project(self, index: int) -> None:
+        """Populate analyses list and summary for a saved project."""
+        if not self._saved_projects:
+            return
+        if index < 0 or index >= len(self._saved_projects):
+            return
+
+        project = self._saved_projects[index]
+        analysis_list = self.query_one("#analysis-list", ListView)
+        output = self.query_one("#output", Markdown)
+
+        analyses = project.get("analyses") or []
+
+        analysis_list.clear()
+        for a in analyses:
+            label = f"{a.get('language')} @ {a.get('created_at')}"
+            analysis_list.append(ListItem(Label(label)))
+
+        # Show a brief project summary in the markdown pane.
+        parts: list[str] = []
+        parts.append("# Saved Project\n")
+        parts.append(
+            f"## {project.get('name')}  \n"
+            f"`{project.get('rel_path')}` (Upload: {project.get('upload_filename')})\n"
+        )
+        parts.append(f"- Files: {project.get('file_count')}")
+        parts.append(f"- Upload ID: {project.get('upload_id')}")
+        langs = project.get("languages") or []
+        if langs:
+            parts.append(f"- Languages: {', '.join(langs)}")
+        skills = project.get("skills") or []
+        if skills:
+            parts.append(f"- Skills/Tools: {', '.join(skills[:12])}")
+        loc = project.get("lines_of_code")
+        if loc is not None:
+            parts.append(f"- Lines of code (sum of analyses): {loc}")
+
+        parts.append("")
+        if analyses:
+            parts.append("Select an analysis on the left to view its detailed summary.")
+        else:
+            parts.append("No analyses have been saved for this project yet.")
+
+        md = "\n".join(parts)
+        self._current_markdown = md
+        output.update(md)
+
+    def _render_saved_analysis_detail(
+        self,
+        *,
+        project_dict: dict,
+        analysis_row,
+        metrics: dict,
+        project_row=None,
+    ) -> str:
+        """Render detailed markdown for a saved analysis snapshot."""
+        parts: list[str] = []
+
+        title = project_dict.get("upload_filename") or "Saved Analysis"
+        parts.append(f"# {title}\n")
+
+        parts.append(
+            f"## {project_dict.get('name')}  \n"
+            f"`{project_dict.get('rel_path')}` "
+            f"(Upload ID: {project_dict.get('upload_id')})\n"
+        )
+
+        parts.append("### Summary")
+        parts.append(f"- Analysis ID: {analysis_row.id}")
+        parts.append(f"- Timestamp: {analysis_row.created_at}")
+
+        language = (
+            metrics.get("language")
+            or metrics.get("language_name")
+            or getattr(analysis_row, "language", None)
+            or "Unknown"
+        )
+        framework = metrics.get("framework")
+        parts.append(f"- Language: {language}")
+        parts.append(f"- Framework: {framework or 'None detected'}")
+
+        total_files = (
+            metrics.get("total_files")
+            or metrics.get("total_files_count")
+            or project_dict.get("file_count")
+            or 0
+        )
+        parts.append(f"- Files: {int(total_files)}")
+
+        loc = metrics.get("lines_of_code") or metrics.get("total_lines_of_code")
+        if isinstance(loc, int):
+            parts.append(f"- Lines of code: {loc}")
+
+        if project_row is not None and project_row.importance_score is not None:
+            parts.append(f"- Importance score: {project_row.importance_score:.1f}")
+
+        # Skills and tools
+        tools = set(metrics.get("tools", []))
+        practices = set(metrics.get("practices", []))
+        combined_skills = sorted(tools | practices)
+
+        parts.append("\n### Skills")
+        if combined_skills:
+            parts.extend(f"- {s}" for s in combined_skills)
+        else:
+            # Fall back to aggregated skills from project_dict if any.
+            fallback_skills = project_dict.get("skills") or []
+            if fallback_skills:
+                parts.extend(f"- {s}" for s in fallback_skills)
+            else:
+                parts.append("- None detected")
+
+        parts.append("\n### Tools")
+        if tools:
+            parts.extend(f"- {t}" for t in sorted(tools))
+        else:
+            parts.append("- None detected")
+
+        # Generic metrics (if present)
+        oop_score = metrics.get("oop_score")
+        complexity_score = metrics.get("complexity_score")
+        if oop_score is not None or complexity_score is not None:
+            parts.append("\n### Code Quality Metrics")
+            if oop_score is not None:
+                parts.append(f"- OOP score: {oop_score}")
+            if complexity_score is not None:
+                parts.append(f"- Complexity score: {complexity_score}")
+
+        # Lightweight resume-style bullets reconstructed from saved metrics.
+        bullets: list[str] = []
+        if language != "Unknown":
+            if framework:
+                bullets.append(
+                    f"Built a {language} project using {framework} with approximately "
+                    f"{int(total_files)} files."
                 )
+            else:
+                bullets.append(
+                    f"Built a {language} project with approximately {int(total_files)} files."
+                )
+        if tools:
+            top_tools = ", ".join(sorted(tools)[:5])
+            bullets.append(f"Used tools and technologies such as {top_tools}.")
+        if combined_skills:
+            top_skills = ", ".join(combined_skills[:8])
+            bullets.append(f"Demonstrated skills in {top_skills}.")
+        if isinstance(loc, int) and loc > 0:
+            bullets.append(f"Worked with roughly {loc} lines of code in this snapshot.")
 
-                parts.append("\n**Skills**")
-                parts.extend(f"- {s}" for s in proj["skills"])
+        parts.append("\n### Resume Bullet Points (from saved analysis)")
+        if bullets:
+            parts.extend(f"- {b}" for b in bullets)
+        else:
+            parts.append("- Not enough data to infer bullet points.")
 
-                parts.append("\n**Tools**")
-                parts.extend(f"- {t}" for t in proj["tools"])
+        # Original summary text
+        summary = analysis_row.summary_text or "(no summary available)"
+        parts.append("\n### Summary Text")
+        parts.append(summary)
 
-                if proj["ai_bullets"]:
-                    parts.append("\n**AI Bullet Points**")
-                    parts.extend(f"- {b}" for b in proj["ai_bullets"])
-                elif proj["ai_warning"]:
-                    parts.append(f"\n> {proj['ai_warning']}")
+        return "\n".join(parts)
+
+    def _show_project_detail(self, index: int) -> None:
+        """Render details for a single selected project into the markdown view."""
+        if not self._projects or self._upload_summary is None:
+            return
+        if index < 0 or index >= len(self._projects):
+            return
+
+        proj = self._projects[index]
+        rank = self._ranks.get(index)
+        md = self._render_project_markdown(self._upload_summary, proj, rank)
+        self._current_markdown = md
+        self.query_one("#output", Markdown).update(md)
+
+    def _render_project_markdown(self, upload: dict, proj: dict, rank: int | None) -> str:
+        parts: list[str] = []
+
+        title = upload["filename"]
+        parts.append(f"# {title}\n")
+
+        heading = f"{proj['name']} (Rank #{rank})" if rank is not None else proj["name"]
+        parts.append(f"## {heading}\n`{proj['rel_path']}`\n")
+
+        parts.append("### Summary")
+        parts.append(f"- Duration: {proj['duration']}")
+        parts.append(f"- Language: {proj['language']}")
+        other = proj.get("other_languages") or []
+        if other:
+            parts.append(f"- Other languages: {', '.join(other)}")
+        parts.append(f"- Framework: {proj['framework']}")
+        parts.append(
+            f"- Files: {proj['file_summary']['total_files']} ({proj['file_summary']['total_size']})"
+        )
+        score = proj.get("score")
+        if score is not None:
+            parts.append(f"- Importance score: {score:.1f}")
+
+        parts.append("\n### Skills")
+        if proj["skills"]:
+            parts.extend(f"- {s}" for s in proj["skills"])
+        else:
+            parts.append("- None detected")
+
+        parts.append("\n### Tools")
+        if proj["tools"]:
+            parts.extend(f"- {t}" for t in proj["tools"])
+        else:
+            parts.append("- None detected")
+
+        timeline = proj.get("skill_timeline") or []
+        if timeline:
+            parts.append("\n### Skill Development Over Time")
+            for entry in timeline:
+                date = entry.get("date", "")
+                skills = entry.get("skills") or []
+                if not skills:
+                    continue
+                parts.append(f"- {date}: {', '.join(skills)}")
+
+        bullets = proj.get("resume_bullets") or []
+        source = proj.get("resume_bullet_source") or "unknown"
+        if bullets:
+            parts.append(f"\n### Resume Bullet Points ({source} Generation)")
+            parts.extend(f"- {b}" for b in bullets)
+
+        git_info = proj.get("git") or {}
+        if git_info.get("is_repo"):
+            current = git_info.get("current_author_contribution") or {}
+            authors = git_info.get("author_contributions") or []
+            if authors:
+                parts.append("\n### Git Contributions")
+                if current:
+                    parts.append(
+                        f"- You: {current.get('commits', 0)} commits, "
+                        f"+{current.get('added', 0)} / -{current.get('deleted', 0)} lines"
+                    )
+
+                for ac in authors:
+                    author = ac.get("author")
+                    if (
+                        git_info.get("current_author")
+                        and author
+                        and author.strip().lower()
+                        == str(git_info.get("current_author")).strip().lower()
+                    ):
+                        continue
+                    parts.append(
+                        f"- {author}: {ac.get('commits', 0)} commits, "
+                        f"+{ac.get('added', 0)} / -{ac.get('deleted', 0)} lines"
+                    )
+
+            chart_lines = git_info.get("activity_chart") or []
+            if chart_lines:
+                parts.append("\n### Weekly Activity (last 12 weeks)")
+                parts.append("```")
+                parts.extend(chart_lines)
+                parts.append("```")
 
         return "\n".join(parts)
 
@@ -614,6 +1396,23 @@ ProgressBar {
     # EDIT MODE ACTIONS
     # ---------------------------------------------------------------------
 
+    @on(Button.Pressed, "#btn-config")
+    def handle_config_button(self) -> None:
+        """Re-run the consent/config sequence on demand."""
+        status = self.query_one("#status", Label)
+
+        if self._current_user is None:
+            status.update("Please log in before configuring consent.")
+            return
+
+        tool = self._consent_tool or ConsentTool(username=self._current_user)
+        if not tool.generate_consent_form():
+            status.update("Consent configuration cancelled; previous settings kept.")
+            return
+
+        self._consent_tool = tool
+        status.update("Consent configuration updated.")
+
     @on(Button.Pressed, "#btn-edit")
     def handle_edit_button(self) -> None:
         self.action_toggle_edit()
@@ -669,6 +1468,27 @@ ProgressBar {
         editor.display = False
         output.display = True
         status.update("Edit cancelled.")
+
+    @on(Button.Pressed, "#btn-logout")
+    def handle_logout(self) -> None:
+        """Log out current user and return to auth screen."""
+        self._current_user = None
+        self._auth_mode = None
+        status = self.query_one("#status", Label)
+        user_label = self.query_one("#user-label", Label)
+        auth_screen = self.query_one("#auth-screen", Container)
+        app_screen = self.query_one("#app-screen", Container)
+        project_list = self.query_one("#project-list", ListView)
+        output = self.query_one("#output", Markdown)
+        progress = self.query_one("#progress", ProgressBar)
+
+        user_label.update("Hi, -")
+        project_list.clear()
+        output.update("")
+        progress.update(progress=0)
+        auth_screen.display = True
+        app_screen.display = False
+        status.update("Logged out. Please log in again.")
 
     @on(Button.Pressed, "#btn-exit")
     def exit_app(self) -> None:

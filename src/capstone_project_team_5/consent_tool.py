@@ -115,8 +115,13 @@ class ConsentTool:
         ".tmp",
     ]
 
-    def __init__(self) -> None:
-        """Initialize the ConsentTool with default consent text and configuration."""
+    def __init__(self, username: str | None = None) -> None:
+        """Initialize the ConsentTool with default consent text and configuration.
+
+        Args:
+            username: Optional application-level username to scope consent records.
+        """
+        self.username: str | None = username
         self.title: str = "Consent Form"
         self.consent_text: str = """Thank you for using Zip2Job.
 Before we begin, we ask your permission to access and analyze files in directories you choose.
@@ -190,7 +195,7 @@ Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
             # If user agrees to main consent, request external services consent
             self.get_external_services_consent()
             # Record the collected configuration
-            self.record_consent(self._build_config())
+            self.record_consent(self._build_config(), username=self.username)
             return True
 
         self.consent_given = False
@@ -487,7 +492,51 @@ You can add custom patterns later."""
             "default_ignore_patterns": self.default_ignore_patterns,
         }
 
-    def record_consent(self, user_config: dict[str, Any]) -> None:
+    def load_existing_consent(self) -> bool:
+        """Load the most recent consent record for this user if it exists.
+
+        Returns:
+            True if a consent record was found and loaded, False otherwise.
+        """
+        from capstone_project_team_5.data.models import User
+
+        with get_session() as session:
+            user_id: int | None = None
+            if self.username is not None and self.username.strip():
+                user = session.query(User).filter(User.username == self.username.strip()).first()
+                if user is not None:
+                    user_id = user.id
+
+            record: ConsentRecord | None = None
+
+            # Prefer a consent record scoped to this user if one exists.
+            if user_id is not None:
+                record = (
+                    session.query(ConsentRecord)
+                    .filter(ConsentRecord.user_id == user_id)
+                    .order_by(ConsentRecord.created_at.desc())
+                    .first()
+                )
+
+            # Fall back to the most recent global (unscoped) consent record.
+            if record is None:
+                record = (
+                    session.query(ConsentRecord)
+                    .filter(ConsentRecord.user_id.is_(None))
+                    .order_by(ConsentRecord.created_at.desc())
+                    .first()
+                )
+
+            if record is None:
+                return False
+
+            self.consent_given = record.consent_given
+            self.use_external_services = record.use_external_services
+            self.external_services = record.external_services or {}
+            self.default_ignore_patterns = record.default_ignore_patterns or []
+            return True
+
+    def record_consent(self, user_config: dict[str, Any], username: str | None = None) -> None:
         """Record user consent and configuration data.
 
         Args:
@@ -497,9 +546,18 @@ You can add custom patterns later."""
                 - external_services: dict (with nested config like {"service": {"allowed": True}})
                 - default_ignore_patterns: list[str]
         """
+        from capstone_project_team_5.data.models import User
+
         with get_session() as session:
+            user_id: int | None = None
+            if username is not None and username.strip():
+                user = session.query(User).filter(User.username == username.strip()).first()
+                if user is not None:
+                    user_id = user.id
+
             session.add(
                 ConsentRecord(
+                    user_id=user_id,
                     consent_given=user_config["consent_given"],
                     use_external_services=user_config["use_external_services"],
                     external_services=user_config["external_services"],

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 from collections.abc import Sequence
@@ -165,14 +166,27 @@ def _display_project_analyses(
             warning_printed=ai_warning_printed,
         )
 
-        # Save analysis to database (language-agnostic)
+        # Save analysis to database (language-agnostic, CLI not tied to a user)
         save_code_analysis_to_db(project.name, project.rel_path, analysis)
 
         analyzed += 1
         print()
 
     if project_scores and analyzed > 0:
+        # Update DB with importance ranks/scores.
         update_project_ranks(project_scores)
+
+        # Also show a local ranking summary for this upload.
+        indexed: list[tuple[int, float]] = [(i, entry[2]) for i, entry in enumerate(project_scores)]
+        ranked = ContributionMetrics.rank_projects(indexed)
+        rank_by_index = {idx: rank for idx, rank in ranked}
+
+        print("\n🏆 Project Rankings")
+        print("-" * 60)
+        for idx, rank in sorted(rank_by_index.items(), key=lambda pair: pair[1]):
+            name, rel_path, score, _breakdown = project_scores[idx]
+            rel_display = rel_path or "(root)"
+            print(f"#{rank}  {name} ({rel_display}) — score {score:.1f}")
 
     return analyzed
 
@@ -327,8 +341,52 @@ def _format_bytes(size: int) -> str:
     return f"{size:.1f} TB"
 
 
+_EXTENSION_LANGUAGE_MAP: dict[str, str] = {
+    ".py": "Python",
+    ".js": "JavaScript",
+    ".jsx": "JavaScript",
+    ".ts": "TypeScript",
+    ".tsx": "TypeScript",
+    ".java": "Java",
+    ".cs": "C#",
+    ".c": "C/C++",
+    ".cc": "C/C++",
+    ".cpp": "C/C++",
+    ".cxx": "C/C++",
+    ".h": "C/C++",
+    ".hpp": "C/C++",
+    ".rs": "Rust",
+    ".go": "Go",
+    ".php": "PHP",
+    ".rb": "Ruby",
+    ".kt": "Kotlin",
+    ".swift": "Swift",
+}
+
+
+def _detect_languages_from_walk(walk_result: Any) -> set[str]:
+    """Infer all languages present in a project from file extensions.
+
+    This is a lightweight signal to show polyglot projects alongside the
+    primary detected language/framework.
+    """
+    languages: set[str] = set()
+    for file_info in getattr(walk_result, "files", []):
+        try:
+            suffix = Path(file_info.path).suffix.lower()
+        except Exception:
+            continue
+        mapped = _EXTENSION_LANGUAGE_MAP.get(suffix)
+        if mapped is not None:
+            languages.add(mapped)
+    return languages
+
+
 def analyze_projects_structured(
-    extract_root: Path, projects: Sequence[DetectedProject], consent_tool: ConsentTool
+    extract_root: Path,
+    projects: Sequence[DetectedProject],
+    consent_tool: ConsentTool,
+    current_user: str | None = None,
 ) -> list[dict[str, Any]]:
     """Compute structured per-project analysis for all detected projects.
 
@@ -337,6 +395,21 @@ def analyze_projects_structured(
     """
     ai_allowed, ai_warning_global = _ai_bullet_permission(consent_tool)
     analyses: list[dict[str, Any]] = []
+
+    import os
+
+    from capstone_project_team_5.services.code_analysis_persistence import (
+        save_code_analysis_to_db,
+    )
+    from capstone_project_team_5.services.project_analysis import analyze_project
+    from capstone_project_team_5.utils.git import (
+        AuthorContribution,
+        get_author_contributions,
+        get_current_git_identity,
+        get_weekly_activity,
+        is_git_repo,
+        render_weekly_activity_chart,
+    )
 
     for project in projects:
         project_path = _resolve_project_path(extract_root, project.rel_path)
@@ -354,11 +427,17 @@ def analyze_projects_structured(
         except ValueError:
             continue
 
-        language, framework = identify_language_and_framework(project_path)
-        skills = extract_project_tools_practices(project_path)
-        tools = set(skills.get("tools", set()))
-        practices = set(skills.get("practices", set()))
+        # Unified analysis object (language, skills, language-specific metrics).
+        analysis = project_analysis or analyze_project(project_path)
+        language = analysis.language
+        framework = analysis.framework
+        tools = set(analysis.tools)
+        practices = set(analysis.practices)
         combined_skills = tools | practices
+
+        # Detect additional languages beyond the primary.
+        all_langs = _detect_languages_from_walk(walk_result)
+        other_languages = sorted(lang for lang in all_langs if lang != language)
 
         summary = DirectoryWalker.get_summary(walk_result)
         total_size = _format_bytes(summary["total_size_bytes"])
@@ -396,6 +475,68 @@ def analyze_projects_structured(
         else:
             ai_warning = ai_warning_global
 
+        # Unified resume bullets (AI or local-only depending on consent).
+        ai_available = bool(os.getenv("GOOGLE_API_KEY"))
+        try:
+            resume_bullets, resume_source = generate_resume_bullets(
+                project_path,
+                max_bullets=6,
+                use_ai=ai_allowed,
+                ai_available=ai_available,
+                analysis=analysis,
+            )
+        except Exception:
+            resume_bullets = []
+            resume_source = "error"
+
+        # Git-based contribution details for collaborative projects.
+        git_is_repo = is_git_repo(project_path)
+        git_current_author: str | None = None
+        git_author_contribs: list[dict[str, int | str]] = []
+        git_current_contrib: dict[str, int] | None = None
+        git_activity_chart: list[str] = []
+
+        if git_is_repo:
+            current_name, _current_email = get_current_git_identity(project_path)
+            git_current_author = current_name
+
+            try:
+                contributions: list[AuthorContribution] = get_author_contributions(project_path)
+            except RuntimeError:
+                contributions = []
+
+            for ac in contributions:
+                git_author_contribs.append(
+                    {
+                        "author": ac.author,
+                        "commits": ac.commits,
+                        "added": ac.added,
+                        "deleted": ac.deleted,
+                    }
+                )
+                if (
+                    current_name is not None
+                    and ac.author.strip().lower() == current_name.strip().lower()
+                ):
+                    git_current_contrib = {
+                        "commits": ac.commits,
+                        "added": ac.added,
+                        "deleted": ac.deleted,
+                    }
+
+            try:
+                activity = get_weekly_activity(project_path, weeks=12)
+                git_activity_chart = render_weekly_activity_chart(activity)
+            except RuntimeError:
+                git_activity_chart = []
+
+        # Persist analysis snapshot and then build skill timeline. When a
+        # user is logged in via the TUI, the snapshot is linked to that user.
+        save_code_analysis_to_db(project.name, project.rel_path, analysis, username=current_user)
+        skill_timeline = _get_skill_timeline_for_project(project.name, project.rel_path)
+
+        # Optionally add a testing-focused bullet derived from the full project
+        # analysis, ensuring it appears alongside any other AI bullets.
         if project_analysis:
             testing_bullet = build_testing_bullet(project_analysis)
             if testing_bullet:
@@ -408,6 +549,7 @@ def analyze_projects_structured(
                 "rel_path": project.rel_path,
                 "language": language,
                 "framework": framework,
+                "other_languages": other_languages,
                 "skills": sorted(combined_skills),
                 "tools": sorted(tools),
                 "duration": duration_display,
@@ -433,6 +575,16 @@ def analyze_projects_structured(
                 "score_breakdown": breakdown,
                 "ai_bullets": ai_bullets,
                 "ai_warning": ai_warning,
+                "resume_bullets": resume_bullets,
+                "resume_bullet_source": resume_source,
+                "skill_timeline": skill_timeline,
+                "git": {
+                    "is_repo": git_is_repo,
+                    "current_author": git_current_author,
+                    "author_contributions": git_author_contribs,
+                    "current_author_contribution": git_current_contrib,
+                    "activity_chart": git_activity_chart,
+                },
             }
         )
 
@@ -522,6 +674,72 @@ def analyze_root_structured(extract_root: Path, consent_tool: ConsentTool) -> di
         "ai_bullets": ai_bullets,
         "ai_warning": ai_warning_out,
     }
+
+
+def _get_skill_timeline_for_project(name: str, rel_path: str) -> list[dict[str, Any]]:
+    """Build a simple 'skills over time' timeline from code_analyses snapshots.
+
+    Groups tools+practices by the date they first appear in metrics_json.
+    Returns a list of dicts: {"date": "YYYY-MM-DD", "skills": [...]}, sorted by date.
+    """
+    try:
+        from capstone_project_team_5.data.db import get_session
+        from capstone_project_team_5.data.models import CodeAnalysis, Project
+    except Exception:
+        return []
+
+    timeline: list[dict[str, Any]] = []
+
+    try:
+        with get_session() as session:
+            project = (
+                session.query(Project)
+                .filter(Project.name == name, Project.rel_path == rel_path)
+                .first()
+            )
+            if project is None:
+                return []
+
+            analyses = (
+                session.query(CodeAnalysis)
+                .filter(CodeAnalysis.project_id == project.id)
+                .order_by(CodeAnalysis.created_at.asc())
+                .all()
+            )
+
+            if not analyses:
+                return []
+
+            first_seen: dict[str, Any] = {}
+            for row in analyses:
+                try:
+                    metrics = json.loads(row.metrics_json)
+                except Exception:
+                    continue
+                tools = set(metrics.get("tools", []))
+                practices = set(metrics.get("practices", []))
+                skills = tools | practices
+                for skill in skills:
+                    if skill not in first_seen:
+                        first_seen[skill] = row.created_at
+
+            buckets: dict[str, set[str]] = {}
+            for skill, dt in first_seen.items():
+                date_str = dt.date().isoformat()
+                buckets.setdefault(date_str, set()).add(skill)
+
+            for date_str in sorted(buckets.keys()):
+                timeline.append(
+                    {
+                        "date": date_str,
+                        "skills": sorted(buckets[date_str]),
+                    }
+                )
+
+    except Exception:
+        return []
+
+    return timeline
 
 
 def main() -> int:

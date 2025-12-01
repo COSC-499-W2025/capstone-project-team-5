@@ -16,7 +16,10 @@ if TYPE_CHECKING:
 
 
 def save_code_analysis_to_db(
-    project_name: str, project_rel_path: str, analysis: ProjectAnalysis
+    project_name: str,
+    project_rel_path: str,
+    analysis: ProjectAnalysis,
+    username: str | None = None,
 ) -> None:
     """Save code analysis results to the database (language-agnostic).
 
@@ -46,7 +49,12 @@ def save_code_analysis_to_db(
     """
     try:
         from capstone_project_team_5.data.db import get_session
-        from capstone_project_team_5.data.models import CodeAnalysis, Project
+        from capstone_project_team_5.data.models import (
+            CodeAnalysis,
+            Project,
+            User,
+            UserCodeAnalysis,
+        )
 
         # Find the project in the database
         with get_session() as session:
@@ -58,19 +66,6 @@ def save_code_analysis_to_db(
 
             if not project:
                 return  # Project not yet in DB, skip
-
-            # Check if analysis already exists for this language
-            existing = (
-                session.query(CodeAnalysis)
-                .filter(
-                    CodeAnalysis.project_id == project.id,
-                    CodeAnalysis.language == analysis.language,
-                )
-                .first()
-            )
-
-            if existing:
-                return  # Already saved, skip
 
             # Prepare metrics and summary based on language
             metrics_json, summary_text = _prepare_language_specific_data(analysis)
@@ -88,6 +83,13 @@ def save_code_analysis_to_db(
                 summary_text=summary_text,
             )
             session.add(code_analysis)
+            session.flush()  # ensure code_analysis.id is populated
+
+            if username is not None:
+                user = session.query(User).filter(User.username == username.strip()).first()
+                if user is not None:
+                    session.add(UserCodeAnalysis(user_id=user.id, analysis_id=code_analysis.id))
+
             session.commit()
 
     except Exception:

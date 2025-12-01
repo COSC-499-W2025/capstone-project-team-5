@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 from unittest.mock import patch
 
 from capstone_project_team_5.consent_tool import ConsentTool
+from capstone_project_team_5.data.db import get_session
+from capstone_project_team_5.data.models import ConsentRecord, User
 
 
 def test_consent_tool_initialization() -> None:
@@ -97,3 +101,45 @@ def test_get_external_services_consent_declined() -> None:
 
     assert result is False
     assert consent_tool.use_external_services is False
+
+
+def test_load_existing_consent_prefers_user_then_global() -> None:
+    """load_existing_consent should prefer user-scoped consent, then global."""
+    # Set up one global consent record and one user-specific consent record.
+    with get_session() as session:
+        global_consent = ConsentRecord(
+            user_id=None,
+            consent_given=True,
+            use_external_services=False,
+            external_services={"global": {"allowed": True}},
+            default_ignore_patterns=[".git"],
+        )
+        user = User(username="alice-test", password_hash="dummy-hash")
+        session.add(global_consent)
+        session.add(user)
+
+    # First, a tool for a user with no user-specific record should load global consent.
+    tool_for_new_user = ConsentTool(username="bob-test")
+    assert tool_for_new_user.load_existing_consent() is True
+    assert tool_for_new_user.consent_given is True
+    assert tool_for_new_user.external_services.get("global") == {"allowed": True}
+
+    # Now add a user-specific consent for alice-test that differs from the global one.
+    with get_session() as session:
+        alice = session.query(User).filter(User.username == "alice-test").first()
+        assert alice is not None
+        alice_consent = ConsentRecord(
+            user_id=alice.id,
+            consent_given=True,
+            use_external_services=True,
+            external_services={"alice-test": {"allowed": True}},
+            default_ignore_patterns=["node_modules"],
+        )
+        session.add(alice_consent)
+
+    # Tool for alice-test should prefer her user-scoped record over the global one.
+    tool_for_alice = ConsentTool(username="alice-test")
+    assert tool_for_alice.load_existing_consent() is True
+    assert tool_for_alice.consent_given is True
+    assert tool_for_alice.use_external_services is True
+    assert tool_for_alice.external_services.get("alice-test") == {"allowed": True}
