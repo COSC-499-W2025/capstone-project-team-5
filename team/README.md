@@ -1,6 +1,32 @@
 # Team Weekly Logs
 
 <details>
+  <summary><h3>Week 13 | November 24 - 30</h3></summary>
+
+  ### Burnup Chart
+  <img width="916" height="486" alt="image" src="https://github.com/user-attachments/assets/97201e1d-87d7-4463-8330-016745b3d823" />
+
+
+  ### Past Work
+  - Implemented language-agnostic test analysis pipeline and integrated testing metrics
+  - Enhanced and integrated Java, Python, and JS/TS language analyzers into CLI workflow with improved analysis depth
+  - Integrated code analysis logic flow and enhanced local resume bullet point generation
+  - Improved TUI with project/analysis retrieval features and enhanced UX/flow changes across the application
+  - Enhanced code analysis persistence layer with deletion logic and prepared presentation materials for milestone #1
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Integrating All Features | ✅ Done | Major integration work completed - language analyzers, test analysis, TUI features all integrated |
+  | Prepare for milestone 1 | 🚧 In Progress | Presentation materials completed, video demo and final submissions pending |
+
+  ### Upcoming Work
+  - Complete video demo for milestone #1
+  - Finalize milestone #1 submissions (team contract, self-reflection, deliverable, peer evaluation)
+  - Conduct presentation in class
+</details>
+
+<details>
   <summary><h3>Week 12 | November 17 - 23</h3></summary>
 
   ### Burnup Chart
