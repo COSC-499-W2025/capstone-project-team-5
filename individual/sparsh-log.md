@@ -185,3 +185,18 @@ It was a busy week for me due to heavy midterm load and I was unable to be as in
 ### TODOs for Next week 
 - **Backlog Tasks**: Discuss with the team and pick up any free tasks.
 - **Integration**: Work with the team on integrating any modules that arent already connected and do any code cleanups if necessary.
+
+## Week #13 (November 23 2025 - November 30 2025)
+<details>
+  <summary><h3>Evaluation</h3></summary
+<img width="2940" height="1912" alt="image" src="https://github.com/user-attachments/assets/582957dc-3997-42ad-b802-6ccae43972d2" />
+</details>
+
+### Team Activities
+- **PR Actions**: Reviewed PRs and provided any feedback/suggestions necessary.  
+
+### Personal Contributions
+
+- **Code Contributions**: Integrated Code analysis logic flow and made local resume bullet points nore robust.
+### TODOs for Next week 
+- **Finishing Touches**: Discuss with the team and work on any final remaining bugs or features before milestone 1 submission.
