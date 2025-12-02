@@ -87,9 +87,9 @@ def test_skill_and_projectskill_tables(db_connection):
     cursor.execute("INSERT INTO Project (name, description) VALUES (?, ?)", ("Proj3", "desc"))
     project_id = cursor.lastrowid
     # Insert skills
-    cursor.execute("INSERT INTO Skill (name) VALUES (?)", ("Python",))
+    cursor.execute("INSERT INTO Skill (name, skill_type) VALUES (?, ?)", ("Python", "tool"))
     skill_id1 = cursor.lastrowid
-    cursor.execute("INSERT INTO Skill (name) VALUES (?)", ("SQL",))
+    cursor.execute("INSERT INTO Skill (name, skill_type) VALUES (?, ?)", ("SQL", "tool"))
     skill_id2 = cursor.lastrowid
     # Link skills to project
     cursor.execute(
@@ -120,7 +120,7 @@ def test_foreign_key_cascade_delete(db_connection):
         "INSERT INTO Artifact (project_id, path, type) VALUES (?, ?, ?)",
         (project_id, "/file3.py", "code"),
     )
-    cursor.execute("INSERT INTO Skill (name) VALUES (?)", ("Django",))
+    cursor.execute("INSERT INTO Skill (name, skill_type) VALUES (?, ?)", ("Django", "tool"))
     skill_id = cursor.lastrowid
     cursor.execute(
         "INSERT INTO ProjectSkill (project_id, skill_id) VALUES (?, ?)", (project_id, skill_id)
