@@ -2,6 +2,16 @@
 Constants for skill detection in project directories.
 """
 
+from enum import Enum
+
+
+class SkillType(str, Enum):
+    """Enum for skill types used in ProjectSkill table."""
+
+    TOOL = "tool"
+    PRACTICE = "practice"
+
+
 # Directories and files to skip during scanning (case-insensitive)
 SKIP_DIRS = {
     # Dependencies

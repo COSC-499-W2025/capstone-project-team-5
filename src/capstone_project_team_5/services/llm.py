@@ -42,7 +42,7 @@ def generate_bullet_points_from_analysis(
     *,
     language: str,
     framework: str | None,
-    skills: Sequence[str] | None = None,
+    practices: Sequence[str] | None = None,
     tools: Sequence[str] | None = None,
     max_bullets: int = 5,
 ) -> list[str]:
@@ -62,10 +62,9 @@ def generate_bullet_points_from_analysis(
         raise LLMError(f"Failed to initialize LLM service: {e}") from e
 
     tools_set = set(tools or [])
-    skills_set = set(skills or [])
-    practices_only = sorted(skills_set - tools_set)
+    practices_set = set(practices or [])
     tools_str = ", ".join(sorted(tools_set)) or "None"
-    practices_str = ", ".join(practices_only) or "None"
+    practices_str = ", ".join(practices_set) or "None"
 
     system_rules = (
         "You are an expert resume writer generating concise, ATS-friendly, STAR-format bullets "

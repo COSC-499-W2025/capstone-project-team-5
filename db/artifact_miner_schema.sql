@@ -35,7 +35,8 @@ CREATE TABLE Contribution (
 
 CREATE TABLE Skill (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE
+    name TEXT NOT NULL UNIQUE,
+    skill_type TEXT NOT NULL CHECK (skill_type IN ('tool', 'practice'))
 );
 
 -- many-to-many relationship between Project and Skill
@@ -44,7 +45,8 @@ CREATE TABLE ProjectSkill (
     project_id INTEGER NOT NULL,
     skill_id INTEGER NOT NULL,
     FOREIGN KEY (project_id) REFERENCES Project(id) ON DELETE CASCADE,
-    FOREIGN KEY (skill_id) REFERENCES Skill(id) ON DELETE CASCADE
+    FOREIGN KEY (skill_id) REFERENCES Skill(id) ON DELETE CASCADE,
+    UNIQUE (project_id, skill_id)
 );
 
 

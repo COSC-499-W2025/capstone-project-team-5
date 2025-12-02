@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import MetaData, Table, func, select
 from sqlalchemy.orm import Session
 
+from capstone_project_team_5.constants.skill_detection_constants import SkillType
 from capstone_project_team_5.data.db import get_session
 
 # Simple cache for reflected Table objects keyed by (engine id, table name).
@@ -93,7 +94,16 @@ class ProjectSummary:
         return {row["activity_type"]: row["count"] for row in res.mappings().all()}
 
     @classmethod
-    def _get_skills(cls, session: Session, pid: int) -> list[str]:
+    def _get_skills(
+        cls, session: Session, pid: int, skill_type: SkillType | None = None
+    ) -> list[str]:
+        """Get skills for a project, optionally filtered by skill_type.
+
+        Args:
+            session: Database session
+            pid: Project ID
+            skill_type: Optional filter - SkillType.TOOL, SkillType.PRACTICE, or None for all
+        """
         engine = session.get_bind()
         skill_tbl = _get_table("Skill", engine)
         projectskill_tbl = _get_table("ProjectSkill", engine)
@@ -104,8 +114,18 @@ class ProjectSummary:
             )
             .where(projectskill_tbl.c.project_id == pid)
         )
+        if skill_type is not None:
+            stmt = stmt.where(skill_tbl.c.skill_type == skill_type.value)
         res = session.execute(stmt)
         return [row["name"] for row in res.mappings().all()]
+
+    @classmethod
+    def _get_tools(cls, session: Session, pid: int) -> list[str]:
+        return cls._get_skills(session, pid, skill_type=SkillType.TOOL)
+
+    @classmethod
+    def _get_practices(cls, session: Session, pid: int) -> list[str]:
+        return cls._get_skills(session, pid, skill_type=SkillType.PRACTICE)
 
     @classmethod
     def summarize(cls, project_name: str) -> dict[str, Any]:
@@ -123,7 +143,8 @@ class ProjectSummary:
             pid = project["id"]
             artifact_counts = cls._get_artifact_counts(session, pid)
             contrib_counts = cls._get_contrib_counts(session, pid)
-            skills = cls._get_skills(session, pid)
+            tools = cls._get_tools(session, pid)
+            practices = cls._get_practices(session, pid)
 
             summary: dict[str, Any] = {
                 "project_name": project["name"],
@@ -136,7 +157,8 @@ class ProjectSummary:
                 "end_date": project["end_date"],
                 "activity_counts": contrib_counts,
                 "artifact_counts": artifact_counts,
-                "skills": skills,
+                "tools": tools,
+                "practices": practices,
                 "summary": (
                     f"{project['name']} ({project['language'] or 'Unknown'}) using "
                     f"{project['framework'] or 'None'}, "
