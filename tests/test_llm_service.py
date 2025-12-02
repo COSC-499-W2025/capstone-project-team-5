@@ -239,3 +239,41 @@ def test_extract_json_with_surrounding_text() -> None:
     response = 'Based on analysis: {"tools": ["SQL"], "practices": ["Testing"]} as shown'
     result = LLMService.extract_json_from_response(response)
     assert result == {"tools": ["SQL"], "practices": ["Testing"]}
+
+
+def test_from_model_preferences_returns_gemini_for_gemini_preference(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test from_model_preferences creates Gemini provider for Gemini preference."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+
+    class _FakeClient:
+        def __init__(self, api_key: str) -> None:
+            pass
+
+    import google.genai as _genai
+
+    monkeypatch.setattr(_genai, "Client", _FakeClient, raising=True)
+
+    service = LLMService.from_model_preferences(["Gemini (Google)", "GPT-4 (OpenAI)"])
+    assert isinstance(service.provider, GeminiProvider)
+
+
+def test_from_model_preferences_returns_default_for_empty_list(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test from_model_preferences falls back to default for empty preferences."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_PROVIDER", "gemini")
+
+    class _FakeClient:
+        def __init__(self, api_key: str) -> None:
+            pass
+
+    import google.genai as _genai
+
+    monkeypatch.setattr(_genai, "Client", _FakeClient, raising=True)
+
+    service = LLMService.from_model_preferences([])
+    # Should use default provider (Gemini from env)
+    assert isinstance(service.provider, GeminiProvider)
