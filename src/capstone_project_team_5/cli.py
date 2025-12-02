@@ -115,7 +115,7 @@ def _display_project_analyses(
             continue
 
         # Run unified analysis once (includes language detection, skills, C++ analyzer, etc.)
-        analysis = analyze_project(project_path)
+        analysis = analyze_project(project_path, consent_tool)
         language = analysis.language
         framework = analysis.framework
         tools = analysis.tools
@@ -417,7 +417,7 @@ def analyze_projects_structured(
 
         project_analysis: ProjectAnalysis | None = None
         try:
-            project_analysis = analyze_project(project_path)
+            project_analysis = analyze_project(project_path, consent_tool)
         except Exception:
             project_analysis = None
 
@@ -427,7 +427,7 @@ def analyze_projects_structured(
             continue
 
         # Unified analysis object (language, skills, language-specific metrics).
-        analysis = project_analysis or analyze_project(project_path)
+        analysis = project_analysis or analyze_project(project_path, consent_tool)
         language = analysis.language
         framework = analysis.framework
         tools = set(analysis.tools)
@@ -596,13 +596,13 @@ def analyze_root_structured(extract_root: Path, consent_tool: ConsentTool) -> di
     """
     project_analysis: ProjectAnalysis | None = None
     try:
-        project_analysis = analyze_project(extract_root)
+        project_analysis = analyze_project(extract_root, consent_tool)
     except Exception:
         project_analysis = None
 
     walk_result = DirectoryWalker.walk(extract_root)
     language, framework = identify_language_and_framework(extract_root)
-    skills = extract_project_tools_practices(extract_root)
+    skills = extract_project_tools_practices(extract_root, consent_tool)
     tools = set(skills.get("tools", set()))
     practices = set(skills.get("practices", set()))
 
