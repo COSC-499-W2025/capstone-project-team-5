@@ -39,6 +39,8 @@ CREATE TABLE Skill (
     skill_type TEXT NOT NULL CHECK (skill_type IN ('tool', 'practice'))
 );
 
+CREATE INDEX idx_skill_type ON Skill(skill_type);
+
 -- many-to-many relationship between Project and Skill
 CREATE TABLE ProjectSkill (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
