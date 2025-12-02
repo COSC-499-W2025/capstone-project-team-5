@@ -21,6 +21,41 @@ class LLMService:
         """
         self.provider = provider or LLMService._get_default_llm_provider_from_env()
 
+    @classmethod
+    def from_model_preferences(cls, model_preferences: list[str]) -> LLMService:
+        """Create an LLM service based on user's model preferences.
+
+        Tries each model preference in order until one successfully initializes.
+
+        Args:
+            model_preferences: List of model names in priority order
+                (e.g., ["Gemini (Google)", "GPT-4 (OpenAI)"]).
+
+        Returns:
+            LLMService instance configured with the first available provider.
+        """
+        if not model_preferences:
+            return cls()
+
+        # Map user-friendly model names to providers
+        # Try each preference in order until one works
+        for model_name in model_preferences:
+            model_lower = model_name.lower()
+            if "gemini" in model_lower:
+                try:
+                    return cls(provider=GeminiProvider())
+                except LLMError:
+                    continue
+            # Future: add OpenAI, Claude, etc. providers here
+            # elif "gpt" in model_lower or "openai" in model_lower:
+            #     try:
+            #         return cls(provider=OpenAIProvider())
+            #     except LLMError:
+            #         continue
+
+        # Fallback to default if no preferred provider works
+        return cls()
+
     @staticmethod
     def _get_default_llm_provider_from_env() -> LLMProvider:
         """Get the configured LLM provider.
