@@ -15,10 +15,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from capstone_project_team_5.detection import identify_language_and_framework
 from capstone_project_team_5.services.test_analysis import analyze_tests
 from capstone_project_team_5.skill_detection import extract_project_tools_practices
+
+if TYPE_CHECKING:
+    from capstone_project_team_5.consent_tool import ConsentTool
 
 
 @dataclass
@@ -73,7 +77,7 @@ class ProjectAnalysis:
     tests_by_framework: dict[str, int] = field(default_factory=dict)
 
 
-def analyze_project(project_path: Path) -> ProjectAnalysis:
+def analyze_project(project_path: Path, consent_tool: ConsentTool | None = None) -> ProjectAnalysis:
     """Analyze a project using all available analyzers.
 
     This is the main entry point for project analysis. It:
@@ -84,6 +88,7 @@ def analyze_project(project_path: Path) -> ProjectAnalysis:
 
     Args:
         project_path: Path to the project directory
+        consent_tool: Optional ConsentTool for checking LLM permissions.
 
     Returns:
         ProjectAnalysis with aggregated data from all sources
@@ -94,7 +99,7 @@ def analyze_project(project_path: Path) -> ProjectAnalysis:
     language, framework = identify_language_and_framework(project_path)
 
     # Step 2: Skill detection (always runs)
-    skills_map = extract_project_tools_practices(project_path)
+    skills_map = extract_project_tools_practices(project_path, consent_tool)
     tools = skills_map.get("tools", set())
     practices = skills_map.get("practices", set())
 
