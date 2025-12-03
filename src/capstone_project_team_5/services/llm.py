@@ -64,7 +64,7 @@ def generate_bullet_points_from_analysis(
     tools_set = set(tools or [])
     practices_set = set(practices or [])
     tools_str = ", ".join(sorted(tools_set)) or "None"
-    practices_str = ", ".join(practices_set) or "None"
+    practices_str = ", ".join(sorted(practices_set)) or "None"
 
     system_rules = (
         "You are an expert resume writer generating concise, ATS-friendly, STAR-format bullets "
