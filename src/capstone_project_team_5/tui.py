@@ -624,7 +624,8 @@ ProgressBar {
                         # Aggregate fields across any saved analyses for this project,
                         # restricted to the current user when available.
                         languages: set[str] = set()
-                        skills: set[str] = set()
+                        tools: set[str] = set()
+                        practices: set[str] = set()
                         total_loc: int = 0
                         analyses_list: list[dict] = []
 
@@ -650,29 +651,26 @@ ProgressBar {
                                     metrics = json.loads(a.metrics_json)
 
                             lang = None
+                            metrics_tools: list = []
+                            metrics_practices: list = []
+                            loc = None
                             if isinstance(metrics, dict):
                                 lang = metrics.get("language") or metrics.get("language_name")
-                                tools = metrics.get("tools") or []
-                                practices = metrics.get("practices") or []
+                                metrics_tools = metrics.get("tools") or []
+                                metrics_practices = metrics.get("practices") or []
                                 loc = metrics.get("lines_of_code") or metrics.get(
                                     "total_lines_of_code"
                                 )
-                            else:
-                                tools = []
-                                practices = []
-                                loc = None
 
                             if a.language:
                                 languages.add(a.language)
                             if lang:
                                 languages.add(lang)
 
-                                for t in tools:
-                                    with suppress(Exception):
-                                        skills.add(str(t))
-                                for pr in practices:
-                                    with suppress(Exception):
-                                        skills.add(str(pr))
+                            for t in metrics_tools:
+                                tools.add(str(t))
+                            for pr in metrics_practices:
+                                practices.add(str(pr))
 
                             try:
                                 if isinstance(loc, int):
@@ -705,7 +703,8 @@ ProgressBar {
                             "importance_score": p.importance_score,
                             "analyses": analyses_list,
                             "languages": sorted(languages),
-                            "skills": sorted(skills),
+                            "tools": sorted(tools),
+                            "practices": sorted(practices),
                             "lines_of_code": total_loc if total_loc > 0 else None,
                             "analyses_count": len(analyses_list),
                         }
@@ -1378,7 +1377,16 @@ ProgressBar {
 
     def _render_table(self, projects: list[dict]) -> str:
         """Render a simple ASCII table summary for retrieved projects."""
-        headers = ["Name", "Path", "Language", "Framework", "Duration", "Files", "Skills", "Tools"]
+        headers = [
+            "Name",
+            "Path",
+            "Language",
+            "Framework",
+            "Duration",
+            "Files",
+            "Practices",
+            "Tools",
+        ]
         rows: list[list[str]] = []
         for p in projects:
             name = str(p.get("name", ""))
@@ -1387,9 +1395,9 @@ ProgressBar {
             fw = str(p.get("framework", ""))
             duration = str(p.get("duration", ""))
             files = str(p.get("file_summary", {}).get("total_files", ""))
-            skills = ",".join(p.get("skills", []))
+            practices = ",".join(p.get("practices", []))
             tools = ",".join(p.get("tools", []))
-            rows.append([name, rel, lang, fw, duration, files, skills, tools])
+            rows.append([name, rel, lang, fw, duration, files, practices, tools])
 
         col_widths = [len(h) for h in headers]
         for r in rows:
@@ -1455,7 +1463,9 @@ ProgressBar {
                 langs = p.get("languages") or []
                 if langs:
                     parts.append(f"  - Languages: {', '.join(langs)}")
-                skills = p.get("skills") or []
+                practices = p.get("practices") or []
+                tools = p.get("tools") or []
+                skills = practices + tools
                 if skills:
                     parts.append(f"  - Skills/Tools: {', '.join(skills[:12])}")
                 loc = p.get("lines_of_code")
