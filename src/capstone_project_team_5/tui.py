@@ -1212,7 +1212,7 @@ ProgressBar {
 
         parts.append("\n### Skills - Practices")
         if practices:
-            parts.extend(f"- {s}" for s in practices)
+            parts.extend(f"- {s}" for s in sorted(practices))
         else:
             # Fall back to aggregated skills from project_dict if any.
             fallback_practices = project_dict.get("practices") or []
