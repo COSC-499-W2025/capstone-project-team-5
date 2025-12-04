@@ -23,7 +23,6 @@ def generate_ai_bullets_for_project(project_root: Path | str, *, max_bullets: in
     skills_map = extract_project_tools_practices(root)
     tools: Sequence[str] = sorted(skills_map.get("tools", set()))
     practices: Sequence[str] = sorted(skills_map.get("practices", set()))
-    combined = sorted(set(tools) | set(practices))
 
     try:
         project_analysis = analyze_project(root)
@@ -34,7 +33,7 @@ def generate_ai_bullets_for_project(project_root: Path | str, *, max_bullets: in
         bullets = generate_bullet_points_from_analysis(
             language=language,
             framework=framework,
-            skills=combined,
+            practices=practices,
             tools=tools,
             max_bullets=max_bullets,
         )

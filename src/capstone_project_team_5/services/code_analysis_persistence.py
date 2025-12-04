@@ -11,6 +11,8 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
+from capstone_project_team_5.services.skill_persistence import save_skills_to_db
+
 if TYPE_CHECKING:
     from capstone_project_team_5.services.project_analysis import ProjectAnalysis
 
@@ -89,6 +91,9 @@ def save_code_analysis_to_db(
                 user = session.query(User).filter(User.username == username.strip()).first()
                 if user is not None:
                     session.add(UserCodeAnalysis(user_id=user.id, analysis_id=code_analysis.id))
+
+            # Save skills (tools and practices) to Skill and ProjectSkill tables
+            save_skills_to_db(session, project.id, analysis.tools, analysis.practices)
 
             session.commit()
 

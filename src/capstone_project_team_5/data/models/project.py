@@ -13,6 +13,7 @@ from capstone_project_team_5.data.db import Base
 if TYPE_CHECKING:
     from capstone_project_team_5.data.models.code_analysis import CodeAnalysis
     from capstone_project_team_5.data.models.portfolio_item import PortfolioItem
+    from capstone_project_team_5.data.models.skill import ProjectSkill
     from capstone_project_team_5.data.models.upload_record import UploadRecord
 
 
@@ -50,4 +51,7 @@ class Project(Base):
     )
     code_analyses: Mapped[list[CodeAnalysis]] = relationship(
         "CodeAnalysis", back_populates="project", cascade="all, delete-orphan"
+    )
+    project_skills: Mapped[list[ProjectSkill]] = relationship(
+        "ProjectSkill", back_populates="project", cascade="all, delete-orphan"
     )

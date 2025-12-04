@@ -74,11 +74,17 @@ def temp_db(tmp_path):
         )
 
         # Skills + link table
-        res_py = conn.execute(text("INSERT INTO Skill (name) VALUES (:name)"), {"name": "Python"})
+        res_py = conn.execute(
+            text("INSERT INTO Skill (name, skill_type) VALUES (:name, :stype)"),
+            {"name": "REST APIs", "stype": "practice"},
+        )
         python_skill_id = int(
             res_py.lastrowid or conn.execute(text("SELECT last_insert_rowid()")).scalar()
         )
-        res_fl = conn.execute(text("INSERT INTO Skill (name) VALUES (:name)"), {"name": "Flask"})
+        res_fl = conn.execute(
+            text("INSERT INTO Skill (name, skill_type) VALUES (:name, :stype)"),
+            {"name": "Flask", "stype": "tool"},
+        )
         flask_skill_id = int(
             res_fl.lastrowid or conn.execute(text("SELECT last_insert_rowid()")).scalar()
         )
@@ -106,8 +112,8 @@ def test_project_summary(monkeypatch, temp_db):
     assert result["collaboration"] == "individual"
     assert "code" in result["artifact_counts"]
     assert "document" in result["artifact_counts"]
-    assert "Python" in result["skills"]
-    assert "Flask" in result["skills"]
+    assert "Flask" in result["tools"]
+    assert "REST APIs" in result["practices"]
 
 
 def test_get_project_metadata(monkeypatch, temp_db):
@@ -150,7 +156,7 @@ def test_get_skills(monkeypatch, temp_db):
         project = ps.ProjectSummary._get_project_metadata(conn, "Artifact Miner")
         pid = project["id"]
         skills = ps.ProjectSummary._get_skills(conn, pid)
-        assert set(skills) == {"Python", "Flask"}
+        assert set(skills) == {"Flask", "REST APIs"}
 
 
 def test_missing_project_raises(monkeypatch, temp_db):
@@ -177,4 +183,5 @@ def test_empty_project_has_no_artifacts_or_skills(monkeypatch, tmp_path, temp_db
     result = ps.ProjectSummary.summarize("Empty Project")
     assert result["artifact_counts"] == {}
     assert result["activity_counts"] == {}
-    assert result["skills"] == []
+    assert result["tools"] == []
+    assert result["practices"] == []

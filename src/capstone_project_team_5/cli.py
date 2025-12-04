@@ -120,7 +120,6 @@ def _display_project_analyses(
         framework = analysis.framework
         tools = analysis.tools
         practices = analysis.practices
-        combined_skills = tools | practices
         summary = DirectoryWalker.get_summary(walk_result)
         total_size = _format_bytes(summary["total_size_bytes"])
         collab_summary = CollabDetector.collaborator_summary(project_path)
@@ -146,9 +145,9 @@ def _display_project_analyses(
         print(collaborators)
         print(f"🧑‍💻 Language: {language}")
         print(f"🏗️ Framework: {framework or 'None detected'}")
-        skills_list = ", ".join(sorted(combined_skills)) or "None detected"
+        practices_list = ", ".join(sorted(practices)) or "None detected"
         tools_list = ", ".join(sorted(tools)) or "None detected"
-        print(f"🧠 Skills: {skills_list}")
+        print(f"🧠 Practices: {practices_list}")
         print(f"🧰 Tools: {tools_list}")
         print(ContributionMetrics.format_contribution_metrics(contribution_metrics, metrics_source))
 
@@ -202,9 +201,9 @@ def _display_root_analysis(extract_root: Path, consent_tool: ConsentTool) -> Non
     print(data["collaborators_display"])
     print(f"🧑‍💻 Language: {data['language']}")
     print(f"🏗️ Framework: {data['framework'] or 'None detected'}")
-    skills_list = ", ".join(data["skills"]) or "None detected"
+    practices_list = ", ".join(data["practices"]) or "None detected"
     tools_list = ", ".join(data["tools"]) or "None detected"
-    print(f"🧠 Skills: {skills_list}")
+    print(f"🧠 Practices: {practices_list}")
     print(f"🧰 Tools: {tools_list}")
     print(data["contribution_summary"])
 
@@ -433,7 +432,6 @@ def analyze_projects_structured(
         framework = analysis.framework
         tools = set(analysis.tools)
         practices = set(analysis.practices)
-        combined_skills = tools | practices
 
         # Detect additional languages beyond the primary.
         all_langs = _detect_languages_from_walk(walk_result)
@@ -464,7 +462,7 @@ def analyze_projects_structured(
                 ai_bullets = generate_bullet_points_from_analysis(
                     language=language,
                     framework=framework,
-                    skills=sorted(combined_skills),
+                    practices=sorted(practices),
                     tools=sorted(tools),
                     max_bullets=6,
                 )
@@ -550,7 +548,7 @@ def analyze_projects_structured(
                 "language": language,
                 "framework": framework,
                 "other_languages": other_languages,
-                "skills": sorted(combined_skills),
+                "practices": sorted(practices),
                 "tools": sorted(tools),
                 "duration": duration_display,
                 "duration_timedelta": duration_timedelta,
@@ -607,7 +605,6 @@ def analyze_root_structured(extract_root: Path, consent_tool: ConsentTool) -> di
     skills = extract_project_tools_practices(extract_root)
     tools = set(skills.get("tools", set()))
     practices = set(skills.get("practices", set()))
-    combined_skills = tools | practices
 
     ai_allowed, ai_warning = _ai_bullet_permission(consent_tool)
     collab_summary = CollabDetector.collaborator_summary(extract_root)
@@ -632,7 +629,7 @@ def analyze_root_structured(extract_root: Path, consent_tool: ConsentTool) -> di
             ai_bullets = generate_bullet_points_from_analysis(
                 language=language,
                 framework=framework,
-                skills=sorted(combined_skills),
+                practices=sorted(practices),
                 tools=sorted(tools),
                 max_bullets=6,
             )
@@ -652,7 +649,7 @@ def analyze_root_structured(extract_root: Path, consent_tool: ConsentTool) -> di
     return {
         "language": language,
         "framework": framework,
-        "skills": sorted(combined_skills),
+        "practices": sorted(practices),
         "tools": sorted(tools),
         "duration": duration_display,
         "duration_timedelta": duration_timedelta,

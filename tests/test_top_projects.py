@@ -66,6 +66,7 @@ def temp_db(tmp_path: Path):
         md,
         Column("id", Integer, primary_key=True, autoincrement=True),
         Column("name", Text, nullable=False),
+        Column("skill_type", Text, nullable=False),
     )
 
     Table(
