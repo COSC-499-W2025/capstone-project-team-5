@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from capstone_project_team_5.consent_tool import ConsentTool
 from capstone_project_team_5.constants.skill_detection_constants import (
     PRACTICES_FILE_NAMES,
     PRACTICES_FILE_PATTERNS,
@@ -278,17 +279,11 @@ class SkillDetector:
         return system_instructions, user_content, temperature, max_tokens
 
     @staticmethod
-    def _has_consent_for_llm() -> bool:
-        """
-        Check if user has given consent for LLM analysis.
-
-        Args:
-            None (for now. TBD in future PR)"""
-        return True  # TODO: Replace with real consent check in future PR
-
-    @staticmethod
     def _detect_tools_practices_llm(
-        root: Path, existing_tools: set[str], existing_practices: set[str]
+        root: Path,
+        existing_tools: set[str],
+        existing_practices: set[str],
+        consent_tool: ConsentTool | None = None,
     ) -> tuple[set[str], set[str]]:
         """
         Use LLM to identify additional tools and practices from the directory structure.
@@ -297,6 +292,7 @@ class SkillDetector:
             root: Root directory of the project
             existing_tools: Tools already detected by pattern matching
             existing_practices: Practices already detected by pattern matching
+            consent_tool: Optional ConsentTool for getting model preferences.
 
         Returns:
             Tuple of (tools, practices) sets identified by LLM
@@ -313,8 +309,9 @@ class SkillDetector:
                 SkillDetector._generate_llm_call_config(tree)
             )
 
-            # Call LLM service
-            llm_service = LLMService()
+            # Create LLM service with user's model preferences if available
+            model_preferences = consent_tool.get_llm_model_preferences() if consent_tool else []
+            llm_service = LLMService.from_model_preferences(model_preferences)
             response = llm_service.generate_llm_response(
                 system_instructions=system_instructions,
                 user_content=user_content,
@@ -342,17 +339,18 @@ class SkillDetector:
             return set(), set()
 
     @staticmethod
-    def detect_skills(root: Path) -> dict[str, set[str]]:
+    def detect_skills(root: Path, consent_tool: ConsentTool | None = None) -> dict[str, set[str]]:
         """
         Detect development tools and practices in the project.
 
         Args:
             root: Root directory of the project
+            consent_tool: Optional ConsentTool instance for checking LLM permissions.
 
         Returns:
             Dictionary with 'tools' and 'practices' keys containing sets of detected items
         """
-        skills = {
+        skills: dict[str, set[str]] = {
             "tools": set(),
             "practices": set(),
         }
@@ -365,10 +363,10 @@ class SkillDetector:
         skills["tools"].update(local_tools)
         skills["practices"].update(local_practices)
 
-        if SkillDetector._has_consent_for_llm():
+        if consent_tool is not None and consent_tool.is_llm_allowed():
             # use LLM to identify any additional tools/practices
             llm_tools, llm_practices = SkillDetector._detect_tools_practices_llm(
-                root, skills["tools"], skills["practices"]
+                root, skills["tools"], skills["practices"], consent_tool
             )
             skills["tools"].update(llm_tools)
             skills["practices"].update(llm_practices)
@@ -376,14 +374,17 @@ class SkillDetector:
         return skills
 
 
-def extract_project_tools_practices(project_root: Path) -> dict[str, set[str]]:
+def extract_project_tools_practices(
+    project_root: Path, consent_tool: ConsentTool | None = None
+) -> dict[str, set[str]]:
     """
     Extracts project skills: tools and practices from the given project root directory.
 
     Args:
         project_root: Path to the project root directory
+        consent_tool: Optional ConsentTool instance for checking LLM permissions.
 
     Returns:
         Dictionary with skills: 'tools' and 'practices' keys containing sets of detected items
     """
-    return SkillDetector.detect_skills(Path(project_root))
+    return SkillDetector.detect_skills(Path(project_root), consent_tool)

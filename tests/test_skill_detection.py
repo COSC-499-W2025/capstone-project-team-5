@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from capstone_project_team_5.skill_detection import extract_project_tools_practices
+from capstone_project_team_5.consent_tool import ConsentTool
+from capstone_project_team_5.skill_detection import SkillDetector, extract_project_tools_practices
 
 
 def test_empty_directory_returns_empty_skills(tmp_path: Path) -> None:
@@ -128,3 +129,27 @@ def test_tool_file_path_pattern_detection(tmp_path: Path) -> None:
     (tmp_path / ".github" / "dependabot.yml").write_text("version: 2\n", encoding="utf-8")
     skills = extract_project_tools_practices(tmp_path)
     assert "Dependabot" in skills["tools"]
+
+
+def test_detect_skills_skips_llm_when_consent_tool_is_none(tmp_path: Path) -> None:
+    """Test that LLM detection is skipped when consent_tool is None."""
+    (tmp_path / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
+
+    # Without consent_tool, should only do local detection (no LLM call)
+    skills = SkillDetector.detect_skills(tmp_path, consent_tool=None)
+
+    # Local detection should still work
+    assert "PyTest" in skills["tools"]
+
+
+def test_detect_skills_skips_llm_when_llm_not_allowed(tmp_path: Path) -> None:
+    """Test that LLM detection is skipped when consent_tool has LLM disabled."""
+    (tmp_path / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
+
+    consent_tool = ConsentTool()
+    consent_tool.use_external_services = False  # LLM not allowed
+
+    skills = SkillDetector.detect_skills(tmp_path, consent_tool=consent_tool)
+
+    # Local detection should still work
+    assert "PyTest" in skills["tools"]

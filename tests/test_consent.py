@@ -149,3 +149,67 @@ def test_load_existing_consent_prefers_user_then_global() -> None:
     assert tool_for_alice.consent_given is True
     assert tool_for_alice.use_external_services is True
     assert tool_for_alice.external_services.get(alice_username) == {"allowed": True}
+
+
+def test_is_llm_allowed_returns_true_when_llm_enabled() -> None:
+    """Test is_llm_allowed returns True when LLM is properly configured."""
+    consent_tool = ConsentTool()
+    consent_tool.use_external_services = True
+    consent_tool.external_services = {
+        "llm": {"allowed": True, "model_preferences": ["Gemini (Google)"]}
+    }
+
+    assert consent_tool.is_llm_allowed() is True
+
+
+def test_is_llm_allowed_returns_false_when_external_services_disabled() -> None:
+    """Test is_llm_allowed returns False when external services are disabled."""
+    consent_tool = ConsentTool()
+    consent_tool.use_external_services = False
+    consent_tool.external_services = {
+        "llm": {"allowed": True, "model_preferences": ["Gemini (Google)"]}
+    }
+
+    assert consent_tool.is_llm_allowed() is False
+
+
+def test_is_llm_allowed_returns_false_when_llm_not_in_services() -> None:
+    """Test is_llm_allowed returns False when llm key is missing."""
+    consent_tool = ConsentTool()
+    consent_tool.use_external_services = True
+    consent_tool.external_services = {"GitHub API": {"allowed": True}}
+
+    assert consent_tool.is_llm_allowed() is False
+
+
+def test_is_llm_allowed_returns_false_when_llm_not_allowed() -> None:
+    """Test is_llm_allowed returns False when llm allowed is False."""
+    consent_tool = ConsentTool()
+    consent_tool.use_external_services = True
+    consent_tool.external_services = {"llm": {"allowed": False}}
+
+    assert consent_tool.is_llm_allowed() is False
+
+
+def test_get_llm_model_preferences_returns_preferences_when_configured() -> None:
+    """Test get_llm_model_preferences returns model list when properly configured."""
+    consent_tool = ConsentTool()
+    consent_tool.use_external_services = True
+    consent_tool.external_services = {
+        "llm": {"allowed": True, "model_preferences": ["Gemini (Google)", "GPT-4 (OpenAI)"]}
+    }
+
+    result = consent_tool.get_llm_model_preferences()
+    assert result == ["Gemini (Google)", "GPT-4 (OpenAI)"]
+
+
+def test_get_llm_model_preferences_returns_empty_when_llm_not_allowed() -> None:
+    """Test get_llm_model_preferences returns empty list when LLM not allowed."""
+    consent_tool = ConsentTool()
+    consent_tool.use_external_services = True
+    consent_tool.external_services = {
+        "llm": {"allowed": False, "model_preferences": ["Gemini (Google)"]}
+    }
+
+    result = consent_tool.get_llm_model_preferences()
+    assert result == []

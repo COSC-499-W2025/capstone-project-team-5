@@ -10,13 +10,21 @@ from capstone_project_team_5.models.upload import DetectedProject, DirectoryNode
 
 
 class _StubConsentTool:
-    def __init__(self, *, allow_external: bool, services: dict[str, bool] | None = None) -> None:
+    def __init__(self, *, allow_external: bool, services: dict[str, dict] | None = None) -> None:
         self.use_external_services = allow_external
         self.external_services = services or {}
 
     @staticmethod
     def generate_consent_form() -> bool:
         return True
+
+    def is_llm_allowed(self) -> bool:
+        """Stub: always returns False since these tests don't test LLM."""
+        return False
+
+    def get_llm_model_preferences(self) -> list[str]:
+        """Stub: always returns empty list since these tests don't test LLM."""
+        return []
 
 
 def _create_zip(path: Path, contents: dict[str, str]) -> Path:

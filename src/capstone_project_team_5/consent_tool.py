@@ -492,6 +492,39 @@ You can add custom patterns later."""
             "default_ignore_patterns": self.default_ignore_patterns,
         }
 
+    def is_llm_allowed(self) -> bool:
+        """Check if LLM usage is allowed based on user consent.
+
+        Returns:
+            True if external services are enabled and LLM is allowed, False otherwise.
+        """
+        if not self.use_external_services:
+            return False
+
+        llm_config = self.external_services.get("llm")
+        if llm_config is None:
+            return False
+
+        return llm_config.get("allowed", False)
+
+    def get_llm_model_preferences(self) -> list[str]:
+        """Get the user's LLM model preferences in priority order.
+
+        Returns:
+            List of LLM model names in priority order, or empty list if none configured.
+        """
+        if not self.use_external_services:
+            return []
+
+        llm_config = self.external_services.get("llm")
+        if llm_config is None:
+            return []
+
+        if not llm_config.get("allowed", False):
+            return []
+
+        return llm_config.get("model_preferences", [])
+
     def load_existing_consent(self) -> bool:
         """Load the most recent consent record for this user if it exists.
 
