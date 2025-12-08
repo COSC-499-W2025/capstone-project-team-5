@@ -27,7 +27,7 @@ class ConsentRecord(Base):
             Example: {
                 "GitHub API": {"allowed": True},
                 "Gemini": {"allowed": True},
-                "llm": {"allowed": True, "model_preferences": ["Gemini (Google)", "GPT-4"]}
+                "llm": {"allowed": True, "model_preferences": ["Gemini 2.0 Flash (Google)"]}
             }
         default_ignore_patterns: JSON list of file/folder patterns to ignore during analysis.
         created_at: UTC timestamp of when the consent was recorded.

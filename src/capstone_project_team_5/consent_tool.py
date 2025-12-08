@@ -39,20 +39,15 @@ class ConsentTool:
         "GitHub API",
         "Gemini",
         "LinkedIn API",
-        "OpenAI/GPT",
         "Google Cloud Services",
         "AWS Services",
         "Microsoft Azure",
     ]
 
     # Available AI models for LLM features
+    # Note: Currently only Gemini is implemented in the codebase
     AVAILABLE_AI_MODELS: list[str] = [
-        "Gemini (Google)",
-        "GPT-4 (OpenAI)",
-        "GPT-3.5 (OpenAI)",
-        "Claude (Anthropic)",
-        "LLaMA (Meta)",
-        "Mistral AI",
+        "Gemini 2.5 Flash (Google)",
     ]
 
     # Common file extensions and directories to ignore
@@ -276,7 +271,8 @@ You can select multiple services or none."""
         Returns:
             True if any LLM service is in the selected services.
         """
-        llm_services = {"Gemini", "OpenAI/GPT", "Claude"}
+        # Currently only Gemini is implemented
+        llm_services = {"Gemini"}
         return any(service in selected_services for service in llm_services)
 
     def _configure_llm_preferences(self) -> None:
@@ -306,91 +302,24 @@ Note: This requires API keys for the selected AI services."""
             )
 
     def _select_ai_model_preferences(self) -> None:
-        """Allow user to select and prioritize AI models."""
-        msg = """Select your preferred AI models in order of preference.
+        """Allow user to configure AI model (currently only Gemini is supported)."""
+        # Store AI config in external_services under "llm" key
+        # Only Gemini is currently implemented, so no need for selection
+        self.external_services["llm"] = {
+            "allowed": True,
+            "model_preferences": ["Gemini 2.0 Flash (Google)"],
+        }
 
-The application will try models in the order you select them.
-If the first model is unavailable, it will fall back to the next one.
+        msg = """AI model configured: Gemini 2.0 Flash (Google)
 
-Default: Gemini (Google) is pre-selected as the first choice."""
+The application uses Gemini 2.0 Flash for AI-powered features including:
+- Automated resume bullet point generation
+- Project description enhancement
+- Skill analysis and recommendations
 
-        # Pre-select Gemini as default
-        selected = eg.multchoicebox(
-            msg=msg,
-            title="AI Model Preferences",
-            choices=self.AVAILABLE_AI_MODELS,
-            preselect=[0],  # Pre-select first item (Gemini)
-        )
+Make sure to set your GEMINI_API_KEY in the .env file."""
 
-        if selected and len(selected) > 0:
-            ai_model_preferences = selected
-
-            # If more than one model selected, let user set priority
-            if len(selected) > 1:
-                ai_model_preferences = self._set_model_priority(selected)
-
-            # Store AI config in external_services under "llm" key
-            self.external_services["llm"] = {
-                "allowed": True,
-                "model_preferences": ai_model_preferences,
-            }
-
-            eg.msgbox(
-                "AI models configured with priority order:\n\n"
-                + "\n".join([f"{i + 1}. {model}" for i, model in enumerate(ai_model_preferences)]),
-                title="AI Configuration Complete",
-            )
-        else:
-            # Default to Gemini if nothing selected
-            self.external_services["llm"] = {
-                "allowed": True,
-                "model_preferences": ["Gemini (Google)"],
-            }
-            eg.msgbox(
-                "No models selected. Defaulting to Gemini (Google).",
-                title="Default AI Model",
-            )
-
-    def _set_model_priority(self, selected_models: list[str]) -> list[str]:
-        """Allow user to set priority order for selected AI models.
-
-        Args:
-            selected_models: List of selected AI model names.
-
-        Returns:
-            List of models in priority order.
-        """
-        msg = """Set the priority order for your AI models.
-
-Select models one by one in your preferred order (highest priority first).
-The application will try them in this order if one fails or is unavailable."""
-
-        ordered_models: list[str] = []
-        remaining = selected_models.copy()
-
-        while remaining:
-            if len(remaining) == 1:
-                # Last item, just add it
-                ordered_models.append(remaining[0])
-                break
-
-            choice = eg.choicebox(
-                f"{msg}\n\nAlready selected ({len(ordered_models)}):\n"
-                + "\n".join([f"  {i + 1}. {m}" for i, m in enumerate(ordered_models)])
-                + f"\n\nSelect priority #{len(ordered_models) + 1}:",
-                title=f"Priority Selection ({len(ordered_models) + 1}/{len(selected_models)})",
-                choices=remaining,
-            )
-
-            if choice:
-                ordered_models.append(choice)
-                remaining.remove(choice)
-            else:
-                # User cancelled, keep remaining in original order
-                ordered_models.extend(remaining)
-                break
-
-        return ordered_models
+        eg.msgbox(msg, title="AI Configuration Complete")
 
     def _configure_ignore_patterns(self) -> list[str]:
         """Configure file and directory ignore patterns.
