@@ -281,6 +281,42 @@ Made big refactoring changes by adding a TUI into our workflow. Integrated indiv
 | Review PRs | ❌ Not Started    |  |
 | Polish Milestone 1 requirements | ❌ Not Started    |  |
 
+## Week 13 | December 1-5, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1605" height="939" alt="image" src="https://github.com/user-attachments/assets/c1c9f448-74cf-4ec8-9589-f38b8bbab908" />
+
+</details>
+
+### Task Progress this week
+
+Refactored the TUI to make the file less big, prepared for milestone presentation, presented milestone presentation, saw other milestone presentations, reviewed milestone presentations and discussed other teams' milestone presentations. reviewd PRs.
+
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Review PRs | ✅ Done     |  |
+| Learn about Tauri | ⏳ In Progress      | Need to choose between the Tauri python plugin, or an API first approach. |
+| Polish Milestone 1 requirements | ✅ Done    |  |
+
+
+### Next week's plans
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Review PRs | ❌ Not Started    |  |
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
