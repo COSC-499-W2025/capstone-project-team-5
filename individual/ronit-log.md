@@ -2,7 +2,35 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-_Last Updated:_ November 30, 2025
+_Last Updated:_ December 07, 2025
+
+---
+
+## Week 14 | December 01-07, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1071" height="628" alt="image" src="https://github.com/user-attachments/assets/45940ca9-b086-44b0-a35f-703f0ebefdaa" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Recorded + Edited video demo | ✅ Done | |
+| Added importance score breakdown to tui | ✅ Done | |
+| Conducted code reviews | ✅ Done | Ongoing task |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Refactor codebase | | | |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Complete video demo | ✅ Done | Video work for milestone #1 |
+| Complete milestone #1 submissions | ✅ Done | Video demo, team contract, self-reflection, deliverable, peer evaluation (of other teams) |
+| Continue code reviews | ✅ Done | Ongoing task |
 
 ---
 
