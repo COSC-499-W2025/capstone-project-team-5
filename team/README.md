@@ -21,6 +21,10 @@
   | Complete video demo for milestone #1 | ✅ Done | |
   | Conduct presentation in class |  ✅ Done | |
   | Finalize milestone #1 submissions |  ✅ Done | |
+  
+  ### Future Work
+  - Review suggestions from milestone 1 presentation
+  - Decide on improvements to be implemented and divide work
 
 </details>
 
