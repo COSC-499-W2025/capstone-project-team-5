@@ -1,5 +1,259 @@
 # Team Weekly Logs
 
+<details>
+  <summary><h3>Week 14 | November 30 - December 07 </h3></summary>
+
+  ### Burnup Chart
+
+<img width="1072" height="795" alt="image" src="https://github.com/user-attachments/assets/cf956aeb-be89-4c15-aa0a-5313186c71cd" />
+
+
+  ### Past Work
+  - Implemented LLM check in SKill detector
+  - Code Cleanup for Consent Tool
+  - Conducted in Class Presentation
+  - Completed Team contract
+  - Completed Video Demo
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Complete video demo for milestone #1 | ✅ Done | |
+  | Conduct presentation in class |  ✅ Done | |
+  | Finalize milestone #1 submissions |  ✅ Done | |
+
+</details>
+
+
+<details>
+  <summary><h3>Week 13 | November 24 - 30</h3></summary>
+
+  ### Burnup Chart
+  <img width="916" height="486" alt="image" src="https://github.com/user-attachments/assets/97201e1d-87d7-4463-8330-016745b3d823" />
+
+
+  ### Past Work
+  - Implemented language-agnostic test analysis pipeline and integrated testing metrics
+  - Enhanced and integrated Java, Python, and JS/TS language analyzers into CLI workflow with improved analysis depth
+  - Integrated code analysis logic flow and enhanced local resume bullet point generation
+  - Improved TUI with project/analysis retrieval features and enhanced UX/flow changes across the application
+  - Enhanced code analysis persistence layer with deletion logic and prepared presentation materials for milestone #1
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Integrating All Features | ✅ Done | Major integration work completed - language analyzers, test analysis, TUI features all integrated |
+  | Prepare for milestone 1 | 🚧 In Progress | Presentation materials completed, video demo and final submissions pending |
+
+  ### Upcoming Work
+  - Complete video demo for milestone #1
+  - Finalize milestone #1 submissions (team contract, self-reflection, deliverable, peer evaluation)
+  - Conduct presentation in class
+</details>
+
+<details>
+  <summary><h3>Week 12 | November 17 - 23</h3></summary>
+
+  ### Burnup Chart
+  <img width="930" height="675" alt="image" src="https://github.com/user-attachments/assets/51ee191e-da7b-45b9-bb2d-96d12522074b" />
+
+  ### Past Work
+  - Implemented deep analysis Java, C, C++, JS, TS, Python.
+  - Add project ranking based on user contributions
+  - Summarize top ranked projects
+  - Update consent tool for integration preparation
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Sync main with Develop |✅ Done | Need to get all PR's merged and sync this week. |
+  | Integrating All Features | In Progress | Primary focus for next week.
+  | Database | ✅ Done| Database set up and refactors for SQLAlchemy complete. |
+  | Refactoring to make codebase cleaner |  ✅ Done| Multiple services refactored. |
+
+  ### Upcoming Work
+  - Integrate all features and components, and prepare for milestone 1.
+</details>
+
+
+<details>
+  <summary><h3>Week 10 | November 3 - 7</h3></summary>
+
+  ### Burnup Chart
+  <img width="907" height="478" alt="image" src="https://github.com/user-attachments/assets/39edc7bc-c43d-4217-ab41-306b0716d71d" />
+
+  ### Past Work
+  - Merging develop and sync branches
+  - Extracting multiple projects from a single zip file
+  - Deletion of portfolio items
+  - Refactor to reduce coupling
+  - Refactor for sql alchemy 
+  - Retrieve previously generated resume item
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Sync main with Develop |✅ Done | Need to get all PR's merged and sync this week. |
+  | Integrating All Features | In Progress | Need to integrate all completed features into the main program.
+  | Database | ✅ Done| Database set up and refactors for SQLAlchemy complete. |
+  | Refactoring to make codebase cleaner |  ✅ Done| Multiple services refactored. |
+
+  ### Upcoming Work
+  - Integrate entire end to end flow, including all features.
+  - Start exploring deep-analysis, as mentioned in this week's email.
+</details>
+
+<details>
+  <summary><h3>Week 9 | October 27 - November 2</h3></summary>
+
+  ### Burnup Chart
+  ![screenshot](Week9_burnup.png)
+
+  ### Past Work
+  - Create Centralized LLM Service 
+  - Extract individual contributions from a collaborative project 
+  - Deletion of portfolio items
+  - Extract key project contribution metrics
+  - Refactor for sql alchemy 
+  - Detect and persist multiple projects from single ZIP upload
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Sync main with Develop | In Progress | Need to get all PR's merged and sync this week. |
+  | Integrating All Features | In Progress | Need to integrate all completed features into the main program.
+  | Database | ✅ Done| Database set up and refactors for SQLAlchemy complete. |
+
+  ### Upcoming Work
+  - Syncing main with develop needs to be done this upcoming sprint once all PR's are merged.
+  - Some features are complete but not involved in the main program. This week all completed features can be implemented in the main program.
+</details>
+
+<details>
+  <summary><h3>Week 8 | October 19-26, 2025</h3></summary>
+
+### Burnup Chart
+<img width="1005" height="600" alt="Week 8 Burnup Chart" src="https://github.com/user-attachments/assets/e0a99545-e7e9-4722-82bf-33cb1a1295f1" />
+
+
+### Past Work
+- Initial Python tooling setup with `uv`, `ruff`, `pytest`
+- CI/CD implementation
+- Framework/language detection implementation and improvements
+- Database and Database Schema Created
+- User configuration and consent input features further modified
+- Code contributions and PR reviews going as per requirements
+
+### Updates on Previous To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Retrieve previously generated portfolio (R15) | ✅ Done | Logic staged and to be merged following code review |
+| Detect collaborative projects tool | ✅ Done | Logic staged and to be merged following code review|
+| Database | in progress | Initial database and schema created; requires monitoring and expansion as needed |
+
+### Upcoming Work
+- Sync main branch with develop branch
+- Continue integration of modules into larger system
+- Database expansion/discussion
+- PR reviews and continued code contributions
+
+</details>
+
+---
+
+<details>
+  <summary><h3>Week 7 | October 12-19, 2025</h3></summary>
+
+### Burnup Chart
+<img width="1076" height="593" alt="image" src="https://github.com/user-attachments/assets/8116fc9f-3cda-42b6-900d-00e04582e7d0" />
+
+
+### Past Work
+- Initial Python tooling setup with `uv`, `ruff`, `pytest`
+- CI/CD implementation
+- Framework/language detection implementation and improvements
+- Database Schema Created
+- User configuration and consent input features further modified
+- Code contributions and PR reviews going as per requirements
+
+### Updates on Previous To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Output key project information (R13) | ✅ Done | Logic Staged and to be merged post suggestion changes |
+| Framework/language detection | ✅ Done | Initial version merged |
+| Database schema | in progress | Initial schema created and updated , still requires further clarity and discussion |
+| User configuration | In Progress | More contributions made pending discussion over DB |
+
+### Upcoming Work
+- Connecting further modules of our project to test functionality
+- Database expansion/ Discussion
+- PR reviews and continued code contributions
+
+</details>
+
+---
+
+<details>
+  <summary><h3>Week 6 | October 6-12, 2025</h3></summary>
+
+### Burnup Chart
+<img width="1200" height="864" alt="chart" src="https://github.com/user-attachments/assets/5b943c91-ef41-4047-993a-2a0de65e341f" />
+
+### Past Work
+- Revised WBS and finalized task distribution; populated Kanban board
+- Initial Python tooling setup with `uv`, `ruff`, `pytest`
+- Framework/language detection implementation
+- Database schema creation
+- User configuration and consent input features started
+- Code contributions and PR reviews initiated
+
+### Updates on Previous To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Populate Kanban/task board based on Milestone 1 requirements | ✅ Done | Initial tasks created and distributed |
+| Research Python integration with Tauri | ❌ Not Started | Deferred to later in Milestone 1 |
+| Framework/language detection | ✅ Done | Initial version merged |
+| Database schema | In Progress | Initial schema created |
+| User configuration | In Progress | Early contributions made |
+
+### Upcoming Work
+- Upload parsing specification and validation
+- Artifact extraction research
+- Database expansion
+- Output key project information (R13)
+- PR reviews and continued code contributions
+
+</details>
+
+---
+
+<details>
+  <summary><h3>Week 5 | September 30-October 4, 2025</h3></summary>
+
+## Milestones
+* Completed DFD design and iterated based on internal, external and professor feedback
+
+## What Went Well
+* Significantly better communication than last week
+* Increased team synergy - members are comfortable sharing opinions 
+
+## What Didn't Go Well
+* Ambiguity regarding the level of detail needed in DFD
+
+## Reflection Points
+* **Strengths**: Smooth and effective completion of required tasks
+* **Areas for Improvement**: Better workload distribution for weekly tasks
+
+## Plan for Next Cycle (Week 6)
+* Reviewing finalized set of requirements
+* Dividing tasks and responsibilities
+* Populating Kanban board
+* Researching deeper into finalized tech stack
+
+
+</details>
+
+---
 
 <details>
   <summary><h3>Week 4 | September 22-28, 2025</h3></summary>
@@ -56,3 +310,5 @@
 
 </details>
 
+
+---
