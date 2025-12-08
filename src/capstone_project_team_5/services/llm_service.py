@@ -8,6 +8,7 @@ from capstone_project_team_5.services.llm_providers import (
     GeminiProvider,
     LLMError,
     LLMProvider,
+    OpenAIProvider,
 )
 
 """LLM service with multi-provider support. (Gemini, OpenAI, Anthropic, etc.)"""
@@ -67,9 +68,8 @@ class LLMService:
 
         if provider_name == "gemini":
             return GeminiProvider()
-        # Future providers:
-        # elif provider_name == "openai":
-        #     return OpenAIProvider()
+        elif provider_name == "openai":
+            return OpenAIProvider()
         else:
             raise LLMError(f"Unknown LLM provider: {provider_name}.")
 
