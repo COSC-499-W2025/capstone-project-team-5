@@ -23,6 +23,7 @@ from textual.worker import Worker, WorkerState
 
 from capstone_project_team_5.cli import analyze_projects_structured
 from capstone_project_team_5.consent_tool import ConsentTool
+from capstone_project_team_5.contribution_metrics import ContributionMetrics
 from capstone_project_team_5.services import upload_zip
 from capstone_project_team_5.services.auth import authenticate_user, create_user
 from capstone_project_team_5.utils import prompt_for_zip_file
@@ -1311,6 +1312,12 @@ ProgressBar {
         score = proj.get("score")
         if score is not None:
             parts.append(f"- Importance score: {score:.1f}")
+            breakdown = proj.get("score_breakdown")
+            if isinstance(breakdown, dict) and breakdown:
+                parts.append("\n### Importance Score Breakdown")
+                parts.append("```")
+                parts.append(ContributionMetrics.format_score_breakdown(score, breakdown))
+                parts.append("```")
 
         parts.append("\n### Skills - Practices")
         if proj["practices"]:
