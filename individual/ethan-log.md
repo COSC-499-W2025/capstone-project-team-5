@@ -86,3 +86,13 @@ This week time was spent integrating past JS/TS specific language analysis featu
 | JS/TS Integration | Done | Fully integrated into project flow. |
 
 ![screenshot](Week13_checklist.png)
+
+## Week #14 (December 1 - December 7)
+
+Time this week was spent presenting in class on monday as well as creating the team contract and completing most of the required fields. Code contributions included enhancing previous JavaScript / TypeScript code analysis using AST analysis. This included updating the local JS bullet point generation to reflect the new analysis.
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| JS/TS AST Analysis | Done | Fully integrated into project flow. |
+
+![screenshot](Week14_checklist.png)
