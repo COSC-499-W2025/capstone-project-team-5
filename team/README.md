@@ -1,6 +1,35 @@
 # Team Weekly Logs
 
 <details>
+  <summary><h3>Week 14 | November 30 - December 07 </h3></summary>
+
+  ### Burnup Chart
+
+<img width="1072" height="795" alt="image" src="https://github.com/user-attachments/assets/cf956aeb-be89-4c15-aa0a-5313186c71cd" />
+
+
+  ### Past Work
+  - Implemented LLM check in SKill detector
+  - Code Cleanup for Consent Tool
+  - Conducted in Class Presentation
+  - Completed Team contract
+  - Completed Video Demo
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Complete video demo for milestone #1 | ✅ Done | |
+  | Conduct presentation in class |  ✅ Done | |
+  | Finalize milestone #1 submissions |  ✅ Done | |
+  
+  ### Future Work
+  - Review suggestions from milestone 1 presentation
+  - Decide on improvements to be implemented and divide work
+
+</details>
+
+
+<details>
   <summary><h3>Week 13 | November 24 - 30</h3></summary>
 
   ### Burnup Chart

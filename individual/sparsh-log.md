@@ -200,3 +200,19 @@ It was a busy week for me due to heavy midterm load and I was unable to be as in
 - **Code Contributions**: Integrated Code analysis logic flow and made local resume bullet points nore robust.
 ### TODOs for Next week 
 - **Finishing Touches**: Discuss with the team and work on any final remaining bugs or features before milestone 1 submission.
+
+## Week #14 (November 30 2025 - December 07 2025)
+<details>
+  <summary><h3>Evaluation</h3></summary
+<img width="1062" height="604" alt="image" src="https://github.com/user-attachments/assets/f0c6918b-5025-459a-a364-a54f8df40dbd" />
+
+</details>
+
+### Team Activities
+- **PR Actions**: Reviewed PRs and provided any feedback/suggestions necessary.
+- **Team Contract**: Worked and reviewed the team contract
+- **Presentation**: Did the final Presentation in Class
+
+### Personal Contributions
+
+- **Code Contributions**: Cleaned up consent tool code to better reflect the AI models being used.
