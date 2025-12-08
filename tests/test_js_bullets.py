@@ -92,6 +92,12 @@ class TestGenerateJSBullets:
             uses_typescript=True,
             uses_react=True,
             uses_nodejs=True,
+            avg_function_complexity=3.2,
+            custom_hooks_count=5,
+            oop_features={"Classes", "Encapsulation", "Inheritance"},
+            design_patterns={"Observer Pattern", "Factory Pattern"},
+            data_structures={"Map", "Set"},
+            algorithms_used={"Sorting", "Filtering"},
         )
 
         bullets = generate_js_bullets(summary, max_bullets=6)
@@ -102,24 +108,25 @@ class TestGenerateJSBullets:
         assert any("TypeScript" in b for b in bullets)
         assert any("React" in b for b in bullets)
         assert any("Node.js" in b for b in bullets)
-        assert any("45 files" in b for b in bullets)
+        assert any("45 files" in b or "87 functions" in b for b in bullets)
 
         assert any("User Authentication" in b for b in bullets)
         assert any("5 key features" in b or "features including" in b.lower() for b in bullets)
 
         assert any(
-            "React" in b and ("component" in b.lower() or "hooks" in b.lower()) for b in bullets
+            "React" in b and ("component" in b.lower() or "hooks" in b.lower() or "5 custom" in b)
+            for b in bullets
         )
 
         assert any("Prisma" in b and "PostgreSQL" in b for b in bullets)
         assert any("RESTful" in b or "API" in b for b in bullets)
 
-        assert any("Stripe" in b or "Auth0" in b for b in bullets)
-
         has_testing = any("Jest" in b for b in bullets)
         has_tooling = any("Vite" in b and "ESLint" in b for b in bullets)
         has_typescript = any("TypeScript" in b and "static typing" in b.lower() for b in bullets)
-        assert has_testing or has_tooling or has_typescript
+        has_oop = any("class" in b.lower() and "12" in b for b in bullets)
+        has_patterns = any("pattern" in b.lower() for b in bullets)
+        assert has_testing or has_tooling or has_typescript or has_oop or has_patterns
 
     def test_backend_only_nodejs(self):
         """Test bullets for backend-only Node.js project."""
@@ -140,6 +147,8 @@ class TestGenerateJSBullets:
             uses_typescript=True,
             uses_nodejs=True,
             uses_react=False,
+            avg_function_complexity=4.1,
+            uses_async_await=True,
         )
 
         bullets = generate_js_bullets(summary, max_bullets=6)
@@ -153,7 +162,9 @@ class TestGenerateJSBullets:
 
         assert any("Prisma" in b and "PostgreSQL" in b for b in bullets)
 
-        assert any("TypeScript" in b for b in bullets)
+        has_typescript = any("TypeScript" in b for b in bullets)
+        has_async = any("async" in b.lower() or "asynchronous" in b.lower() for b in bullets)
+        assert has_typescript or has_async
 
     def test_react_frontend_only(self):
         """Test bullets for frontend-only React project."""
@@ -176,6 +187,8 @@ class TestGenerateJSBullets:
             },
             uses_typescript=True,
             uses_react=True,
+            custom_hooks_count=8,
+            avg_function_complexity=2.8,
         )
 
         bullets = generate_js_bullets(summary, max_bullets=6)
@@ -183,7 +196,9 @@ class TestGenerateJSBullets:
         assert any("React" in b for b in bullets)
         assert any("Redux" in b for b in bullets)
 
-        assert any("component" in b.lower() for b in bullets)
+        has_components = any("component" in b.lower() for b in bullets)
+        has_hooks = any("8 custom" in b or "hooks" in b.lower() for b in bullets)
+        assert has_components or has_hooks
 
         assert any("responsive" in b.lower() or "Tailwind" in b for b in bullets)
 
@@ -263,6 +278,8 @@ class TestGenerateJSBullets:
             uses_typescript=True,
             uses_react=True,
             uses_nodejs=True,
+            avg_function_complexity=3.5,
+            custom_hooks_count=6,
         )
 
         # Test different limits
@@ -326,6 +343,46 @@ class TestGenerateJSBullets:
         # Check that "TypeScript" appears but not excessively
         typescript_count = sum(1 for b in bullets if "TypeScript" in b)
         assert 1 <= typescript_count <= 4  # Reasonable range
+
+    def test_async_await_bullet(self):
+        """Test that async/await usage generates appropriate bullets."""
+
+        summary = JSProjectSummary(
+            total_files=32,
+            total_functions=78,
+            tech_stack={
+                "backend": ["Node.js", "Express"],
+            },
+            features=["External API Integration"],
+            uses_nodejs=True,
+            uses_async_await=True,
+        )
+
+        bullets = generate_js_bullets(summary, max_bullets=6)
+
+        has_async = any("async" in b.lower() or "asynchronous" in b.lower() for b in bullets)
+        assert has_async, f"Expected async/await bullet. Got: {bullets}"
+
+    def test_custom_hooks_bullet(self):
+        """Test that custom React hooks generate appropriate bullets."""
+
+        summary = JSProjectSummary(
+            total_files=28,
+            total_functions=62,
+            total_classes=0,
+            tech_stack={
+                "frontend": ["TypeScript", "React 18"],
+            },
+            features=["State Management"],
+            uses_typescript=True,
+            uses_react=True,
+            custom_hooks_count=12,
+        )
+
+        bullets = generate_js_bullets(summary, max_bullets=6)
+
+        has_hooks = any("12 custom" in b and "hooks" in b.lower() for b in bullets)
+        assert has_hooks, f"Expected custom hooks bullet. Got: {bullets}"
 
 
 class TestGenerateJSProjectBullets:

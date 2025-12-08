@@ -4,6 +4,9 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
+
+import esprima
 
 from capstone_project_team_5.constants.js_ts_analysis_constants import (
     FEATURE_PATTERNS,
@@ -14,7 +17,7 @@ from capstone_project_team_5.constants.skill_detection_constants import SKIP_DIR
 
 @dataclass
 class JSProjectSummary:
-    """Summary of JS/TS project analysis - preserves rich analyzer output."""
+    """Summary of JS/TS project analysis."""
 
     total_files: int = 0
     total_lines_of_code: int = 0
@@ -22,9 +25,7 @@ class JSProjectSummary:
     total_classes: int = 0
 
     tech_stack: dict = field(default_factory=dict)
-
     features: list[str] = field(default_factory=list)
-
     integrations: dict = field(default_factory=dict)
     skills_demonstrated: list[str] = field(default_factory=list)
 
@@ -38,6 +39,264 @@ class JSProjectSummary:
     data_structures: set[str] = field(default_factory=set)
     algorithms_used: set[str] = field(default_factory=set)
 
+    total_imports: int = 0
+    total_exports: int = 0
+    avg_function_complexity: float = 0.0
+    max_function_complexity: int = 0
+    uses_async_await: bool = False
+    uses_promises: bool = False
+    custom_hooks_count: int = 0
+    oop_features: set[str] = field(default_factory=set)
+
+
+@dataclass
+class ASTMetrics:
+    """Metrics extracted from AST analysis."""
+
+    function_count: int = 0
+    class_count: int = 0
+    import_count: int = 0
+    export_count: int = 0
+    async_function_count: int = 0
+    arrow_function_count: int = 0
+    complexity_scores: list[int] = field(default_factory=list)
+    custom_hooks: set[str] = field(default_factory=set)
+    design_patterns: set[str] = field(default_factory=set)
+    uses_promises: bool = False
+
+
+class ASTAnalyzer:
+    """Handles AST-based code analysis for JavaScript/TypeScript."""
+
+    def __init__(self):
+        self.metrics = ASTMetrics()
+
+    def analyze_file(self, code: str, file_path: str) -> None:
+        """
+        Analyze a single file's AST.
+
+        Args:
+            code: Source code content
+            file_path: Path to the file (for context)
+        """
+
+        if file_path.endswith((".ts", ".tsx")):
+            code = self._strip_typescript_syntax(code)
+
+        try:
+            ast = esprima.parseModule(code, {"jsx": True, "tolerant": True})
+            ast_dict = ast.toDict()
+            self._traverse(ast_dict)
+
+        except Exception:
+            # Fallback to script mode if module fails
+            try:
+                ast = esprima.parseScript(code, {"jsx": True, "tolerant": True})
+                ast_dict = ast.toDict()
+                self._traverse(ast_dict)
+
+            except Exception:
+                # If parsing fails completely, skip this file
+                pass
+
+    def _strip_typescript_syntax(self, code: str) -> str:
+        """
+        Basic TypeScript syntax stripping for parsing.
+
+        Note: This is a best-effort approach. Complex TypeScript may still fail to parse.
+        """
+
+        # Remove import type statements
+        code = re.sub(r'import\s+type\s+.*?from\s+[\'"][^\'"]+[\'"];?', "", code)
+
+        # Remove type-only imports
+        code = re.sub(r'import\s*\{\s*type\s+[^}]+\}\s*from\s+[\'"][^\'"]+[\'"];?', "", code)
+
+        # Remove interface declarations
+        code = re.sub(r"interface\s+\w+\s*\{[^}]*\}", "", code, flags=re.DOTALL)
+
+        # Remove type aliases
+        code = re.sub(r"type\s+\w+\s*=\s*[^;]+;", "", code)
+
+        # Remove generic type parameters from function/class declarations
+        code = re.sub(r"<[A-Z]\w*(?:\s*,\s*[A-Z]\w*)*>(?=\s*\()", "", code)
+
+        # Remove return type annotations: ): Type {
+        code = re.sub(r"\):\s*\w+(?:\[\])?(?:\s*\|\s*\w+)*\s*\{", ") {", code)
+
+        # Remove parameter type annotations: (param: Type)
+        code = re.sub(r":\s*\w+(?:\[\])?(?:\s*\|\s*\w+)*(?=\s*[,\)])", "", code)
+
+        # Remove variable type annotations: const x: Type =
+        code = re.sub(r":\s*\w+(?:\[\])?(?:\s*\|\s*\w+)*(?=\s*=)", "", code)
+
+        # Remove type assertions: as Type
+        code = re.sub(r"\s+as\s+\w+", "", code)
+
+        # Remove angle bracket type assertions: <Type>
+        code = re.sub(r"<\w+>", "", code)
+
+        # Remove readonly, public, private, protected modifiers
+        code = re.sub(r"\b(readonly|public|private|protected)\s+", "", code)
+
+        # Remove implements clause
+        code = re.sub(r"\s+implements\s+\w+(?:\s*,\s*\w+)*", "", code)
+
+        return code
+
+    def _traverse(self, node: Any, parent: Any = None) -> None:
+        """Recursively traverse AST nodes."""
+
+        if not isinstance(node, dict) or "type" not in node:
+            return
+
+        node_type = node["type"]
+
+        # Count functions
+        if node_type in ("FunctionDeclaration", "FunctionExpression"):
+            self.metrics.function_count += 1
+            complexity = self._calculate_complexity(node)
+            self.metrics.complexity_scores.append(complexity)
+
+            if node.get("async"):
+                self.metrics.async_function_count += 1
+
+            # Detect custom React hooks
+            func_name = node.get("id", {}).get("name", "")
+            if func_name.startswith("use") and len(func_name) > 3 and func_name[3].isupper():
+                self.metrics.custom_hooks.add(func_name)
+
+        elif node_type == "ArrowFunctionExpression":
+            self.metrics.arrow_function_count += 1
+            self.metrics.function_count += 1
+            complexity = self._calculate_complexity(node)
+            self.metrics.complexity_scores.append(complexity)
+
+            if node.get("async"):
+                self.metrics.async_function_count += 1
+
+        elif node_type == "ClassDeclaration":
+            self.metrics.class_count += 1
+            self._detect_class_patterns(node)
+
+        elif node_type in ("ImportDeclaration", "ImportExpression"):
+            self.metrics.import_count += 1
+
+        elif node_type in (
+            "ExportNamedDeclaration",
+            "ExportDefaultDeclaration",
+            "ExportAllDeclaration",
+        ):
+            self.metrics.export_count += 1
+
+        elif node_type == "CallExpression":
+            self._detect_call_patterns(node)
+            self._detect_promise_usage(node)
+
+        # Traverse children
+        for _key, value in node.items():
+            if isinstance(value, dict):
+                self._traverse(value, node)
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        self._traverse(item, node)
+
+    def _calculate_complexity(self, func_node: dict) -> int:
+        """Calculate cyclomatic complexity of a function."""
+
+        complexity = 1
+
+        def count_complexity(node):
+            nonlocal complexity
+
+            if not isinstance(node, dict):
+                return
+
+            node_type = node.get("type")
+
+            if (
+                node_type
+                in (
+                    "IfStatement",
+                    "ConditionalExpression",
+                    "WhileStatement",
+                    "ForStatement",
+                    "ForInStatement",
+                    "ForOfStatement",
+                    "CatchClause",
+                    "SwitchCase",
+                )
+                or node_type == "LogicalExpression"
+                and node.get("operator") in ("&&", "||")
+            ):
+                complexity += 1
+
+            for value in node.values():
+                if isinstance(value, dict):
+                    count_complexity(value)
+                elif isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, dict):
+                            count_complexity(item)
+
+        count_complexity(func_node)
+        return complexity
+
+    def _detect_class_patterns(self, class_node: dict) -> None:
+        """Detect design patterns in class structure."""
+
+        body = class_node.get("body", {})
+        class_body = body.get("body", [])
+
+        method_names = set()
+        has_get_instance = False
+
+        for item in class_body:
+            if item.get("type") == "MethodDefinition":
+                key = item.get("key", {})
+                name = key.get("name", "")
+                method_names.add(name)
+
+                if name in ("getInstance", "instance"):
+                    has_get_instance = True
+
+        if has_get_instance:
+            self.metrics.design_patterns.add("Singleton Pattern")
+
+        if any(name.startswith("create") for name in method_names):
+            self.metrics.design_patterns.add("Factory Pattern")
+
+    def _detect_call_patterns(self, call_node: dict) -> None:
+        """Detect patterns in function calls."""
+
+        callee = call_node.get("callee", {})
+
+        if callee.get("type") == "MemberExpression":
+            prop = callee.get("property", {})
+            method_name = prop.get("name", "")
+
+            if method_name in ("addEventListener", "on", "subscribe", "observe"):
+                self.metrics.design_patterns.add("Observer Pattern")
+            elif method_name in ("map", "filter", "reduce"):
+                self.metrics.design_patterns.add("Functional Programming Pattern")
+
+    def _detect_promise_usage(self, call_node: dict) -> None:
+        """Detect Promise usage patterns."""
+
+        callee = call_node.get("callee", {})
+
+        # new Promise()
+        if callee.get("name") == "Promise":
+            self.metrics.uses_promises = True
+
+        # .then(), .catch(), .finally()
+        if callee.get("type") == "MemberExpression":
+            prop = callee.get("property", {})
+            method_name = prop.get("name", "")
+            if method_name in ("then", "catch", "finally"):
+                self.metrics.uses_promises = True
+
 
 def analyze_js_project(
     project_path: Path, language: str, framework: str | None
@@ -45,11 +304,13 @@ def analyze_js_project(
     """
     Analyze a JS/TS project and return unified summary.
 
-    This wraps the JSTSAnalyzer and preserves all its rich output
-    while providing compatibility with the unified analysis system.
+    This is the main entry point that maintains backward compatibility
+    with existing code while providing enhanced AST-based analysis.
 
     Args:
         project_path: Path to the project directory
+        language: Detected language (JavaScript/TypeScript)
+        framework: Detected framework (React/Vue/etc.)
 
     Returns:
         JSProjectSummary with all analysis data
@@ -61,6 +322,27 @@ def analyze_js_project(
     results = analyzer.analyze()
 
     summary = JSProjectSummary()
+
+    # Basic metrics
+    summary.total_files = _count_js_files(project_path)
+    summary.total_lines_of_code = _count_lines_of_code(analyzer.all_code_content)
+
+    # AST-based metrics
+    summary.total_functions = results.get("function_count", 0)
+    summary.total_classes = results.get("class_count", 0)
+    summary.total_imports = results.get("import_count", 0)
+    summary.total_exports = results.get("export_count", 0)
+    summary.custom_hooks_count = results.get("custom_hooks_count", 0)
+    summary.uses_async_await = results.get("uses_async_await", False)
+    summary.uses_promises = results.get("uses_promises", False)
+
+    # Complexity metrics
+    complexity_scores = results.get("complexity_scores", [])
+    if complexity_scores:
+        summary.avg_function_complexity = sum(complexity_scores) / len(complexity_scores)
+        summary.max_function_complexity = max(complexity_scores)
+
+    # Tech stack and features
     summary.tech_stack = results.get("tech_stack", {})
     summary.features = results.get("features", [])
     summary.integrations = results.get("integrations", {})
@@ -76,6 +358,10 @@ def analyze_js_project(
     summary.uses_angular = any("Angular" in item for item in frontend)
     summary.uses_nodejs = any("Node.js" in item for item in backend)
 
+    # Design patterns
+    summary.design_patterns = results.get("design_patterns", set())
+
+    # Map features to design patterns
     feature_to_pattern = {
         "State Management": "State Management Pattern",
         "User Authentication": "Authentication Pattern",
@@ -88,20 +374,56 @@ def analyze_js_project(
         if feature in feature_to_pattern:
             summary.design_patterns.add(feature_to_pattern[feature])
 
-    summary.total_files = _count_js_files(project_path)
-    summary.total_lines_of_code = _count_lines_of_code(analyzer.all_code_content)
+    # Detect OOP features
+    if summary.total_classes > 0:
+        summary.oop_features.add("Classes")
+        summary.oop_features.add("Encapsulation")
+
+        if re.search(r"extends\s+\w+", analyzer.all_code_content):
+            summary.oop_features.add("Inheritance")
+
+        if summary.uses_typescript and re.search(r"implements\s+\w+", analyzer.all_code_content):
+            summary.oop_features.add("Interfaces")
+
+    # Detect data structures
+    data_structure_patterns = {
+        r"\bMap\s*\(": "Map",
+        r"\bSet\s*\(": "Set",
+        r"\bWeakMap\s*\(": "WeakMap",
+        r"\bWeakSet\s*\(": "WeakSet",
+        r"\.push\s*\(|\.pop\s*\(": "Array/Stack",
+        r"\.shift\s*\(|\.unshift\s*\(": "Queue",
+    }
+
+    for pattern, structure in data_structure_patterns.items():
+        if re.search(pattern, analyzer.all_code_content):
+            summary.data_structures.add(structure)
+
+    # Detect algorithms
+    algorithm_patterns = {
+        r"\.sort\s*\(": "Sorting",
+        r"\.filter\s*\(": "Filtering",
+        r"\.reduce\s*\(": "Reduction/Aggregation",
+        r"\.map\s*\(": "Mapping/Transformation",
+        r"recursiv|factorial": "Recursion",
+        r"memoize|cache": "Memoization",
+        r"debounce|throttle": "Debouncing/Throttling",
+    }
+
+    for pattern, algorithm in algorithm_patterns.items():
+        if re.search(pattern, analyzer.all_code_content, re.IGNORECASE):
+            summary.algorithms_used.add(algorithm)
 
     return summary
 
 
 def _count_js_files(project_path: Path) -> int:
     """Count JS/TS files in project."""
-    from capstone_project_team_5.constants.skill_detection_constants import SKIP_DIRS
 
     extensions = {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"}
     count = 0
 
-    for _root, dirs, files in project_path.walk():
+    for _root, dirs, files in os.walk(project_path):
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
         count += sum(1 for f in files if Path(f).suffix in extensions)
 
@@ -110,6 +432,7 @@ def _count_js_files(project_path: Path) -> int:
 
 def _count_lines_of_code(code_content: str) -> int:
     """Count non-empty lines of code."""
+
     if not code_content:
         return 0
     return sum(1 for line in code_content.split("\n") if line.strip())
@@ -118,13 +441,12 @@ def _count_lines_of_code(code_content: str) -> int:
 class JSTSAnalyzer:
     """
     Analyzes JS/TS projects for resume-relevant skills and features.
-    Can be called after detecting a project as JS/TS project.
+    Uses both AST analysis and pattern matching for comprehensive results.
     """
 
     def __init__(self, project_path: str, existing_content: dict):
         """
-        Initialize analyzer with project path and existing detection results
-        for language and framework.
+        Initialize analyzer with project path and existing detection results.
 
         Args:
             project_path: Root directory of the JS/TS project.
@@ -133,44 +455,56 @@ class JSTSAnalyzer:
 
         self.project_path = Path(project_path)
         self.context = existing_content
-        self.package_jsons = []  # List of found package.json files to account for multiple
-        self.merged_dependencies = {}  # Combined dependencies from all package.json
+        self.package_jsons = []
+        self.merged_dependencies = {}
         self.all_code_content = ""
+        self.ast_analyzer = ASTAnalyzer()
 
     def analyze(self) -> dict:
         """
         Main analysis method - extracts all resume-relevant information.
 
         Returns:
-            dict: Tech stack, features, integrations and skills.
+            dict: Metrics, tech stack, features, integrations, and patterns.
         """
 
         self._load_package_json()
-        self._load_code_content()
+        self._load_and_analyze_code()
 
         tech_stack = self._extract_tech_stack()
         features = self._detect_features()
         integrations = self._detect_integrations()
 
-        skills = self._generate_skills_list(
-            tech_stack=tech_stack, features=features, integrations=integrations
-        )
-
-        return {
+        result = {
             "tech_stack": tech_stack,
             "features": features,
             "integrations": integrations,
-            "skills_demonstrated": skills,
+            "skills_demonstrated": self._generate_skills_list(tech_stack, features, integrations),
+            "design_patterns": set(),
         }
 
+        if self.ast_analyzer:
+            metrics = self.ast_analyzer.metrics
+            result.update(
+                {
+                    "function_count": metrics.function_count,
+                    "class_count": metrics.class_count,
+                    "import_count": metrics.import_count,
+                    "export_count": metrics.export_count,
+                    "uses_async_await": metrics.async_function_count > 0,
+                    "uses_promises": metrics.uses_promises,
+                    "custom_hooks_count": len(metrics.custom_hooks),
+                    "complexity_scores": metrics.complexity_scores,
+                    "design_patterns": metrics.design_patterns,
+                }
+            )
+
+        return result
+
     def _load_package_json(self):
-        """
-        Load and parse all package.json files in the project.
-        Handles monorepos and multi-package projects.
-        """
+        """Load and parse all package.json files in the project."""
 
         package_files = list(self.project_path.rglob("package.json"))
-
         package_files = [f for f in package_files if "node_modules" not in f.parts]
 
         if not package_files:
@@ -183,7 +517,6 @@ class JSTSAnalyzer:
             try:
                 with open(package_path, encoding="utf-8") as f:
                     pkg_data = json.load(f)
-
                     deps = pkg_data.get("dependencies", {})
                     dev_deps = pkg_data.get("devDependencies", {})
 
@@ -193,14 +526,13 @@ class JSTSAnalyzer:
                     self.package_jsons.append(
                         {"path": str(package_path.relative_to(self.project_path)), "data": pkg_data}
                     )
-
             except (OSError, json.JSONDecodeError):
                 continue
 
         self.merged_dependencies = {"dependencies": all_deps, "devDependencies": all_dev_deps}
 
-    def _load_code_content(self):
-        """Loads all JS/TS code content for pattern matching."""
+    def _load_and_analyze_code(self):
+        """Load all JS/TS code and perform AST analysis."""
 
         code_extensions = {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"}
         code_files = []
@@ -213,20 +545,19 @@ class JSTSAnalyzer:
                     file_path = Path(root) / file
                     try:
                         with open(file_path, encoding="utf-8", errors="ignore") as f:
-                            code_files.append(f.read())
+                            code_content = f.read()
+                            code_files.append(code_content)
+
+                            # Perform AST analysis on each file
+                            if self.ast_analyzer:
+                                self.ast_analyzer.analyze_file(code_content, str(file_path))
                     except Exception:
-                        # Ignore error and continue to process
                         continue
 
         self.all_code_content = "\n".join(code_files)
 
     def _extract_tech_stack(self) -> dict:
-        """
-        Extracts technology stack from package.json and project structure.
-
-        Returns:
-            dict: Containing frontend, backend, database, testing and tools.
-        """
+        """Extract technology stack from package.json."""
 
         deps = self.merged_dependencies.get("dependencies", {})
         dev_deps = self.merged_dependencies.get("devDependencies", {})
@@ -250,7 +581,6 @@ class JSTSAnalyzer:
         """Detect frontend technologies."""
 
         stack = []
-
         language = self.context.get("language", "")
 
         if language == "TypeScript":
@@ -259,10 +589,8 @@ class JSTSAnalyzer:
             stack.append("JavaScript")
 
         framework = self.context.get("framework", "")
-
         if framework and framework in ["React", "Vue", "Angular", "Svelte", "Next.js"]:
             stack.append(framework)
-        # Always check deps for frontend framework, even if a backend framework is detected
 
         if "react" in all_deps and "React" not in " ".join(stack):
             version = all_deps["react"].replace("^", "").replace("~", "")
@@ -275,26 +603,32 @@ class JSTSAnalyzer:
             stack.append("Svelte")
 
         # UI Libraries
-        if "@mui/material" in all_deps or "@material-ui/core" in all_deps:
-            stack.append("Material-UI")
-        if "antd" in all_deps:
-            stack.append("Ant Design")
-        if "tailwindcss" in all_deps:
-            stack.append("Tailwind CSS")
-        if "bootstrap" in all_deps or "react-bootstrap" in all_deps:
-            stack.append("Bootstrap")
-        if "@chakra-ui/react" in all_deps:
-            stack.append("Chakra UI")
+        ui_libs = {
+            "@mui/material": "Material-UI",
+            "@material-ui/core": "Material-UI",
+            "antd": "Ant Design",
+            "tailwindcss": "Tailwind CSS",
+            "bootstrap": "Bootstrap",
+            "react-bootstrap": "Bootstrap",
+            "@chakra-ui/react": "Chakra UI",
+        }
+
+        for pkg, name in ui_libs.items():
+            if pkg in all_deps and name not in stack:
+                stack.append(name)
 
         # State Management
-        if "redux" in all_deps or "@reduxjs/toolkit" in all_deps:
-            stack.append("Redux")
-        if "mobx" in all_deps:
-            stack.append("MobX")
-        if "zustand" in all_deps:
-            stack.append("Zustand")
-        if "recoil" in all_deps:
-            stack.append("Recoil")
+        state_mgmt = {
+            "redux": "Redux",
+            "@reduxjs/toolkit": "Redux",
+            "mobx": "MobX",
+            "zustand": "Zustand",
+            "recoil": "Recoil",
+        }
+
+        for pkg, name in state_mgmt.items():
+            if pkg in all_deps and name not in stack:
+                stack.append(name)
 
         return stack
 
@@ -302,7 +636,6 @@ class JSTSAnalyzer:
         """Detect backend technologies."""
 
         stack = []
-
         backend_frameworks = {
             "express": "Express",
             "fastify": "Fastify",
@@ -312,13 +645,11 @@ class JSTSAnalyzer:
         }
 
         nodejs_detected = False
-
         for pkg_name, display_name in backend_frameworks.items():
             if pkg_name in all_deps:
                 stack.append(display_name)
                 nodejs_detected = True
 
-        # Add Node.js runtime if backend framework detected
         if nodejs_detected:
             stack.insert(0, "Node.js")
 
@@ -336,47 +667,44 @@ class JSTSAnalyzer:
 
         stack = []
 
-        # ORMs/Query Builders
-        if "@prisma/client" in all_deps or "prisma" in all_deps:
-            stack.append("Prisma")
-        if "mongoose" in all_deps:
-            stack.append("MongoDB (Mongoose)")
-        if "typeorm" in all_deps:
-            stack.append("TypeORM")
-        if "sequelize" in all_deps:
-            stack.append("Sequelize")
-        if "knex" in all_deps:
-            stack.append("Knex.js")
+        db_tools = {
+            "@prisma/client": "Prisma",
+            "prisma": "Prisma",
+            "mongoose": "MongoDB (Mongoose)",
+            "typeorm": "TypeORM",
+            "sequelize": "Sequelize",
+            "knex": "Knex.js",
+            "pg": "PostgreSQL",
+            "mysql": "MySQL",
+            "mysql2": "MySQL",
+            "mongodb": "MongoDB",
+            "redis": "Redis",
+        }
 
-        # Database drivers
-        if "pg" in all_deps:
-            stack.append("PostgreSQL")
-        if "mysql" in all_deps or "mysql2" in all_deps:
-            stack.append("MySQL")
-        if "mongodb" in all_deps:
-            stack.append("MongoDB")
-        if "redis" in all_deps:
-            stack.append("Redis")
+        for pkg, name in db_tools.items():
+            if pkg in all_deps and name not in stack:
+                stack.append(name)
 
         return stack
 
     def _detect_testing_stack(self, all_deps: dict) -> list[str]:
-        """Detect testing framework and tools."""
+        """Detect testing frameworks and tools."""
 
         stack = []
 
-        if "jest" in all_deps:
-            stack.append("Jest")
-        if "mocha" in all_deps:
-            stack.append("Mocha")
-        if "vitest" in all_deps:
-            stack.append("Vitest")
-        if "cypress" in all_deps:
-            stack.append("Cypress")
-        if "@playwright/test" in all_deps or "playwright" in all_deps:
-            stack.append("Playwright")
-        if "@testing-library/react" in all_deps:
-            stack.append("React Testing Library")
+        testing_tools = {
+            "jest": "Jest",
+            "mocha": "Mocha",
+            "vitest": "Vitest",
+            "cypress": "Cypress",
+            "@playwright/test": "Playwright",
+            "playwright": "Playwright",
+            "@testing-library/react": "React Testing Library",
+        }
+
+        for pkg, name in testing_tools.items():
+            if pkg in all_deps and name not in stack:
+                stack.append(name)
 
         return stack
 
@@ -385,30 +713,24 @@ class JSTSAnalyzer:
 
         tools = []
 
-        if "vite" in all_deps:
-            tools.append("Vite")
-        if "webpack" in all_deps:
-            tools.append("Webpack")
-        if "rollup" in all_deps:
-            tools.append("Rollup")
-        if "parcel" in all_deps:
-            tools.append("Parcel")
-        if "eslint" in all_deps:
-            tools.append("ESLint")
-        if "prettier" in all_deps:
-            tools.append("Prettier")
-        if "typescript" in all_deps:
-            tools.append("TypeScript Compiler")
+        build_tools = {
+            "vite": "Vite",
+            "webpack": "Webpack",
+            "rollup": "Rollup",
+            "parcel": "Parcel",
+            "eslint": "ESLint",
+            "prettier": "Prettier",
+            "typescript": "TypeScript Compiler",
+        }
+
+        for pkg, name in build_tools.items():
+            if pkg in all_deps and name not in tools:
+                tools.append(name)
 
         return tools
 
     def _detect_features(self) -> list[str]:
-        """
-        Detect implemented features by scanning code patterns.
-
-        Returns:
-            List of feature names that were detected
-        """
+        """Detect implemented features by scanning code patterns."""
 
         detected_features = []
 
@@ -444,7 +766,7 @@ class JSTSAnalyzer:
         return mapping.get(feature_key, feature_key.replace("_", " ").title())
 
     def _detect_integrations(self) -> dict[str, list[str]]:
-        """Detect third party service integrations."""
+        """Detect third-party service integrations."""
 
         if not self.merged_dependencies:
             return {}
@@ -464,18 +786,14 @@ class JSTSAnalyzer:
     def _generate_skills_list(
         self, tech_stack: dict, features: list[str], integrations: dict
     ) -> list[str]:
-        """
-        Generate comprehensive skills list for resume.
-
-        Combines tech stack, features, and integrations into a single
-        list of demonstrable skills.
-        """
+        """Generate comprehensive skills list for resume."""
 
         skills = set()
 
         for _category, items in tech_stack.items():
             skills.update(items)
 
+        # Map integration categories to skills
         integration_skills_map = {
             "payment": "Payment Integration",
             "auth": "Authentication & Authorization",
@@ -489,6 +807,7 @@ class JSTSAnalyzer:
             if category in integration_skills_map:
                 skills.add(integration_skills_map[category])
 
+        # Map features to skills
         feature_skills_map = {
             "User Authentication": "Authentication & Authorization",
             "Payment Processing": "Payment Integration",

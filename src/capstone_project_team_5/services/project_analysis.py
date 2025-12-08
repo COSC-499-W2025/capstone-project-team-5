@@ -365,6 +365,52 @@ def _analyze_js_project(analysis: ProjectAnalysis) -> None:
         if summary.integrations:
             analysis.language_analysis["js_ts_integrations"] = summary.integrations
 
+        if summary.total_classes > 0:
+            analysis.class_count = summary.total_classes
+            analysis.oop_features.update(summary.oop_features)
+
+        analysis.function_count = summary.total_functions
+        analysis.data_structures.update(summary.data_structures)
+        analysis.algorithms.update(summary.algorithms_used)
+
+        analysis.language_analysis["ast_metrics"] = {
+            "function_count": summary.total_functions,
+            "class_count": summary.total_classes,
+            "import_count": summary.total_imports,
+            "export_count": summary.total_exports,
+            "avg_complexity": summary.avg_function_complexity,
+            "max_complexity": summary.max_function_complexity,
+            "custom_hooks": summary.custom_hooks_count,
+        }
+
+        if summary.uses_async_await:
+            analysis.technical_features.add("Asynchronous Programming")
+
+        if summary.custom_hooks_count > 0:
+            analysis.technical_features.add("Custom React Hooks")
+
+        if summary.total_imports > 20:
+            analysis.technical_features.add("Modular Architecture")
+
+        if summary.total_classes > 0:
+            oop_feature_count = len(summary.oop_features)
+            class_ratio = min(1.0, summary.total_classes / max(1, summary.total_functions))
+            analysis.oop_score = min(10.0, (oop_feature_count * 2) + (class_ratio * 4))
+
+        if summary.max_function_complexity > 10:
+            analysis.technical_features.add("Complex Business Logic")
+        elif summary.avg_function_complexity < 3:
+            analysis.practices.add("Simple, Maintainable Code")
+
+        if "Recursion" in summary.algorithms_used:
+            analysis.technical_features.add("Recursive Algorithms")
+
+        if "Memoization" in summary.algorithms_used:
+            analysis.technical_features.add("Performance Optimization")
+
+        if summary.avg_function_complexity > 0:
+            analysis.complexity_score = min(10.0, summary.avg_function_complexity)
+
     except ImportError:
         # JS analyzer not available, skip
         pass
