@@ -47,7 +47,7 @@ class ConsentTool:
     # Available AI models for LLM features
     # Note: Currently only Gemini is implemented in the codebase
     AVAILABLE_AI_MODELS: list[str] = [
-        "Gemini 2.0 Flash (Google)",
+        "Gemini 2.5 Flash (Google)",
     ]
 
     # Common file extensions and directories to ignore
