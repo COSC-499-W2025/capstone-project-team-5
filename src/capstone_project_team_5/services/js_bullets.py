@@ -241,7 +241,7 @@ def _get_scale_metrics(summary: JSProjectSummary) -> str:
     if summary.total_files > 0:
         metrics.append(f"{summary.total_files} files")
 
-    if summary.total_functions > 20 or summary.total_functions > 0:
+    if summary.total_functions > 20:
         metrics.append(f"{summary.total_functions} functions")
 
     if summary.total_lines_of_code > 1000:
