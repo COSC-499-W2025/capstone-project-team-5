@@ -212,7 +212,7 @@ This week we spent integrating code, and preparing for next week's presentation.
 
 <details>
   <summary><h3></h3></summary>
-
+<img alt="Screenshot 2025-12-07 173146" src="https://github.com/user-attachments/assets/c347da22-1aed-4f29-8b24-7ce667a01380" />
 
 
 This week was spent wrapping up Milestone #1. We prepared and conducted our Presentation, watched other teams and completed Peer Evaluations, wrote and signed the Team Contract, and created the Video Demo. Individually, my main focus was writing up the Team Contract. Next week is the start of Christmas holidays, and so nothing is explicitly planned.
