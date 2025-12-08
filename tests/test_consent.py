@@ -37,10 +37,10 @@ def test_select_external_services_with_selections() -> None:
     consent_tool = ConsentTool()
 
     # Mock multchoicebox to return selected services
-    with patch("easygui.multchoicebox", return_value=["GitHub API", "OpenAI/GPT"]):
+    with patch("easygui.multchoicebox", return_value=["GitHub API", "Gemini"]):
         selected = consent_tool._select_external_services()
 
-    assert selected == ["GitHub API", "OpenAI/GPT"]
+    assert selected == ["GitHub API", "Gemini"]
 
 
 def test_select_external_services_with_no_selections() -> None:
