@@ -207,3 +207,27 @@ This week we spent integrating code, and preparing for next week's presentation.
 | Further Planning | In Progress | Discuss next steps following the presentation. |
 | Team Contract | In Progress | Write and sign the Team Contract due at the end of semester. |
 </details>
+
+## Week 14 | 30 November - 07 December 2025
+
+<details>
+  <summary><h3></h3></summary>
+
+
+
+This week was spent wrapping up Milestone #1. We prepared and conducted our Presentation, watched other teams and completed Peer Evaluations, wrote and signed the Team Contract, and created the Video Demo. Individually, my main focus was writing up the Team Contract. Next week is the start of Christmas holidays, and so nothing is explicitly planned.
+
+### Previous Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Presentations | Completed | Conduct presentations in class. |
+| Further Planning | Completed | Discuss next steps following the presentation. |
+| Team Contract | Completed | Write and sign the Team Contract due at the end of semester. |
+| Video Demo | Compelted | Create the video demo for milestone #1. |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Holidays | Not Yet Started | Drink rum and egg nog. |
+</details>
