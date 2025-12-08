@@ -232,16 +232,24 @@
   <summary><h3>December</h3></summary>
 
 <details>
-  <summary><h3>Week X</h3></summary>
+  <summary><h3>Week 14</h3></summary>
+
+  <img width="1146" height="625" alt="image" src="https://github.com/user-attachments/assets/ddc3bb6e-e068-4ad7-8819-67bfdd2a5d67" />
+
 
 ### What Went Well
-  - 
+  - Presented Milestone 1
+  - Integrated consent tool check ebfore using LLM for skill detetction
+  - Refactored "Skills" section in TUI to split it into tools and practices, for better UX
+  - Implemenetd Skills ORM to track skills over time
+  - Reviewed PRs :)
 
   ### What Didn't Go Well
-  - 
+  - All good :)
 
-  ### Planning for Next Week
-  - 
+  ### Planning for Next Term
+  - Review more PRs
+  - Discuss sugegstions from milestone 1 with team
 </details>
 
 ---
