@@ -175,7 +175,9 @@ def render_saved_list(saved: list[dict[str, Any]]) -> str:
         parts.append(f"## Upload: {up.get('filename')}  ")
         parts.append(f"- **ID**: {up.get('id')}  ")
         parts.append(f"- **Files**: {up.get('file_count')}  ")
-        parts.append(f"- **Size**: {up.get('size_bytes'):,} bytes  ")
+        size = up.get("size_bytes")
+        size_str = f"{size:,}" if isinstance(size, int) else "unknown"
+        parts.append(f"- **Size**: {size_str} bytes  ")
         parts.append(f"- **Created**: {up.get('created_at')}  ")
         projects = up.get("projects", [])
         if not projects:
