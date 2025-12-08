@@ -61,3 +61,5 @@ As we have yet to receive feedback for the Data Flow Diagram, we were unable to 
 
 
 ---
+
+### [Team Contract]([url](https://github.com/COSC-499-W2025/capstone-project-team-5/blob/team-contract/docs/contract/Capstone%20Team%205%20Contract.pdf))
