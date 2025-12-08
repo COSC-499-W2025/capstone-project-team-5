@@ -134,6 +134,11 @@ def test_fullstack_react_express_project(tmp_path):
     )
     assert "Authentication & Authorization" in skills
 
+    assert "function_count" in result
+    assert "class_count" in result
+    assert result["function_count"] >= 0
+    assert result["class_count"] >= 0
+
 
 def test_nextjs_project_with_integrations(tmp_path):
     """
@@ -233,6 +238,11 @@ def test_nextjs_project_with_integrations(tmp_path):
     assert "Real-time Communication" in skills
     assert "Cloud Services" in skills
 
+    assert "function_count" in result
+    assert "class_count" in result
+    assert "uses_async_await" in result
+    assert isinstance(result.get("function_count", 0), int)
+
 
 def test_edge_case_no_package_json(tmp_path):
     """Test graceful handling when no package.json exists"""
@@ -243,12 +253,14 @@ def test_edge_case_no_package_json(tmp_path):
     analyzer = JSTSAnalyzer(str(tmp_path), context)
     result = analyzer.analyze()
 
-    # Should return empty but valid structure
     assert "tech_stack" in result
     assert "features" in result
     assert "integrations" in result
     assert "skills_demonstrated" in result
     assert isinstance(result["tech_stack"], dict)
+
+    assert "function_count" in result
+    assert "class_count" in result
 
 
 def test_node_modules_ignored(tmp_path):
@@ -374,6 +386,7 @@ def test_skills_generation(tmp_path):
 
 def test_integration_detection(tmp_path):
     """Test third-party integration detection."""
+
     create_package_json(
         tmp_path / "package.json",
         dependencies={
@@ -392,3 +405,294 @@ def test_integration_detection(tmp_path):
     assert "AWS SDK" in integrations["cloud"]
     assert "realtime" in integrations
     assert "Socket.IO" in integrations["realtime"]
+
+
+def test_ast_function_and_class_counting(tmp_path):
+    """Test that AST accurately counts functions and classes in JavaScript."""
+
+    create_package_json(
+        tmp_path / "package.json",
+        dependencies={"react": "^18.2.0"},
+    )
+
+    create_code_file(
+        tmp_path / "src" / "utils.js",
+        """
+        function regularFunction() {
+            return 'hello';
+        }
+        
+        const arrowFunction = () => {
+            return 'world';
+        };
+        
+        async function asyncFunction() {
+            return await fetch('/api/data');
+        }
+        
+        class MyClass {
+            constructor() {
+                this.value = 0;
+            }
+            
+            method() {
+                return this.value;
+            }
+        }
+        
+        class AnotherClass extends MyClass {
+            anotherMethod() {
+                return 'extended';
+            }
+        }
+        """,
+    )
+
+    summary = analyze_js_project(tmp_path, "JavaScript", None)
+
+    assert summary.total_functions >= 6, (
+        f"Expected at least 6 functions, got {summary.total_functions}"
+    )
+
+    assert summary.total_classes >= 2, f"Expected at least 2 classes, got {summary.total_classes}"
+
+    assert summary.uses_async_await is True
+
+
+def test_complexity_calculation(tmp_path):
+    """Test that complexity metrics are calculated."""
+
+    create_package_json(tmp_path / "package.json", dependencies={})
+
+    create_code_file(
+        tmp_path / "src" / "complex.js",
+        """
+        function simpleFunction() {
+            return 1;
+        }
+        
+        function complexFunction(x, y) {
+            if (x > 0) {
+                if (y > 0) {
+                    return x + y;
+                } else {
+                    return x - y;
+                }
+            } else if (x < 0) {
+                return -x;
+            }
+            return 0;
+        }
+        
+        function loopFunction(arr) {
+            for (let i = 0; i < arr.length; i++) {
+                if (arr[i] > 10) {
+                    console.log(arr[i]);
+                }
+            }
+        }
+        """,
+    )
+
+    summary = analyze_js_project(tmp_path, "JavaScript", None)
+
+    assert summary.avg_function_complexity > 0
+    assert summary.max_function_complexity >= 1
+    assert summary.total_functions >= 3
+
+
+def test_react_custom_hooks_detection(tmp_path):
+    """Test detection of custom React hooks."""
+
+    create_package_json(
+        tmp_path / "package.json",
+        dependencies={"react": "^18.2.0"},
+    )
+
+    create_code_file(
+        tmp_path / "src" / "hooks.js",
+        """
+        import { useState, useEffect } from 'react';
+        
+        function useCustomHook() {
+            const [state, setState] = useState(null);
+            return [state, setState];
+        }
+        
+        function useAnotherHook(value) {
+            useEffect(() => {
+                console.log(value);
+            }, [value]);
+        }
+        
+        function useFetchData(url) {
+            const [data, setData] = useState(null);
+            
+            useEffect(() => {
+                fetch(url).then(r => r.json()).then(setData);
+            }, [url]);
+            
+            return data;
+        }
+        
+        // This should NOT be counted (doesn't start with 'use')
+        function notAHook() {
+            return 'test';
+        }
+        """,
+    )
+
+    summary = analyze_js_project(tmp_path, "JavaScript", "React")
+
+    # Should detect the 3 custom hooks (useCustomHook, useAnotherHook, useFetchData)
+    assert summary.custom_hooks_count >= 3, (
+        f"Expected at least 3 custom hooks, got {summary.custom_hooks_count}"
+    )
+
+
+def test_design_pattern_detection(tmp_path):
+    """Test detection of design patterns via AST."""
+
+    create_package_json(tmp_path / "package.json", dependencies={})
+
+    create_code_file(
+        tmp_path / "src" / "patterns.js",
+        """
+        // Singleton pattern
+        class Singleton {
+            constructor() {
+                if (Singleton.instance) {
+                    return Singleton.instance;
+                }
+                Singleton.instance = this;
+            }
+            
+            static getInstance() {
+                if (!Singleton.instance) {
+                    Singleton.instance = new Singleton();
+                }
+                return Singleton.instance;
+            }
+        }
+        
+        // Factory pattern
+        class Factory {
+            createProduct(type) {
+                if (type === 'A') {
+                    return new ProductA();
+                }
+                return new ProductB();
+            }
+        }
+        
+        // Observer pattern
+        const button = document.querySelector('button');
+        button.addEventListener('click', () => {
+            console.log('clicked');
+        });
+        
+        // Functional patterns
+        const numbers = [1, 2, 3, 4, 5];
+        const doubled = numbers.map(n => n * 2);
+        const filtered = numbers.filter(n => n > 2);
+        """,
+    )
+
+    summary = analyze_js_project(tmp_path, "JavaScript", None)
+
+    assert len(summary.design_patterns) > 0, "Expected design patterns to be detected"
+
+    patterns_str = str(summary.design_patterns)
+
+    assert any(
+        pattern in patterns_str for pattern in ["Singleton", "Factory", "Observer", "Functional"]
+    )
+
+
+def test_oop_features_detection(tmp_path):
+    """Test detection of OOP features."""
+
+    create_package_json(tmp_path / "package.json", dependencies={})
+
+    create_code_file(
+        tmp_path / "src" / "oop.js",
+        """
+        class Animal {
+            constructor(name) {
+                this.name = name;
+            }
+            
+            makeSound() {
+                console.log('Some sound');
+            }
+        }
+        
+        class Dog extends Animal {
+            constructor(name) {
+                super(name);
+            }
+            
+            makeSound() {
+                console.log('Woof!');
+            }
+        }
+        
+        class Cat extends Animal {
+            makeSound() {
+                console.log('Meow!');
+            }
+        }
+        """,
+    )
+
+    summary = analyze_js_project(tmp_path, "JavaScript", None)
+
+    assert summary.total_classes >= 3
+    assert len(summary.oop_features) > 0
+    assert "Classes" in summary.oop_features
+    assert "Inheritance" in summary.oop_features
+
+
+def test_data_structures_and_algorithms(tmp_path):
+    """Test detection of data structures and algorithms."""
+
+    create_package_json(tmp_path / "package.json", dependencies={})
+
+    create_code_file(
+        tmp_path / "src" / "algorithms.js",
+        """
+        const map = new Map();
+        map.set('key', 'value');
+        
+        const set = new Set([1, 2, 3]);
+        
+        const array = [5, 2, 8, 1, 9];
+        array.sort((a, b) => a - b);
+        
+        const filtered = array.filter(x => x > 3);
+        const doubled = array.map(x => x * 2);
+        const sum = array.reduce((acc, x) => acc + x, 0);
+        
+        function fibonacci(n) {
+            if (n <= 1) return n;
+            return fibonacci(n - 1) + fibonacci(n - 2);
+        }
+        
+        const queue = [];
+        queue.push(1);
+        queue.shift();
+        """,
+    )
+
+    summary = analyze_js_project(tmp_path, "JavaScript", None)
+
+    assert len(summary.data_structures) > 0
+    assert "Map" in summary.data_structures
+    assert "Set" in summary.data_structures
+
+    assert len(summary.algorithms_used) > 0
+    assert "Sorting" in summary.algorithms_used
+    assert (
+        "Filtering" in summary.algorithms_used
+        or "Mapping/Transformation" in summary.algorithms_used
+    )
