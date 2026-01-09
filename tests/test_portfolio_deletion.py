@@ -6,7 +6,6 @@ ensuring that underlying project data and shared artifacts remain intact.
 
 from __future__ import annotations
 
-import json
 import os
 import tempfile
 from collections.abc import Iterator
@@ -16,7 +15,7 @@ import pytest
 
 from capstone_project_team_5.data import db as db_module
 from capstone_project_team_5.data.db import get_session, init_db
-from capstone_project_team_5.data.models import PortfolioItem, Project, UploadRecord
+from capstone_project_team_5.data.models import PortfolioItem, Project, UploadRecord, User
 from capstone_project_team_5.services.portfolio_deletion import (
     clear_all_portfolio_items,
     delete_portfolio_item,
@@ -59,6 +58,16 @@ def temp_db() -> Iterator[Path]:
     db_path.unlink(missing_ok=True)
 
 
+def _create_user(username: str = "testuser") -> int:
+    """Helper to create a user and return their ID."""
+    with get_session() as session:
+        user = User(username=username, password_hash="fakehash123")
+        session.add(user)
+        session.flush()
+        user_id = user.id
+        return user_id
+
+
 def _create_upload(name: str = "test.zip") -> int:
     """Helper to create an upload record and return its ID."""
     with get_session() as session:
@@ -95,18 +104,20 @@ def _create_project(upload_id: int | None = None, name: str = "Test Project") ->
 
 def _create_portfolio_item(
     project_id: int | None = None,
+    user_id: int | None = None,
     title: str = "Test Item",
-    content: dict | None = None,
+    content: str = "# Test Portfolio Item\n\nThis is test content.",
 ) -> int:
     """Helper to create a portfolio item and return its ID."""
-    if content is None:
-        content = {"bullets": ["Developed feature X", "Implemented Y"]}
+    if user_id is None:
+        user_id = _create_user()
 
     with get_session() as session:
         item = PortfolioItem(
             project_id=project_id,
+            user_id=user_id,
             title=title,
-            content=json.dumps(content),
+            content=content,
         )
         session.add(item)
         session.flush()
@@ -114,12 +125,14 @@ def _create_portfolio_item(
         return item_id
 
 
-def _count_portfolio_items(project_id: int | None = None) -> int:
+def _count_portfolio_items(project_id: int | None = None, user_id: int | None = None) -> int:
     """Helper to count portfolio items."""
     with get_session() as session:
         query = session.query(PortfolioItem)
         if project_id is not None:
             query = query.filter(PortfolioItem.project_id == project_id)
+        if user_id is not None:
+            query = query.filter(PortfolioItem.user_id == user_id)
         return query.count()
 
 
@@ -138,8 +151,9 @@ def _portfolio_item_exists(item_id: int) -> bool:
 
 def test_delete_portfolio_item_existing_record(temp_db: Path) -> None:
     """Test deleting an existing portfolio item returns True."""
+    user_id = _create_user()
     project_id = _create_project()
-    item_id = _create_portfolio_item(project_id)
+    item_id = _create_portfolio_item(project_id, user_id)
 
     deleted = delete_portfolio_item(item_id)
     assert deleted is True
@@ -154,8 +168,9 @@ def test_delete_portfolio_item_non_existent_record(temp_db: Path) -> None:
 
 def test_delete_portfolio_item_preserves_project(temp_db: Path) -> None:
     """Test that deleting a portfolio item doesn't delete the project."""
+    user_id = _create_user()
     project_id = _create_project(name="Important Project")
-    item_id = _create_portfolio_item(project_id)
+    item_id = _create_portfolio_item(project_id, user_id)
 
     assert _count_projects() == 1
 
@@ -167,16 +182,17 @@ def test_delete_portfolio_item_preserves_project(temp_db: Path) -> None:
 
 def test_delete_portfolio_items_by_project_removes_all_matching(temp_db: Path) -> None:
     """Test deleting all portfolio items for a specific project."""
+    user_id = _create_user()
     project1_id = _create_project(name="Project 1")
     project2_id = _create_project(name="Project 2")
 
     # Create multiple items for project 1
-    _create_portfolio_item(project1_id, "Item 1")
-    _create_portfolio_item(project1_id, "Item 2")
-    _create_portfolio_item(project1_id, "Item 3")
+    _create_portfolio_item(project1_id, user_id, "Item 1")
+    _create_portfolio_item(project1_id, user_id, "Item 2")
+    _create_portfolio_item(project1_id, user_id, "Item 3")
 
     # Create item for project 2
-    _create_portfolio_item(project2_id, "Item 4")
+    _create_portfolio_item(project2_id, user_id, "Item 4")
 
     count = delete_portfolio_items_by_project(project1_id)
     assert count == 3
@@ -198,9 +214,10 @@ def test_delete_portfolio_items_by_project_no_matches(temp_db: Path) -> None:
 
 def test_delete_portfolio_items_by_project_preserves_project(temp_db: Path) -> None:
     """Test that deleting portfolio items doesn't delete the project."""
+    user_id = _create_user()
     project_id = _create_project(name="Project")
-    _create_portfolio_item(project_id)
-    _create_portfolio_item(project_id)
+    _create_portfolio_item(project_id, user_id)
+    _create_portfolio_item(project_id, user_id)
 
     assert _count_projects() == 1
 
@@ -212,15 +229,16 @@ def test_delete_portfolio_items_by_project_preserves_project(temp_db: Path) -> N
 
 def test_delete_portfolio_items_shared_project(temp_db: Path) -> None:
     """Test that deleting items from one project doesn't affect items from other projects."""
+    user_id = _create_user()
     shared_project_id = _create_project(name="Shared Project")
 
     # Create items for the shared project
-    item1 = _create_portfolio_item(shared_project_id, "Report 1")
-    item2 = _create_portfolio_item(shared_project_id, "Report 2")
+    item1 = _create_portfolio_item(shared_project_id, user_id, "Report 1")
+    item2 = _create_portfolio_item(shared_project_id, user_id, "Report 2")
 
     # Create another project with items
     other_project_id = _create_project(name="Other Project")
-    other_item = _create_portfolio_item(other_project_id, "Other Report")
+    other_item = _create_portfolio_item(other_project_id, user_id, "Other Report")
 
     # Delete items from shared project
     count = delete_portfolio_items_by_project(shared_project_id)
@@ -239,12 +257,13 @@ def test_delete_portfolio_items_shared_project(temp_db: Path) -> None:
 
 def test_clear_all_portfolio_items_removes_everything(temp_db: Path) -> None:
     """Test clearing all portfolio items removes all items."""
+    user_id = _create_user()
     project1_id = _create_project(name="Project 1")
     project2_id = _create_project(name="Project 2")
 
-    _create_portfolio_item(project1_id, "Item 1")
-    _create_portfolio_item(project1_id, "Item 2")
-    _create_portfolio_item(project2_id, "Item 3")
+    _create_portfolio_item(project1_id, user_id, "Item 1")
+    _create_portfolio_item(project1_id, user_id, "Item 2")
+    _create_portfolio_item(project2_id, user_id, "Item 3")
 
     assert _count_portfolio_items() == 3
 
@@ -263,11 +282,12 @@ def test_clear_all_portfolio_items_empty_database(temp_db: Path) -> None:
 
 def test_clear_all_portfolio_items_preserves_projects(temp_db: Path) -> None:
     """Test that clearing all portfolio items doesn't delete projects."""
+    user_id = _create_user()
     project1_id = _create_project(name="Project 1")
     project2_id = _create_project(name="Project 2")
 
-    _create_portfolio_item(project1_id)
-    _create_portfolio_item(project2_id)
+    _create_portfolio_item(project1_id, user_id)
+    _create_portfolio_item(project2_id, user_id)
 
     assert _count_projects() == 2
 
@@ -279,10 +299,11 @@ def test_clear_all_portfolio_items_preserves_projects(temp_db: Path) -> None:
 
 def test_delete_multiple_items_sequentially(temp_db: Path) -> None:
     """Test deleting multiple portfolio items one by one."""
+    user_id = _create_user()
     project_id = _create_project()
-    item1 = _create_portfolio_item(project_id, "Item 1")
-    item2 = _create_portfolio_item(project_id, "Item 2")
-    item3 = _create_portfolio_item(project_id, "Item 3")
+    item1 = _create_portfolio_item(project_id, user_id, "Item 1")
+    item2 = _create_portfolio_item(project_id, user_id, "Item 2")
+    item3 = _create_portfolio_item(project_id, user_id, "Item 3")
 
     assert _count_portfolio_items() == 3
 
@@ -298,8 +319,9 @@ def test_delete_multiple_items_sequentially(temp_db: Path) -> None:
 
 def test_delete_same_item_twice(temp_db: Path) -> None:
     """Test attempting to delete the same portfolio item twice."""
+    user_id = _create_user()
     project_id = _create_project()
-    item_id = _create_portfolio_item(project_id)
+    item_id = _create_portfolio_item(project_id, user_id)
 
     assert delete_portfolio_item(item_id) is True
     assert delete_portfolio_item(item_id) is False
@@ -307,8 +329,9 @@ def test_delete_same_item_twice(temp_db: Path) -> None:
 
 def test_portfolio_items_with_null_project_id(temp_db: Path) -> None:
     """Test deleting portfolio items that have NULL project_id."""
-    # Create item without project association
-    item_id = _create_portfolio_item(project_id=None, title="Orphan Item")
+    user_id = _create_user()
+    # Create item without project association (project_id is nullable in schema)
+    item_id = _create_portfolio_item(project_id=None, user_id=user_id, title="Orphan Item")
 
     assert _count_portfolio_items() == 1
 
@@ -317,33 +340,64 @@ def test_portfolio_items_with_null_project_id(temp_db: Path) -> None:
     assert _count_portfolio_items() == 0
 
 
-def test_complex_json_content_preservation(temp_db: Path) -> None:
-    """Test that complex JSON content is properly handled during deletion."""
+def test_multiple_users_same_project(temp_db: Path) -> None:
+    """Test that multiple users can have portfolio items for the same project."""
+    user1_id = _create_user("user1")
+    user2_id = _create_user("user2")
     project_id = _create_project()
-    complex_content = {
-        "bullets": ["Point 1", "Point 2"],
-        "skills": ["Python", "SQL"],
-        "metadata": {"version": "1.0", "tags": ["backend", "database"]},
-    }
-    item_id = _create_portfolio_item(project_id, content=complex_content)
 
-    # Verify item was created properly
-    assert _portfolio_item_exists(item_id)
+    # Each user creates their own portfolio item for the same project
+    item1 = _create_portfolio_item(
+        project_id, user1_id, "User 1's Portfolio", "User 1's custom content"
+    )
+    item2 = _create_portfolio_item(
+        project_id, user2_id, "User 2's Portfolio", "User 2's custom content"
+    )
 
-    # Delete it
-    delete_portfolio_item(item_id)
+    assert _count_portfolio_items(project_id) == 2
 
-    # Verify it's gone
-    assert not _portfolio_item_exists(item_id)
+    # Delete user1's item
+    delete_portfolio_item(item1)
+
+    # User2's item should remain
+    assert _portfolio_item_exists(item2)
+    assert _count_portfolio_items(project_id) == 1
+
+
+def test_user_specific_deletion(temp_db: Path) -> None:
+    """Test deleting portfolio items for a specific user."""
+    user1_id = _create_user("user1")
+    user2_id = _create_user("user2")
+    project_id = _create_project()
+
+    # Create items for both users
+    _create_portfolio_item(project_id, user1_id, "User 1 Item 1")
+    _create_portfolio_item(project_id, user1_id, "User 1 Item 2")
+    _create_portfolio_item(project_id, user2_id, "User 2 Item")
+
+    assert _count_portfolio_items(user_id=user1_id) == 2
+    assert _count_portfolio_items(user_id=user2_id) == 1
+
+    # Delete all of user1's items
+    with get_session() as session:
+        deleted_count = (
+            session.query(PortfolioItem).filter(PortfolioItem.user_id == user1_id).delete()
+        )
+        session.commit()
+
+    assert deleted_count == 2
+    assert _count_portfolio_items(user_id=user1_id) == 0
+    assert _count_portfolio_items(user_id=user2_id) == 1
 
 
 def test_large_batch_deletion(temp_db: Path) -> None:
     """Test deleting a large number of portfolio items."""
+    user_id = _create_user()
     project_id = _create_project()
 
     # Create 100 portfolio items
     for i in range(100):
-        _create_portfolio_item(project_id, f"Item {i}")
+        _create_portfolio_item(project_id, user_id, f"Item {i}", f"Content for item {i}")
 
     assert _count_portfolio_items(project_id) == 100
 
@@ -354,3 +408,23 @@ def test_large_batch_deletion(temp_db: Path) -> None:
 
     # Project should still exist
     assert _count_projects() == 1
+
+
+def test_cascade_delete_on_user_deletion(temp_db: Path) -> None:
+    """Test that portfolio items are deleted when user is deleted (CASCADE)."""
+    user_id = _create_user("testuser")
+    project_id = _create_project()
+
+    _create_portfolio_item(project_id, user_id, "Item 1")
+    _create_portfolio_item(project_id, user_id, "Item 2")
+
+    assert _count_portfolio_items(user_id=user_id) == 2
+
+    # Delete the user
+    with get_session() as session:
+        user = session.query(User).filter(User.id == user_id).first()
+        session.delete(user)
+        session.commit()
+
+    # Portfolio items should be automatically deleted due to CASCADE
+    assert _count_portfolio_items(user_id=user_id) == 0
