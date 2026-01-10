@@ -49,14 +49,11 @@ class DirectoryWalker:
 
     @staticmethod
     def _get_default_ignore_patterns() -> set[str]:
-        """Get default ignore patterns from ConsentTool.
+        """Get default ignore patterns from ConsentTool."""
 
-        Returns:
-            Set of directory/file patterns to ignore during processing.
-        """
-        from capstone_project_team_5.consent_tool import ConsentTool
+        from capstone_project_team_5.utils.ignore_patterns import get_default_ignore_patterns
 
-        return set(ConsentTool()._get_default_ignore_patterns())
+        return set(get_default_ignore_patterns())
 
     @staticmethod
     def _is_ignored(path: Path, root: Path, ignore_patterns: set[str]) -> bool:
