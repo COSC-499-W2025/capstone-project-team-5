@@ -147,7 +147,10 @@ def analyze_projects_structured(
         except ValueError:
             continue
 
-        analysis = project_analysis or analyze_project(project_path, consent_tool)
+        if project_analysis is None:
+            # Skip project if analysis failed - don't retry
+            continue
+        analysis = project_analysis
         language = analysis.language
         framework = analysis.framework
         tools = set(analysis.tools)
