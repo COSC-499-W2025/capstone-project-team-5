@@ -16,8 +16,7 @@ from capstone_project_team_5.models.upload import (
 
 
 def _get_ignore_patterns() -> set[str]:
-    """Get default ignore patterns from ConsentTool."""
-
+    """Get default ignore patterns."""
     from capstone_project_team_5.utils.ignore_patterns import get_default_ignore_patterns
 
     return set(get_default_ignore_patterns())
