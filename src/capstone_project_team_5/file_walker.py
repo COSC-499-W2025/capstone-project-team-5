@@ -49,7 +49,11 @@ class DirectoryWalker:
 
     @staticmethod
     def _get_default_ignore_patterns() -> set[str]:
-        """Get default ignore patterns from ConsentTool."""
+        """Get default ignore patterns from capstone_project_team_5.utils.ignore_patterns.
+
+        Returns:
+            A set of default ignore pattern strings.
+        """
 
         from capstone_project_team_5.utils.ignore_patterns import get_default_ignore_patterns
 
