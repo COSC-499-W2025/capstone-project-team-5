@@ -79,9 +79,7 @@ def test_incremental_upload_creates_artifact_source(temp_db: None, tmp_path: Pat
 
     # Get the project ID
     with get_session() as session:
-        initial_project = (
-            session.query(Project).filter(Project.name == "project1").first()
-        )
+        initial_project = session.query(Project).filter(Project.name == "project1").first()
         project_id = initial_project.id
 
     # Create second upload with additional files
@@ -105,9 +103,7 @@ def test_incremental_upload_creates_artifact_source(temp_db: None, tmp_path: Pat
     # Verify artifact count
     with get_session() as session:
         artifact_sources = (
-            session.query(ArtifactSource)
-            .filter(ArtifactSource.project_id == project_id)
-            .all()
+            session.query(ArtifactSource).filter(ArtifactSource.project_id == project_id).all()
         )
         assert len(artifact_sources) > 0
         assert artifact_sources[0].artifact_count == 2  # Two new files
@@ -370,9 +366,7 @@ def test_artifact_source_cascade_delete(temp_db: None, tmp_path: Path) -> None:
     # Verify artifact source exists
     with get_session() as session:
         sources = (
-            session.query(ArtifactSource)
-            .filter(ArtifactSource.project_id == project_id)
-            .all()
+            session.query(ArtifactSource).filter(ArtifactSource.project_id == project_id).all()
         )
         assert len(sources) > 0
 
@@ -385,8 +379,6 @@ def test_artifact_source_cascade_delete(temp_db: None, tmp_path: Path) -> None:
     # Verify artifact sources were cascade deleted
     with get_session() as session:
         sources = (
-            session.query(ArtifactSource)
-            .filter(ArtifactSource.project_id == project_id)
-            .all()
+            session.query(ArtifactSource).filter(ArtifactSource.project_id == project_id).all()
         )
         assert len(sources) == 0
