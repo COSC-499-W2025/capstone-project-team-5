@@ -26,9 +26,7 @@ def find_matching_projects(
 
     with get_session() as session:
         for project_name in detected_projects:
-            found_projects = (
-                session.query(Project).filter(Project.name == project_name).all()
-            )
+            found_projects = session.query(Project).filter(Project.name == project_name).all()
             if found_projects:
                 matches[project_name] = [p.id for p in found_projects]
 
@@ -103,9 +101,9 @@ def incremental_upload_zip(
 
                     # Update the existing project's file count
                     existing_project.file_count += detected_project.file_count
-                    existing_project.updated_at = __import__(
-                        "datetime"
-                    ).datetime.now(__import__("datetime").UTC)
+                    existing_project.updated_at = __import__("datetime").datetime.now(
+                        __import__("datetime").UTC
+                    )
 
         session.commit()
 

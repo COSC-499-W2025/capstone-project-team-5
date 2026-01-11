@@ -744,8 +744,6 @@ def _get_skill_timeline_for_project(name: str, rel_path: str) -> list[dict[str, 
     return timeline
 
 
-
-
 def prompt_for_incremental_upload() -> bool:
     """Prompt user whether to perform an incremental upload.
 
@@ -753,9 +751,13 @@ def prompt_for_incremental_upload() -> bool:
         True if user wants to perform incremental upload, False for fresh upload.
     """
     while True:
-        response = input(
-            "\nDo you want to add files to an existing project (incremental upload)? (yes/no): "
-        ).strip().lower()
+        response = (
+            input(
+                "\nDo you want to add files to an existing project (incremental upload)? (yes/no): "
+            )
+            .strip()
+            .lower()
+        )
         if response in ("yes", "y"):
             return True
         if response in ("no", "n"):
@@ -809,7 +811,9 @@ def prompt_for_project_selection(projects: list[dict[str, Any]]) -> int | None:
         display_name = proj["name"]
         if proj["rel_path"]:
             display_name += f" ({proj['rel_path']})"
-        print(f"{idx}. {display_name} — {proj['file_count']} files, {proj['upload_count']} upload(s)")
+        print(
+            f"{idx}. {display_name} — {proj['file_count']} files, {proj['upload_count']} upload(s)"
+        )
 
     while True:
         try:
@@ -954,7 +958,6 @@ def main() -> int:
     except Exception as exc:
         print(f"\n❌ Unexpected error: {exc}")
         return 1
-
 
 
 if __name__ == "__main__":
