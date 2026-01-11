@@ -16,7 +16,6 @@ from capstone_project_team_5.file_walker import DirectoryWalker
 from capstone_project_team_5.models import InvalidZipError
 from capstone_project_team_5.models.upload import DetectedProject
 from capstone_project_team_5.services import (
-    find_matching_projects,
     get_project_uploads,
     incremental_upload_zip,
     upload_zip,
@@ -906,9 +905,12 @@ def run_incremental_upload_flow() -> int:
     try:
         # Get project mapping from user
         # First, do a quick detection to see what projects are in the ZIP
-        from capstone_project_team_5.services.upload import _discover_projects, _get_ignore_patterns
-
         from zipfile import ZipFile
+
+        from capstone_project_team_5.services.upload import (
+            _discover_projects,
+            _get_ignore_patterns,
+        )
 
         with ZipFile(zip_path) as archive:
             names = archive.namelist()
@@ -933,7 +935,7 @@ def run_incremental_upload_flow() -> int:
     if associations:
         print("\n✅ Incremental Update Summary")
         print("-" * 60)
-        for existing_id, upload_id in associations:
+        for existing_id, _upload_id in associations:
             from capstone_project_team_5.data.db import get_session
             from capstone_project_team_5.data.models import Project
 
