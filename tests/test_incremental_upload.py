@@ -9,7 +9,7 @@ import pytest
 
 from capstone_project_team_5.data import db as db_module
 from capstone_project_team_5.data.db import get_session, init_db
-from capstone_project_team_5.data.models import ArtifactSource, Project, UploadRecord
+from capstone_project_team_5.data.models import ArtifactSource, Project
 from capstone_project_team_5.services.incremental_upload import (
     extract_and_merge_files,
     find_matching_projects,
@@ -28,8 +28,6 @@ def _create_zip(zip_path: Path, entries: list[tuple[str, bytes]]) -> None:
 @pytest.fixture(autouse=True)
 def temp_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Point the ORM at a temporary SQLite database for isolation."""
-    import os
-
     db_url = f"sqlite:///{tmp_path / 'test.db'}"
     monkeypatch.setenv("DATABASE_URL", db_url)
     # Reset the global engine_url before each test
@@ -53,7 +51,7 @@ def test_find_matching_projects_by_name(temp_db: None, tmp_path: Path) -> None:
 
     from capstone_project_team_5.services import upload_zip
 
-    result1 = upload_zip(zip_path1)
+    upload_zip(zip_path1)
 
     # Now search for projects with this name
     matches = find_matching_projects(["myproject"])
@@ -75,7 +73,7 @@ def test_incremental_upload_creates_artifact_source(temp_db: None, tmp_path: Pat
 
     from capstone_project_team_5.services import upload_zip
 
-    result1 = upload_zip(zip_path1)
+    upload_zip(zip_path1)
 
     # Get the project ID
     with get_session() as session:
@@ -123,7 +121,7 @@ def test_incremental_upload_updates_file_count(temp_db: None, tmp_path: Path) ->
 
     from capstone_project_team_5.services import upload_zip
 
-    result1 = upload_zip(zip_path1)
+    upload_zip(zip_path1)
 
     with get_session() as session:
         project = session.query(Project).filter(Project.name == "myproj").first()
@@ -166,7 +164,7 @@ def test_get_project_uploads_returns_all_contributions(temp_db: None, tmp_path: 
 
     from capstone_project_team_5.services import upload_zip
 
-    result1 = upload_zip(zip_path1)
+    upload_zip(zip_path1)
 
     with get_session() as session:
         project = session.query(Project).filter(Project.name == "proj").first()
@@ -207,12 +205,11 @@ def test_incremental_upload_without_mapping_creates_new_projects(
 
     from capstone_project_team_5.services import upload_zip
 
-    result1 = upload_zip(zip_path1)
+    upload_zip(zip_path1)
 
     with get_session() as session:
         projects_before = session.query(Project).filter(Project.name == "proj1").all()
         initial_count = len(projects_before)
-        project1_id = projects_before[0].id
 
     # Upload without mapping should create a new project
     zip_path2 = tmp_path / "second.zip"
@@ -272,7 +269,7 @@ def test_incremental_upload_multiple_rounds(temp_db: None, tmp_path: Path) -> No
 
     from capstone_project_team_5.services import upload_zip
 
-    result1 = upload_zip(zip_path1)
+    upload_zip(zip_path1)
 
     with get_session() as session:
         projects = session.query(Project).filter(Project.name == "dev_project").all()
