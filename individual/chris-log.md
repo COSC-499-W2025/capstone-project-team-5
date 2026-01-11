@@ -236,7 +236,7 @@ This week was spent wrapping up Milestone #1. We prepared and conducted our Pres
 
 <details>
   <summary><h3></h3></summary>
-<img alt="Screenshot 2025-12-07 173146" src="https://github.com/user-attachments/assets/c347da22-1aed-4f29-8b24-7ce667a01380" />
+<img alt="Screenshot 2026-01-11 131414" src="https://github.com/user-attachments/assets/3495524b-c2f7-4418-9da7-f9e64c1a6aee" />
 
 
 Some members were travelling this week, so no formal meetings were held, but communication was upheld via Discord. Each of us took on a small task to contribute code, and next week we will solidify a Work Breakdown Structure for Milestone #2. For my part, I began work on Requirement 21 - "Allow incremental information by adding another zipped folder of files for the same portfolio or résumé," completing much of the backend development.
