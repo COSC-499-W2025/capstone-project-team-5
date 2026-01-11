@@ -96,3 +96,14 @@ Time this week was spent presenting in class on monday as well as creating the t
 | JS/TS AST Analysis | Done | Fully integrated into project flow. |
 
 ![screenshot](Week14_checklist.png)
+
+## Term 2 - Week #1 (January 05 - 11)
+
+This week some members were travelling so no formal meetings took place. This week time was spent starting milestone 2 requirements. Code contributions this week included saving the user edits to portfolio items to the db and retreiving these items for the user if present. The plan for next sprint is to meet with the whole team and get on track for milestone 2.
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| Saver user edits | Done | Allows for user edits to output to be saved as a portfolio item. |    
+
+![screenshot](Week9_checklist.png)
+
