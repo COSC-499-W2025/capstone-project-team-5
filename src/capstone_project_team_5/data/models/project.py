@@ -11,6 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from capstone_project_team_5.data.db import Base
 
 if TYPE_CHECKING:
+    from capstone_project_team_5.data.models.artifact_source import ArtifactSource
     from capstone_project_team_5.data.models.code_analysis import CodeAnalysis
     from capstone_project_team_5.data.models.portfolio_item import PortfolioItem
     from capstone_project_team_5.data.models.skill import ProjectSkill
@@ -54,4 +55,7 @@ class Project(Base):
     )
     project_skills: Mapped[list[ProjectSkill]] = relationship(
         "ProjectSkill", back_populates="project", cascade="all, delete-orphan"
+    )
+    artifact_sources: Mapped[list[ArtifactSource]] = relationship(
+        "ArtifactSource", back_populates="project", cascade="all, delete-orphan"
     )

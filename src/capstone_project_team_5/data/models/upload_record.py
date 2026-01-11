@@ -16,6 +16,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from capstone_project_team_5.data.db import Base
 
 if TYPE_CHECKING:
+    from capstone_project_team_5.data.models.artifact_source import ArtifactSource
     from capstone_project_team_5.data.models.project import Project
 
 
@@ -42,4 +43,7 @@ class UploadRecord(Base):
 
     projects: Mapped[list[Project]] = relationship(
         "Project", back_populates="upload", cascade="all, delete-orphan"
+    )
+    artifact_sources: Mapped[list[ArtifactSource]] = relationship(
+        "ArtifactSource", back_populates="upload", cascade="all, delete-orphan"
     )
