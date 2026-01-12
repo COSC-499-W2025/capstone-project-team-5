@@ -6,6 +6,7 @@ from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
+from docx import Document
 
 from capstone_project_team_5.cli import _display_project_analyses
 from capstone_project_team_5.consent_tool import ConsentTool
@@ -189,3 +190,35 @@ def test_project_importance_ranking_stored(temp_db: None, tmp_path: Path) -> Non
         scores = [p.importance_score for p in scored_projects if p.importance_score is not None]
         assert all(isinstance(score, float) for score in scores)
         assert all(score >= 0 for score in scores)
+
+
+def test_is_collaborative_flag_populated_from_collab_detector(
+    temp_db: None, tmp_path: Path
+) -> None:
+    """Verify that collaboration detection populates is_collaborative on persisted projects."""
+    # Create a small project with a .docx file that has multiple authors.
+    project_root = tmp_path / "proj1"
+    project_root.mkdir()
+    docx_path = project_root / "doc1.docx"
+    doc = Document()
+    doc.add_paragraph("Hello collaboration!")
+    doc.core_properties.author = "Alice"
+    doc.core_properties.last_modified_by = "Bob"
+    doc.save(docx_path)
+
+    zip_path = tmp_path / "collab_proj.zip"
+    with ZipFile(zip_path, mode="w", compression=ZIP_DEFLATED) as archive:
+        archive.write(docx_path, arcname="proj1/doc1.docx")
+
+    result = upload_zip(zip_path)
+
+    # There should be a single discovered project for proj1.
+    assert any(project.name == "proj1" for project in result.projects)
+
+    with get_session() as session:
+        upload_record = session.query(UploadRecord).filter_by(filename=result.filename).one()
+        persisted_projects = session.query(Project).filter_by(upload_id=upload_record.id).all()
+
+    assert len(persisted_projects) == 1
+    assert persisted_projects[0].name == "proj1"
+    assert persisted_projects[0].is_collaborative is True

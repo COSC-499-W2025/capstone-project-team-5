@@ -146,6 +146,12 @@ class TestProjectAnalysisPythonIntegration:
         py_file = tmp_path / "main.py"
         py_file.write_text(
             """
+import flask
+import sqlalchemy
+import pytest
+import pydantic
+import requests
+
 from abc import ABC, abstractmethod
 
 class Shape(ABC):
@@ -214,8 +220,23 @@ def factorial(n):
         # Note: May have false positives due to current implementation
         assert isinstance(analysis.data_structures, set)
 
+        # Verify complexity score is populated for Python
+        assert analysis.complexity_score >= 0.0
+
         # Verify technical features from Python
         python_result = analysis.language_analysis["python_result"]
         assert "features" in python_result
         assert "tech_stack" in python_result
         assert "skills_demonstrated" in python_result
+
+        tech_stack = python_result["tech_stack"]
+        assert "Flask" in tech_stack.get("frameworks", [])
+        assert "SQLAlchemy ORM" in tech_stack.get("database", [])
+        assert "PyTest" in tech_stack.get("testing", [])
+        assert "Pydantic" in tech_stack.get("tooling", [])
+
+        # Tech stack and integrations should flow into technical_features
+        assert "Flask" in analysis.technical_features
+        assert "Database Integration" in analysis.technical_features
+        assert "Automated Testing" in analysis.technical_features
+        assert "HTTP API Integration" in analysis.technical_features

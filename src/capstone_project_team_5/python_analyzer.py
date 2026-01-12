@@ -33,7 +33,8 @@ class PythonAnalyzer:
 
         Returns:
             Dictionary with analysis results or error message.
-            On success: {
+            On success:
+            {
                 "oop": dict with OOP analysis,
                 "tech_stack": dict with detected frameworks/tools,
                 "features": list of detected features,
@@ -42,7 +43,7 @@ class PythonAnalyzer:
                 "metrics": dict with code metrics,
                 "data_structures": list of detected data structures,
                 "algorithms": list of detected algorithms,
-                "design_patterns": list of detected design patterns
+                "design_patterns": list of detected design patterns,
             }
             On error: {"error": str}
         """
@@ -54,9 +55,8 @@ class PythonAnalyzer:
             return {"error": f"Project root is not a directory: {self.project_path}"}
 
         try:
-            self._load_code_content()
+            self._load_code_and_ast()
             self._extract_imports()
-            self._parse_ast()
 
             # Check if any Python files were found
             if self.file_count == 0:
@@ -93,26 +93,44 @@ class PythonAnalyzer:
     # LOAD CODE
     # ---------------------------------------------------------
 
-    def _load_code_content(self) -> None:
-        """Load all Python source code from the project directory."""
-        # TODO: Optimize by consolidating with _parse_ast() to avoid walking filesystem twice
-        code_files = []
+    def _load_code_and_ast(self) -> None:
+        """Load Python source code and parse AST in a single filesystem walk."""
+        code_files: list[str] = []
+        trees: list[ast.AST] = []
+        self.file_count = 0
+        self.files_analyzed = 0
 
         for root, dirs, files in os.walk(self.project_path):
-            dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+            dirs[:] = [directory for directory in dirs if directory not in SKIP_DIRS]
 
-            for file in files:
-                if file.endswith(".py"):
-                    self.file_count += 1
-                    file_path = Path(root) / file
-                    try:
-                        code = file_path.read_text(encoding="utf-8", errors="ignore")
-                        code_files.append(code)
-                        self.files_analyzed += 1
-                    except Exception:
-                        continue
+            for file_name in files:
+                if not file_name.endswith(".py"):
+                    continue
+
+                self.file_count += 1
+                file_path = Path(root) / file_name
+
+                try:
+                    code = file_path.read_text(encoding="utf-8", errors="ignore")
+                except Exception:
+                    continue
+
+                code_files.append(code)
+                self.files_analyzed += 1
+
+                try:
+                    trees.append(ast.parse(code, filename=str(file_path)))
+                except Exception:
+                    continue
 
         self.all_code_content = "\n".join(code_files)
+        self.ast_trees = trees
+
+    def _load_code_content(self) -> None:
+        """Load all Python source code from the project directory."""
+        # Kept for backward compatibility.
+        if not self.all_code_content or not self.ast_trees:
+            self._load_code_and_ast()
 
     # ---------------------------------------------------------
     # IMPORT PARSING
@@ -138,21 +156,12 @@ class PythonAnalyzer:
     # ---------------------------------------------------------
 
     def _parse_ast(self) -> None:
-        """Parse AST trees for all Python files."""
-        trees = []
+        """Ensure AST trees are available for all Python files.
 
-        for root, dirs, files in os.walk(self.project_path):
-            dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
-
-            for file in files:
-                if file.endswith(".py"):
-                    p = Path(root) / file
-                    try:
-                        trees.append(ast.parse(p.read_text(encoding="utf-8", errors="ignore")))
-                    except Exception:
-                        continue
-
-        self.ast_trees = trees
+        This method reuses the combined loader to avoid an extra filesystem walk.
+        """
+        if not self.ast_trees:
+            self._load_code_and_ast()
 
     # ---------------------------------------------------------
     # METRICS COUNTING
@@ -166,8 +175,9 @@ class PythonAnalyzer:
             classes_count, and methods_count.
         """
         lines_of_code = 0
-        classes_count = 0
-        methods_count = 0
+        classes_count: int = 0
+        methods_count: int = 0
+        function_complexities: list[int] = []
 
         # Count LOC from all code content
         for line in self.all_code_content.splitlines():
@@ -181,8 +191,15 @@ class PythonAnalyzer:
             for node in ast.walk(tree):
                 if isinstance(node, ast.ClassDef):
                     classes_count += 1
-                elif isinstance(node, ast.FunctionDef):
+                elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     methods_count += 1
+                    function_complexities.append(self._calculate_function_complexity(node))
+
+        avg_function_complexity = 0.0
+        max_function_complexity = 0
+        if function_complexities:
+            max_function_complexity = max(function_complexities)
+            avg_function_complexity = sum(function_complexities) / len(function_complexities)
 
         return {
             "total_files": self.file_count,
@@ -190,6 +207,8 @@ class PythonAnalyzer:
             "lines_of_code": lines_of_code,
             "classes_count": classes_count,
             "methods_count": methods_count,
+            "avg_function_complexity": avg_function_complexity,
+            "max_function_complexity": max_function_complexity,
         }
 
     # ---------------------------------------------------------
@@ -289,6 +308,35 @@ class PythonAnalyzer:
         }
 
     # ---------------------------------------------------------
+    # COMPLEXITY ANALYSIS
+    # ---------------------------------------------------------
+
+    def _calculate_function_complexity(self, node: ast.AST) -> int:
+        """Approximate cyclomatic complexity for a single function.
+
+        This is a lightweight estimate based on common branching constructs.
+        """
+        complexity = 1
+        for child in ast.walk(node):
+            if isinstance(
+                child,
+                (
+                    ast.If,
+                    ast.For,
+                    ast.AsyncFor,
+                    ast.While,
+                    ast.With,
+                    ast.AsyncWith,
+                    ast.Try,
+                    ast.BoolOp,
+                    ast.IfExp,
+                    ast.comprehension,
+                ),
+            ):
+                complexity += 1
+        return complexity
+
+    # ---------------------------------------------------------
     # DATA STRUCTURES DETECTION
     # ---------------------------------------------------------
 
@@ -298,9 +346,7 @@ class PythonAnalyzer:
         Returns:
             Sorted list of detected data structures.
         """
-        # TODO: Improve detection using AST analysis instead of string matching
-        # Current implementation has false positives (e.g., "[]" matches indexing, not just lists)
-        structures = set()
+        structures: set[str] = set()
         code = self.all_code_content
 
         # Check for collections module structures
@@ -316,15 +362,28 @@ class PythonAnalyzer:
             if "namedtuple" in code:
                 structures.add("namedtuple")
 
-        # Check for built-in structures (basic heuristics)
-        if "list(" in code or "[]" in code:
-            structures.add("list")
-        if "dict(" in code or "{}" in code or ": " in code:
-            structures.add("dict")
-        if "set(" in code or "set()" in code:
-            structures.add("set")
-        if "tuple(" in code or "()" in code:
-            structures.add("tuple")
+        # Use AST to detect built-in data structures to avoid string-based
+        # false positives (for example, indexing versus literal lists).
+        for tree in self.ast_trees:
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.List, ast.ListComp)):
+                    structures.add("list")
+                elif isinstance(node, (ast.Dict, ast.DictComp)):
+                    structures.add("dict")
+                elif isinstance(node, (ast.Set, ast.SetComp)):
+                    structures.add("set")
+                elif isinstance(node, ast.Tuple):
+                    structures.add("tuple")
+                elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                    function_name = node.func.id
+                    if function_name == "list":
+                        structures.add("list")
+                    elif function_name == "dict":
+                        structures.add("dict")
+                    elif function_name == "set":
+                        structures.add("set")
+                    elif function_name == "tuple":
+                        structures.add("tuple")
 
         # Check for heapq
         if "heapq" in self.imports:
@@ -383,40 +442,169 @@ class PythonAnalyzer:
         Returns:
             Sorted list of detected design patterns.
         """
-        # TODO: Replace naive keyword matching with structural AST analysis
-        # Current implementation has false positives (e.g., "create_" matches any function)
-        patterns = set()
-        code_lower = self.all_code_content.lower()
+        patterns: set[str] = set()
 
-        # Singleton pattern
-        if ("__instance" in self.all_code_content or "_instance" in self.all_code_content) and (
-            "instance is none" in code_lower or "instance == none" in code_lower
-        ):
-            patterns.add("Singleton")
-
-        # Factory pattern
-        if "create_" in self.all_code_content or "factory" in code_lower:
-            patterns.add("Factory")
-
-        # Builder pattern
-        if "builder" in code_lower and "build(" in self.all_code_content:
-            patterns.add("Builder")
-
-        # Observer pattern
-        if "observer" in code_lower or ("notify" in code_lower and "subscribe" in code_lower):
-            patterns.add("Observer")
-
-        # Strategy pattern
-        if "strategy" in code_lower:
-            patterns.add("Strategy")
-
-        # Decorator pattern (actual decorator pattern, not @decorator syntax)
-        if ("wrapper" in code_lower or "decorator" in code_lower) and (
-            "def wrap" in code_lower or "class.*wrapper" in code_lower
-        ):
-            patterns.add("Decorator")
+        for tree in self.ast_trees:
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ClassDef):
+                    if self._is_singleton_class(node):
+                        patterns.add("Singleton")
+                    if self._is_observer_class(node):
+                        patterns.add("Observer")
+                    if self._is_strategy_class(node):
+                        patterns.add("Strategy")
+                    if self._is_decorator_class(node):
+                        patterns.add("Decorator")
+                elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    if self._is_factory_function(node):
+                        patterns.add("Factory")
+                    if self._is_builder_function(node):
+                        patterns.add("Builder")
 
         return sorted(list(patterns))
+
+    def _is_singleton_class(self, class_node: ast.ClassDef) -> bool:
+        """Heuristic detection of a Singleton-style class."""
+        has_instance_attribute = False
+        has_classmethod_accessor = False
+
+        for statement in class_node.body:
+            if isinstance(statement, ast.Assign):
+                for target in statement.targets:
+                    if (
+                        isinstance(target, ast.Name)
+                        and "instance" in target.id.lower()
+                        or isinstance(target, ast.Attribute)
+                        and "instance" in target.attr.lower()
+                    ):
+                        has_instance_attribute = True
+
+        for statement in class_node.body:
+            if not isinstance(statement, ast.FunctionDef):
+                continue
+
+            decorator_names = {
+                decorator.id
+                for decorator in statement.decorator_list
+                if isinstance(decorator, ast.Name)
+            }
+            if "classmethod" not in decorator_names:
+                continue
+
+            for inner in ast.walk(statement):
+                if (
+                    isinstance(inner, ast.Return)
+                    and isinstance(inner.value, ast.Attribute)
+                    and isinstance(inner.value.value, ast.Name)
+                    and inner.value.attr.lower().endswith("instance")
+                ):
+                    has_classmethod_accessor = True
+                    break
+
+        return has_instance_attribute and has_classmethod_accessor
+
+    def _is_factory_function(self, function_node: ast.AST) -> bool:
+        """Heuristic detection of a factory function.
+
+        Marks a function as a factory when it conditionally constructs
+        different types (multiple constructor calls).
+        """
+        constructor_names: set[str] = set()
+        for child in ast.walk(function_node):
+            if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
+                constructor_names.add(child.func.id)
+        return len(constructor_names) >= 2
+
+    def _is_builder_function(self, function_node: ast.AST) -> bool:
+        """Heuristic detection of a builder-style `build` function."""
+        if not isinstance(function_node, ast.FunctionDef):
+            return False
+
+        if function_node.name != "build":
+            return False
+
+        returns_constructed_object = False
+        fluent_calls = False
+
+        for child in ast.walk(function_node):
+            if isinstance(child, ast.Return) and isinstance(child.value, ast.Call):
+                returns_constructed_object = True
+            if (
+                isinstance(child, ast.Call)
+                and isinstance(child.func, ast.Attribute)
+                and isinstance(child.func.value, ast.Name)
+                and child.func.value.id == "self"
+            ):
+                fluent_calls = True
+
+        return returns_constructed_object or fluent_calls
+
+    def _is_observer_class(self, class_node: ast.ClassDef) -> bool:
+        """Heuristic detection of an Observer-style class."""
+        has_observers_attribute = False
+        has_subscribe_method = False
+        has_notify_method = False
+
+        for statement in class_node.body:
+            if isinstance(statement, ast.Assign):
+                for target in statement.targets:
+                    if (
+                        isinstance(target, ast.Name)
+                        and "observer" in target.id.lower()
+                        or isinstance(target, ast.Attribute)
+                        and "observer" in target.attr.lower()
+                    ):
+                        has_observers_attribute = True
+            elif isinstance(statement, ast.FunctionDef):
+                method_name = statement.name.lower()
+                if method_name in {"subscribe", "attach", "register"}:
+                    has_subscribe_method = True
+                if method_name.startswith("notify"):
+                    has_notify_method = True
+
+        return has_observers_attribute and has_subscribe_method and has_notify_method
+
+    def _is_strategy_class(self, class_node: ast.ClassDef) -> bool:
+        """Heuristic detection of a Strategy-style class."""
+        has_strategy_attribute = False
+        uses_strategy_attribute = False
+
+        for statement in class_node.body:
+            if isinstance(statement, ast.Assign):
+                for target in statement.targets:
+                    if (
+                        isinstance(target, ast.Name)
+                        and "strategy" in target.id.lower()
+                        or isinstance(target, ast.Attribute)
+                        and "strategy" in target.attr.lower()
+                    ):
+                        has_strategy_attribute = True
+
+        for statement in class_node.body:
+            if not isinstance(statement, ast.FunctionDef):
+                continue
+
+            for child in ast.walk(statement):
+                if (
+                    isinstance(child, ast.Attribute)
+                    and isinstance(child.value, ast.Name)
+                    and child.value.id in {"self", class_node.name}
+                    and "strategy" in child.attr.lower()
+                ):
+                    uses_strategy_attribute = True
+
+        return has_strategy_attribute and uses_strategy_attribute
+
+    def _is_decorator_class(self, class_node: ast.ClassDef) -> bool:
+        """Heuristic detection of a Decorator-style class (GoF pattern)."""
+        class_name_lower = class_node.name.lower()
+        has_wrapper_name = "decorator" in class_name_lower or "wrapper" in class_name_lower
+        has_call_method = any(
+            isinstance(statement, ast.FunctionDef) and statement.name == "__call__"
+            for statement in class_node.body
+        )
+
+        return has_wrapper_name and has_call_method
 
     # ---------------------------------------------------------
     # TECH STACK DETECTION
@@ -563,6 +751,7 @@ def analyze_python_project(project_root: Path | str) -> dict:
                 "Polymorphism": bool,
                 "Abstraction": bool,
             },
+            "complexity_score": float,       # Approximate complexity score (0-10)
             "data_structures": list[str],    # Detected data structures
             "algorithms": list[str],         # Detected algorithms
             "design_patterns": list[str],    # Detected design patterns
@@ -589,6 +778,10 @@ def analyze_python_project(project_root: Path | str) -> dict:
         # Transform to expected format
         oop = result.get("oop", {})
         metrics = result.get("metrics", {})
+        avg_complexity = metrics.get("avg_function_complexity", 0.0)
+        complexity_score = 0.0
+        if isinstance(avg_complexity, (int, float)):
+            complexity_score = min(10.0, float(avg_complexity))
 
         return {
             "total_files": metrics.get("total_files", 0),
@@ -602,6 +795,7 @@ def analyze_python_project(project_root: Path | str) -> dict:
                 "Polymorphism": oop.get("polymorphism", False),
                 "Abstraction": oop.get("abstraction", False),
             },
+            "complexity_score": complexity_score,
             "data_structures": result.get("data_structures", []),
             "algorithms": result.get("algorithms", []),
             "design_patterns": result.get("design_patterns", []),
