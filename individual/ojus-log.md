@@ -4,6 +4,9 @@
 
 ---
 <details>
+  <summary><h3>Term 1</summary>
+    
+<details>
   <summary><h3>September</summary>
 
 <details>
@@ -252,19 +255,30 @@
   - Discuss sugegstions from milestone 1 with team
 </details>
 
+</details>
+</details>
+
 ---
 
 <details>
-  <summary><h3>Week X</h3></summary>
+  <summary><h3>January</h3></summary>
+  
+<details>
+  <summary><h3>Week 1</h3></summary>
+  
+<img width="1018" height="671" alt="image" src="https://github.com/user-attachments/assets/34f8f13a-e3b6-4dee-b85e-f1927c47368b" />
 
 ### What Went Well
-  - 
+  - Decided API stack (FASTAPI)
+  - Created a Diff checker tool that will allow faster scanning times
+  - Reviewed PRs
 
   ### What Didn't Go Well
-  - 
+  - All good  
 
   ### Planning for Next Week
-  - 
+  - Work on integrating diff checker into codebase and add functionality to it
+  - Start migrating skill detector as REST API
 </details>
 
 ---
