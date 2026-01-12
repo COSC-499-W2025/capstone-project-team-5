@@ -4,6 +4,11 @@ File diff checker based on file name and size.
 A standalone module for creating snapshots of project files and comparing them
 to detect added, removed, and modified files. No external dependencies required.
 
+TODO (next iteration):
+- Add database persistence for snapshots
+- Add per-file hashing for more accurate change detection
+- Fix SKIP_DIRS duplication
+
 """
 
 from __future__ import annotations
