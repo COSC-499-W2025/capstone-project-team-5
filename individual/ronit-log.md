@@ -2,7 +2,35 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-_Last Updated:_ December 07, 2025
+_Last Updated:_ January 11, 2026
+
+---
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1082" height="642" alt="image" src="https://github.com/user-attachments/assets/419a5217-fac0-41ff-8758-f62e7550e0d9" />
+</details>
+
+## Week 1 | January 5-11, 2026
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Refactored CLI and TUI to utilize new workflows.analysis_pipeline module | ✅ Done | Moved ~400 lines of analysis logic from CLI into dedicated pipeline module |
+| Replaced ConsentTool usage with utility function for ignore patterns | ✅ Done | |
+| Conducted code reviews | ✅ Done | Ongoing task |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Extend API functionality | ❌ Not Started | |
+| Continue code reviews | | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Refactor codebase | ✅ Done | |
+| Continue code reviews | ✅ Done | Ongoing task |
 
 ---
 
