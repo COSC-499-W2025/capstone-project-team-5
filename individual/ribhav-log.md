@@ -308,6 +308,35 @@ Refactored the TUI to make the file less big, prepared for milestone presentatio
 
 
 
+---
+
+# Term 2
+
+## Week 1
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1602" height="930" alt="image" src="https://github.com/user-attachments/assets/83e27ddd-68cd-4c57-a647-e708270ba41d" />
+
+</details>
+
+### Task Progress this week
+
+After milestone 1 demos and submissions, I went over the codebase to mitigate any crucial TODOs and other holes across our tool. Participated in a design discussion that led to us choosing to use FastAPI for our backend.
+
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Review PRs | ✅ Done     |  |
+| Address TODOs across codebase | ✅ Done | |
+| Discuss API design | ✅ Done    |  |
+
+
+### Next week's plans
+| Task Description     | Status        | Notes           |
+|----------------------|---------------|-----------------|
+| Start work on Milestone 2 | ❌ Not Started    |  |
+
 
 
 
