@@ -216,3 +216,25 @@ It was a busy week for me due to heavy midterm load and I was unable to be as in
 ### Personal Contributions
 
 - **Code Contributions**: Cleaned up consent tool code to better reflect the AI models being used.
+
+---
+
+# TERM2 Logs - Sparsh Khanna
+
+---
+
+## Week 1 | January  4-11, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1470" height="956" alt="Screenshot 2026-01-11 at 8 18 52 AM" src="https://github.com/user-attachments/assets/d883b145-8748-4022-acea-2c41388b3cb0" />
+
+
+</details>
+
+### Team Activities
+- **Requirements Analysis**: Had discussions about Term 2 work structure.
+
+### Personal Contributions
+- **API Skeleton**: Made basic API skeleton for API endpoint work in the future.
