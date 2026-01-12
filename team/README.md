@@ -5,8 +5,7 @@
   <summary><h3>T2 Week 1 | January 04 - January 11 </h3></summary>
 
   ### Burnup Chart
-
-
+<img alt="Screenshot 2026-01-11 163909" src="https://github.com/user-attachments/assets/9ff9917f-681d-4bf4-9936-000f6bb7f16a" />
 
   ### Past Work
   - Reflected on presentation
