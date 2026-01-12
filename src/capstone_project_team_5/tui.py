@@ -1157,7 +1157,7 @@ ProgressBar {
             status = self.query_one("#status", Label)
 
         if portfolio_item:
-            status.update("Retreived portfolio item.")
+            status.update("Retrieved portfolio item.")
             # Show user's edited version
             title = portfolio_item["title"]
             content = portfolio_item["content"]
