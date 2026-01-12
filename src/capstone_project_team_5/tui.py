@@ -22,6 +22,7 @@ from textual.widgets import (
 )
 from textual.worker import Worker, WorkerState
 
+from capstone_project_team_5.cli import analyze_projects_structured
 from capstone_project_team_5.consent_tool import ConsentTool
 from capstone_project_team_5.services import upload_zip
 from capstone_project_team_5.services.auth import authenticate_user, create_user
@@ -30,7 +31,6 @@ from capstone_project_team_5.tui_rendering import (
     render_project_markdown,
 )
 from capstone_project_team_5.utils import prompt_for_zip_file
-from capstone_project_team_5.workflows.analysis_pipeline import analyze_projects_structured
 
 if TYPE_CHECKING:
     from capstone_project_team_5.data.models.code_analysis import CodeAnalysis

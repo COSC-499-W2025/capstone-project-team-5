@@ -71,6 +71,7 @@ def _try_ai_generation(analysis: ProjectAnalysis, max_bullets: int) -> list[str]
     try:
         from capstone_project_team_5.services.llm import generate_bullet_points_from_analysis
 
+        # Combine all detected skills for AI
         all_skills = (
             analysis.tools
             | analysis.practices
@@ -88,7 +89,7 @@ def _try_ai_generation(analysis: ProjectAnalysis, max_bullets: int) -> list[str]
             tools=sorted(analysis.tools),
             max_bullets=max_bullets,
         )
-    except Exception:
+    except (ImportError, Exception):  # LLMError or any other error
         return []
 
 

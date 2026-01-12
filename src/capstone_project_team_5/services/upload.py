@@ -16,10 +16,14 @@ from capstone_project_team_5.models.upload import (
 
 
 def _get_ignore_patterns() -> set[str]:
-    """Get default ignore patterns."""
-    from capstone_project_team_5.utils.ignore_patterns import get_default_ignore_patterns
+    """Get default ignore patterns from ConsentTool.
 
-    return set(get_default_ignore_patterns())
+    Returns:
+        Set of directory/file patterns to ignore during processing.
+    """
+    from capstone_project_team_5.consent_tool import ConsentTool
+
+    return set(ConsentTool()._get_default_ignore_patterns())
 
 
 def _is_ignored(segments: list[str], ignore_patterns: set[str]) -> bool:
