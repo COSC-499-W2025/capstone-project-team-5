@@ -911,6 +911,24 @@ ProgressBar {
             work, name="load_latest", exclusive=True, thread=True, exit_on_error=False
         )
 
+    def _save_current_edit_to_db(self, edited_markdown: str) -> bool:
+        """Save edited markdown to database."""
+
+        from capstone_project_team_5.services.portfolio import save_portfolio_item
+
+        if self._saved_active_project_index is None:
+            return False
+
+        project = self._saved_projects[self._saved_active_project_index]
+        project_id = project.get("id")
+
+        if project_id is None or self._current_user is None:
+            return False
+
+        return save_portfolio_item(
+            self._current_user, project_id, project["name"], edited_markdown, is_user_edited=True
+        )
+
     # ---------------------------------------------------------------------
     # WORKER STATE HANDLER
     # ---------------------------------------------------------------------
@@ -1114,6 +1132,7 @@ ProgressBar {
             return
 
         project = self._saved_projects[self._saved_active_project_index]
+        project_id = project.get("id")
         analyses = project.get("analyses") or []
         if not analyses or event.index < 0 or event.index >= len(analyses):
             return
@@ -1129,41 +1148,66 @@ ProgressBar {
         if analysis_id is None:
             return
 
-        # Fetch full CodeAnalysis + metrics from the database for this snapshot.
-        try:
-            import json
+        portfolio_item = None
 
-            from capstone_project_team_5.data.db import get_session
-            from capstone_project_team_5.data.models import CodeAnalysis, Project
+        if self._current_user and project_id:
+            from capstone_project_team_5.services.portfolio import get_portfolio_item
 
-            with get_session() as session:
-                ca = session.query(CodeAnalysis).filter(CodeAnalysis.id == analysis_id).first()
-                if ca is None:
-                    summary_text = analysis.get("summary_text") or "(no summary available)"
-                    md = f"# Saved Analysis\n\n{summary_text}"
-                else:
-                    metrics: dict | None = None
-                    if getattr(ca, "metrics_json", None):
-                        try:
-                            metrics = json.loads(ca.metrics_json)
-                        except Exception:  # pragma: no cover - defensive
-                            metrics = None
+            portfolio_item = get_portfolio_item(self._current_user, project_id)
+            status = self.query_one("#status", Label)
 
-                    proj_row = (
-                        session.query(Project)
-                        .filter(Project.id == getattr(ca, "project_id", -1))
-                        .first()
-                    )
+        if portfolio_item:
+            status.update("Retrieved portfolio item.")
+            # Show user's edited version
+            title = portfolio_item["title"]
+            content = portfolio_item["content"]
+            updated = portfolio_item["updated_at"].strftime("%Y-%m-%d %H:%M")
 
-                    md = self._render_saved_analysis_detail(
-                        project_dict=project,
-                        analysis_row=ca,
-                        metrics=metrics or {},
-                        project_row=proj_row,
-                    )
-        except Exception:
-            summary_text = analysis.get("summary_text") or "(no summary available)"
-            md = f"# Saved Analysis\n\n{summary_text}"
+            analysis_lang = analysis.get("language", "Unknown")
+            analysis_date = analysis.get("created_at", "Unknown")
+
+            md = (
+                f"# {title}\n\n"
+                f"**[✏️ User Edited - {updated}]**\n\n"
+                f"*Viewing edited version for analysis: {analysis_lang} @ {analysis_date}*\n\n"
+                f"{content}"
+            )
+        else:
+            # Fetch full CodeAnalysis + metrics from the database for this snapshot.
+            try:
+                import json
+
+                from capstone_project_team_5.data.db import get_session
+                from capstone_project_team_5.data.models import CodeAnalysis, Project
+
+                with get_session() as session:
+                    ca = session.query(CodeAnalysis).filter(CodeAnalysis.id == analysis_id).first()
+                    if ca is None:
+                        summary_text = analysis.get("summary_text") or "(no summary available)"
+                        md = f"# Saved Analysis\n\n{summary_text}"
+                    else:
+                        metrics: dict | None = None
+                        if getattr(ca, "metrics_json", None):
+                            try:
+                                metrics = json.loads(ca.metrics_json)
+                            except Exception:  # pragma: no cover - defensive
+                                metrics = None
+
+                        proj_row = (
+                            session.query(Project)
+                            .filter(Project.id == getattr(ca, "project_id", -1))
+                            .first()
+                        )
+
+                        md = self._render_saved_analysis_detail(
+                            project_dict=project,
+                            analysis_row=ca,
+                            metrics=metrics or {},
+                            project_row=proj_row,
+                        )
+            except Exception:
+                summary_text = analysis.get("summary_text") or "(no summary available)"
+                md = f"# Saved Analysis\n\n{summary_text}"
 
         self._current_markdown = md
         self.query_one("#output", Markdown).update(md)
@@ -1412,11 +1456,23 @@ ProgressBar {
         if not editor.display:
             return
 
-        self._current_markdown = editor.text
-        output.update(self._current_markdown)
-        editor.display = False
-        output.display = True
-        status.update("Edits saved.")
+        edited_text = editor.text
+
+        # Try to save edit to db
+        if self._view_mode == "saved" and self._current_user:
+            if self._save_current_edit_to_db(edited_text):
+                self._current_markdown = edited_text
+                editor.display = False
+                output.display = True
+                status.update("Edits saved to portfolio.")
+            else:
+                status.update("Failed to save edit to the database.")
+        else:
+            self._current_markdown = editor.text
+            output.update(self._current_markdown)
+            editor.display = False
+            output.display = True
+            status.update("Edits saved.")
 
     def action_cancel_edit(self) -> None:
         """Cancel edit mode without saving changes."""

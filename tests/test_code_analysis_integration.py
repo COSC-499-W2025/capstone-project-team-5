@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,7 @@ from capstone_project_team_5.data.models.code_analysis import CodeAnalysis
 from capstone_project_team_5.data.models.portfolio_item import PortfolioItem
 from capstone_project_team_5.data.models.project import Project
 from capstone_project_team_5.data.models.upload_record import UploadRecord
+from capstone_project_team_5.data.models.user import User
 from capstone_project_team_5.services.c_bullets import generate_c_project_bullets
 
 
@@ -126,6 +128,10 @@ def test_database_integration(sample_c_project: Path):
 
     # Create test data
     with get_session() as session:
+        user = User(username=f"fakeuser_{uuid.uuid4().hex}", password_hash="fakehash")
+        session.add(user)
+        session.flush()
+
         # Create upload record
         upload = UploadRecord(
             filename="test_c_project.zip",
@@ -181,6 +187,7 @@ def test_database_integration(sample_c_project: Path):
 
         portfolio_item = PortfolioItem(
             project_id=project.id,
+            user_id=user.id,
             title="Local C/C++ Resume Bullets - test_c_project",
             content=content,
         )
