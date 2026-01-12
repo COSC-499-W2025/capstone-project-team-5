@@ -20,16 +20,11 @@ from capstone_project_team_5.services import (
     upload_zip,
 )
 from capstone_project_team_5.services.bullet_generator import (
-    build_testing_bullet,
     generate_resume_bullets,
 )
 from capstone_project_team_5.services.code_analysis_persistence import (
     save_code_analysis_to_db,
 )
-from capstone_project_team_5.services.llm import generate_bullet_points_from_analysis
-from capstone_project_team_5.services import upload_zip
-from capstone_project_team_5.services.bullet_generator import generate_resume_bullets
-from capstone_project_team_5.services.code_analysis_persistence import save_code_analysis_to_db
 from capstone_project_team_5.services.project_analysis import ProjectAnalysis, analyze_project
 from capstone_project_team_5.services.ranking import update_project_ranks
 from capstone_project_team_5.utils import display_upload_result, prompt_for_zip_file
