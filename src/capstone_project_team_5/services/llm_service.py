@@ -119,18 +119,33 @@ class LLMService:
             Parsed JSON as a dictionary or list
 
         """
-        # TODO: Improve JSON extraction to handle more edge cases in future PR
-        response = response.strip()
+        text = response.strip()
 
-        json_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", response, re.DOTALL)
-        if json_match:
-            response = json_match.group(1).strip()
-        else:
-            json_match = re.search(r"[\{\[].*[\}\]]", response, re.DOTALL)
-            if json_match:
-                response = json_match.group(0)
-
+        # First, try to parse the response as-is.
         try:
-            return json.loads(response)
-        except json.JSONDecodeError as e:
-            raise LLMError(f"Failed to parse JSON from LLM response: {e}.") from e
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+
+        # Next, search for one or more fenced code blocks and try each in order.
+        code_block_pattern = re.compile(r"```(?:json)?\s*\n?(.*?)\n?```", re.DOTALL | re.IGNORECASE)
+        candidates: list[str] = []
+
+        for match in code_block_pattern.finditer(text):
+            candidate = match.group(1).strip()
+            if candidate:
+                candidates.append(candidate)
+
+        # Fallback: grab the first JSON-looking substring if no code block worked.
+        if not candidates:
+            inline_match = re.search(r"[\{\[].*[\}\]]", text, re.DOTALL)
+            if inline_match:
+                candidates.append(inline_match.group(0).strip())
+
+        for candidate in candidates:
+            try:
+                return json.loads(candidate)
+            except json.JSONDecodeError:
+                continue
+
+        raise LLMError("Failed to parse JSON from LLM response: no valid JSON found.")

@@ -241,6 +241,31 @@ def test_extract_json_with_surrounding_text() -> None:
     assert result == {"tools": ["SQL"], "practices": ["Testing"]}
 
 
+def test_extract_json_from_multiple_code_blocks_uses_first_valid() -> None:
+    """Test extraction when multiple code blocks are present."""
+    response = """Here is some data:
+```json
+{"tools": ["First"], "practices": ["One"]}
+```
+```json
+{"tools": ["Second"], "practices": ["Two"]}
+```"""
+    result = LLMService.extract_json_from_response(response)
+    assert result == {"tools": ["First"], "practices": ["One"]}
+
+
+def test_extract_json_skips_invalid_code_block_and_uses_next() -> None:
+    """Test that invalid fenced blocks are skipped in favor of a later valid one."""
+    response = """```text
+not valid json
+```
+```json
+{"tools": ["Docker"], "practices": ["TDD"]}
+```"""
+    result = LLMService.extract_json_from_response(response)
+    assert result == {"tools": ["Docker"], "practices": ["TDD"]}
+
+
 def test_from_model_preferences_returns_gemini_for_gemini_preference(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

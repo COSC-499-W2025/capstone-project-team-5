@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from zipfile import BadZipFile, ZipFile
 
+from capstone_project_team_5.collab_detect import CollabDetector
 from capstone_project_team_5.models.upload import (
     DetectedProject,
     DirectoryNode,
@@ -310,6 +312,28 @@ def upload_zip(zip_path: Path | str) -> ZipUploadResult:
     file_count = _count_files(tree)
     projects = _discover_projects(names, ignore_patterns)
 
+    # Determine collaboration flags using the extracted archive contents.
+    collab_flags: dict[str, bool] = {}
+    with TemporaryDirectory() as temp_dir_str:
+        extract_root = Path(temp_dir_str)
+        with ZipFile(path) as archive:
+            archive.extractall(extract_root)
+
+        for project in projects:
+            if not project.rel_path:
+                # Pseudo-projects like "docs" and "media" are treated as individual.
+                collab_flags[project.rel_path] = False
+                continue
+
+            project_root = extract_root.joinpath(*project.rel_path.split("/"))
+            if project_root.is_dir():
+                try:
+                    collab_flags[project.rel_path] = CollabDetector.is_collaborative(project_root)
+                except Exception:
+                    collab_flags[project.rel_path] = False
+            else:
+                collab_flags[project.rel_path] = False
+
     result = ZipUploadResult(
         filename=path.name,
         size_bytes=path.stat().st_size,
@@ -335,7 +359,7 @@ def upload_zip(zip_path: Path | str) -> ZipUploadResult:
                     rel_path=project.rel_path,
                     has_git_repo=project.has_git_repo,
                     file_count=project.file_count,
-                    is_collaborative=False,  # TODO: populate when collaboration detection exists
+                    is_collaborative=collab_flags.get(project.rel_path, False),
                 )
             )
 

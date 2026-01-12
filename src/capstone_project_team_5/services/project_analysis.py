@@ -259,9 +259,16 @@ def _analyze_python_project(analysis: ProjectAnalysis) -> None:
     """Run Python specific analysis and update the ProjectAnalysis object.
 
     Args:
-        analysis: ProjectAnalysis object to update with Python specific data
+        analysis: ProjectAnalysis object to update with Python specific data.
 
-    TODO: Document which fields get populated (metrics, oop_score, features, etc.)
+    Populates:
+    - language_analysis["python_result"] with the raw analyzer result.
+    - total_files, lines_of_code, function_count, class_count.
+    - oop_score and oop_features based on detected OOP principles.
+    - complexity_score derived from average function complexity (0-10 scale).
+    - technical_features augmented from Python features, tech_stack, and integrations.
+    - design_patterns, data_structures, and algorithms from the analyzer.
+    - test_frameworks from the Python tech_stack.
     """
     try:
         from capstone_project_team_5.python_analyzer import analyze_python_project
@@ -280,7 +287,8 @@ def _analyze_python_project(analysis: ProjectAnalysis) -> None:
         analysis.lines_of_code = result.get("lines_of_code", 0)
         analysis.function_count = result.get("methods_count", 0)
         analysis.class_count = result.get("classes_count", 0)
-        # TODO: Add complexity_score calculation (currently always 0 for Python)
+        complexity_score = float(result.get("complexity_score", 0.0))
+        analysis.complexity_score = complexity_score
 
         # Calculate OOP score based on principles detected
         oop_principles = result.get("oop_principles", {})
@@ -301,8 +309,27 @@ def _analyze_python_project(analysis: ProjectAnalysis) -> None:
         features = result.get("features", [])
         analysis.technical_features.update(features)
 
-        # TODO: Map tech_stack (frameworks, database, testing, tooling) to technical_features
-        # TODO: Map integrations (http, aws, cache, data) to technical_features or new field
+        # Map tech_stack (frameworks, database, testing, tooling) to technical_features
+        tech_stack = result.get("tech_stack", {})
+        for category, items in tech_stack.items():
+            analysis.technical_features.update(items)
+            if category == "database" and items:
+                analysis.technical_features.add("Database Integration")
+            if category == "testing" and items:
+                analysis.technical_features.add("Automated Testing")
+            if category == "frameworks" and items:
+                analysis.technical_features.add("Web Framework")
+
+        # Map integrations (http, aws, cache, data) to technical_features
+        integrations = result.get("integrations", {})
+        if "http" in integrations:
+            analysis.technical_features.add("HTTP API Integration")
+        if "aws" in integrations:
+            analysis.technical_features.add("Cloud Integration (AWS)")
+        if "cache" in integrations:
+            analysis.technical_features.add("Caching & Messaging")
+        if "data" in integrations:
+            analysis.technical_features.add("Data Processing")
 
         # Copy design patterns, data structures, and algorithms
         analysis.design_patterns.update(result.get("design_patterns", []))
