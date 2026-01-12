@@ -312,7 +312,7 @@ def test_incremental_upload_multiple_rounds(temp_db: None, tmp_path: Path) -> No
 
 
 def test_find_matching_projects_case_insensitive(temp_db: None, tmp_path: Path) -> None:
-    """Test that project matching works with exact project names."""
+    """Test that project matching is case-insensitive."""
     zip_path = tmp_path / "test.zip"
     _create_zip(
         zip_path,
@@ -325,10 +325,16 @@ def test_find_matching_projects_case_insensitive(temp_db: None, tmp_path: Path) 
 
     upload_zip(zip_path)
 
-    # Exact match should work
-    matches = find_matching_projects(["MyProject"])
-    assert "MyProject" in matches
-    assert len(matches["MyProject"]) > 0
+    with get_session() as session:
+        project_id = (
+            session.query(Project.id).filter(Project.name == "MyProject").scalar_one()
+        )
+
+    matches_exact = find_matching_projects(["MyProject"])
+    matches_lower = find_matching_projects(["myproject"])
+
+    assert matches_exact == {"MyProject": [project_id]}
+    assert matches_lower == {"myproject": [project_id]}
 
 
 def test_artifact_source_cascade_delete(temp_db: None, tmp_path: Path) -> None:

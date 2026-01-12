@@ -6,6 +6,8 @@ from pathlib import Path
 from zipfile import ZipFile
 from datetime import UTC, datetime
 
+from sqlalchemy import func
+
 from capstone_project_team_5.data.db import get_session
 from capstone_project_team_5.data.models import ArtifactSource, Project, UploadRecord
 from capstone_project_team_5.models.upload import ZipUploadResult
@@ -27,7 +29,12 @@ def find_matching_projects(
 
     with get_session() as session:
         for project_name in detected_projects:
-            found_projects = session.query(Project).filter(Project.name == project_name).all()
+            normalized_name = project_name.lower()
+            found_projects = (
+                session.query(Project)
+                .filter(func.lower(Project.name) == normalized_name)
+                .all()
+            )
             if found_projects:
                 matches[project_name] = [p.id for p in found_projects]
 
