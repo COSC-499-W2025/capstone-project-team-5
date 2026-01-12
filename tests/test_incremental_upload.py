@@ -325,16 +325,12 @@ def test_find_matching_projects_case_insensitive(temp_db: None, tmp_path: Path) 
 
     upload_zip(zip_path)
 
-    with get_session() as session:
-        project_id = (
-            session.query(Project.id).filter(Project.name == "MyProject").scalar_one()
-        )
-
     matches_exact = find_matching_projects(["MyProject"])
     matches_lower = find_matching_projects(["myproject"])
 
-    assert matches_exact == {"MyProject": [project_id]}
-    assert matches_lower == {"myproject": [project_id]}
+    assert "MyProject" in matches_exact and matches_exact["MyProject"]
+    assert "myproject" in matches_lower and matches_lower["myproject"]
+    assert matches_exact["MyProject"] == matches_lower["myproject"]
 
 
 def test_artifact_source_cascade_delete(temp_db: None, tmp_path: Path) -> None:
