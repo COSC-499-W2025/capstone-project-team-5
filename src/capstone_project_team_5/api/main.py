@@ -1,0 +1,57 @@
+"""FastAPI application entry point for the Zip2Job API."""
+
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from capstone_project_team_5.api.routes import health
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Initialize resources on startup and clean up on shutdown."""
+    from capstone_project_team_5.data.db import init_db
+
+    init_db()
+    yield
+
+
+app = FastAPI(
+    title="Zip2Job API",
+    description="API for analyzing project artifacts and generating portfolio content",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(health.router)
+
+
+def main() -> None:
+    """Start the development server."""
+    import uvicorn
+
+    uvicorn.run(
+        "capstone_project_team_5.api.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+    )
+
+
+if __name__ == "__main__":
+    main()
