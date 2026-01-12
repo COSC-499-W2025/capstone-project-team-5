@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from zipfile import ZipFile
-from datetime import UTC, datetime
 
 from sqlalchemy import func
 
