@@ -1,5 +1,33 @@
 # Team Weekly Logs
 
+
+<details>
+  <summary><h3>T2 Week 1 | January 04 - January 11 </h3></summary>
+
+  ### Burnup Chart
+
+
+
+  ### Past Work
+  - Reflected on presentation
+  - General refactoring
+  - Started work on API code
+  - Started code for saving portfolio changes to database
+  - Started Requirement 21 for Milestone #2
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Review suggestions from Milestone 1 Presentation | ✅ Done | |
+  | Decide on Improvements to be Implemented | ❌ Not Done | |
+  
+  ### Future Work
+  - Decide on improvements to be implemented from feedback
+  - Discuss and Create WBS for Milestone #2
+
+</details>
+
+
 <details>
   <summary><h3>Week 14 | November 30 - December 07 </h3></summary>
 
