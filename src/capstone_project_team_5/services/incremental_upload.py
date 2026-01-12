@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from zipfile import ZipFile
+from datetime import UTC, datetime
 
 from capstone_project_team_5.data.db import get_session
 from capstone_project_team_5.data.models import ArtifactSource, Project, UploadRecord
@@ -101,9 +102,7 @@ def incremental_upload_zip(
 
                     # Update the existing project's file count
                     existing_project.file_count += detected_project.file_count
-                    existing_project.updated_at = __import__("datetime").datetime.now(
-                        __import__("datetime").UTC
-                    )
+                    existing_project.updated_at = datetime.now(UTC)
 
         session.commit()
 
