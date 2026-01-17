@@ -158,7 +158,14 @@ async def upload_project_zip(
 
     with TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir) / filename
-        temp_path.write_bytes(await file.read())
+        chunk_size = 8192  # 8KB chunks
+
+        with temp_path.open("wb") as f:
+            while True:
+                chunk = await file.read(chunk_size)
+                if not chunk:
+                    break
+                f.write(chunk)
 
         try:
             result = upload_zip(temp_path)
