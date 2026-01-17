@@ -381,3 +381,48 @@ def test_artifact_source_cascade_delete(temp_db: None, tmp_path: Path) -> None:
             session.query(ArtifactSource).filter(ArtifactSource.project_id == project_id).all()
         )
         assert len(sources) == 0
+
+
+def test_deduplicates_within_single_zip(tmp_path: Path) -> None:
+    """Files with identical content in the same ZIP should be stored once."""
+    zip_path = tmp_path / "dup_same_zip.zip"
+    content = b"print('same')\n"
+    _create_zip(
+        zip_path,
+        entries=[
+            ("project/a.py", content),
+            ("project/subdir/b.py", content),  # same bytes, different path
+        ],
+    )
+
+    target_dir = tmp_path / "merged"
+    written = extract_and_merge_files(zip_path, target_dir, "proj")
+
+    # Only one unique file should be written
+    assert written == 1
+    files = list((target_dir / "proj").glob("*"))
+    assert len(files) == 1
+
+
+def test_deduplicates_across_multiple_zips(tmp_path: Path) -> None:
+    """Duplicate content across separate ZIPs should be stored once system-wide."""
+    content = b"print('same-across')\n"
+    zip1 = tmp_path / "first.zip"
+    _create_zip(zip1, entries=[("app/x.py", content)])
+
+    zip2 = tmp_path / "second.zip"
+    _create_zip(zip2, entries=[("app/y.py", content)])
+
+    target_dir = tmp_path / "merged2"
+    written1 = extract_and_merge_files(zip1, target_dir, "p1")
+    written2 = extract_and_merge_files(zip2, target_dir, "p2")
+
+    assert written1 == 1
+    # Second write should be skipped due to dedupe
+    assert written2 == 0
+
+    # System-level index should result in a single stored file across projects
+    files_p1 = list((target_dir / "p1").glob("*"))
+    files_p2 = list((target_dir / "p2").glob("*"))
+    assert len(files_p1) == 1
+    assert len(files_p2) == 0

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import hashlib
+import json
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -189,19 +191,61 @@ def extract_and_merge_files(
     project_dir = target_dir / project_name
     project_dir.mkdir(parents=True, exist_ok=True)
 
-    file_count = 0
+    index_path = target_dir / ".dedupe_index.json"
+    # Load existing dedupe index if present; structure: {"hash": "relative/path"}
+    dedupe_index: dict[str, str] = {}
+    if index_path.exists():
+        try:
+            dedupe_index = json.loads(index_path.read_text(encoding="utf-8"))
+        except Exception:
+            dedupe_index = {}
+
+    def compute_content_hash(data: bytes) -> str:
+        """Compute a stable content hash for deduplication (SHA-256 hex)."""
+        h = hashlib.sha256()
+        h.update(data)
+        return h.hexdigest()
+
+    def _unique_target_path(base_dir: Path, filename: str, content_hash: str) -> Path:
+        candidate = base_dir / filename
+        if not candidate.exists():
+            return candidate
+        # If a file exists with same name but different content, disambiguate
+        stem = Path(filename).stem
+        suffix = Path(filename).suffix
+        alt_name = f"{stem}-{content_hash[:8]}{suffix}"
+        return base_dir / alt_name
+
+    written_count = 0
 
     with ZipFile(zip_path) as archive:
         for info in archive.infolist():
             if info.filename.endswith("/"):
                 continue
 
-            # Extract to project subdirectory
-            target_path = project_dir / Path(info.filename).name
+            # Read file bytes and compute content hash
+            with archive.open(info) as source:
+                data = source.read()
+            content_hash = compute_content_hash(data)
 
-            with archive.open(info) as source, open(target_path, "wb") as target:
-                target.write(source.read())
+            # Skip writing if this exact content already exists in the system
+            if content_hash in dedupe_index:
+                continue
 
-            file_count += 1
+            filename = Path(info.filename).name
+            target_path = _unique_target_path(project_dir, filename, content_hash)
+            target_path.write_bytes(data)
 
-    return file_count
+            # Record into system-level dedupe index using project-relative path
+            rel_record_path = str(target_path.relative_to(target_dir))
+            dedupe_index[content_hash] = rel_record_path
+            written_count += 1
+
+    # Persist the dedupe index
+    try:
+        index_path.write_text(json.dumps(dedupe_index, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        # Non-fatal: if index persistence fails, proceed without raising
+        pass
+
+    return written_count
