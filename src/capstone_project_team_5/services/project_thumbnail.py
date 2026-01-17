@@ -12,9 +12,8 @@ ALLOWED_URL_SCHEMES = {"http", "https"}
 ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}
 
 
-def set_project_thumbnail_url(project_id: int, thumbnail_url: str) -> bool:
-    """Set the thumbnail URL on a project."""
-
+def is_valid_thumbnail_url(thumbnail_url: str) -> bool:
+    """Validate thumbnail URL format."""
     url = thumbnail_url.strip()
     if not url:
         return False
@@ -23,7 +22,14 @@ def set_project_thumbnail_url(project_id: int, thumbnail_url: str) -> bool:
     if parsed.scheme not in ALLOWED_URL_SCHEMES or not parsed.netloc:
         return False
     extension = PurePosixPath(parsed.path).suffix.lower()
-    if extension not in ALLOWED_IMAGE_EXTENSIONS:
+    return extension in ALLOWED_IMAGE_EXTENSIONS
+
+
+def set_project_thumbnail_url(project_id: int, thumbnail_url: str) -> bool:
+    """Set the thumbnail URL on a project."""
+
+    url = thumbnail_url.strip()
+    if not is_valid_thumbnail_url(url):
         return False
 
     try:
