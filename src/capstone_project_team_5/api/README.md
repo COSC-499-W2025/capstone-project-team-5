@@ -85,10 +85,10 @@ When the server is running, you can access:
 src/capstone_project_team_5/api/
 ├── __init__.py          # Package exports
 ├── main.py              # FastAPI app and configuration
-└── routes/
-    ├── __init__.py      # Route module exports
-    ├── health.py        # Health check endpoint
-    └── projects.py      # Project endpoints
+├── routes/
+│   ├── __init__.py      # Route module exports
+│   ├── health.py        # Health check endpoint
+│   └── projects.py      # Project endpoints
 └── schemas/
     ├── __init__.py      # Pydantic schemas
     └── projects.py      # Project response models
