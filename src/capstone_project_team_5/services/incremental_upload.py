@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import hashlib
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -242,10 +242,11 @@ def extract_and_merge_files(
             written_count += 1
 
     # Persist the dedupe index
-    try:
-        index_path.write_text(json.dumps(dedupe_index, ensure_ascii=False, indent=2), encoding="utf-8")
-    except Exception:
-        # Non-fatal: if index persistence fails, proceed without raising
-        pass
+    import contextlib
+
+    with contextlib.suppress(Exception):
+        index_path.write_text(
+            json.dumps(dedupe_index, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
     return written_count
