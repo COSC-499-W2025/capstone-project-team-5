@@ -1,5 +1,30 @@
 # Team Weekly Logs
 
+<details>
+  <summary><h3>T2 Week 2 | January 12 - January 18 </h3></summary>
+
+  ### Burnup Chart
+
+  ### Past Work
+  - Work towards milestone 2 requirements such as
+  - User role detection
+  - Recognizing duplicate files
+  - Saving user resume items
+  - API routes for all available CRUD endpoints we have at this time
+  - Adding project thumbnail support
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Discuss and Create WBS for Milestone #2 | ✅ Done | Requirements added as GitHub issues and self assigned. |
+  | Decide on Improvements to be Implemented | ❌ In Progress | Doing some refactoring / improvements of past work. Continuous process. |
+  
+  ### Future Work
+  - Continue with Milestone #2 requirements
+  - Start to prepare for peer testing
+  - Decide on improvements to make from past milestone requirements
+
+</details>
 
 <details>
   <summary><h3>T2 Week 1 | January 04 - January 11 </h3></summary>
