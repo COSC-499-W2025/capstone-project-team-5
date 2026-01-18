@@ -137,7 +137,7 @@ def _classify_role(
         return "Contributor", confidence
 
     # Minor contributor - small involvement
-    confidence = "Low" if user_commits >= 1 else "Low"
+    confidence = "Low"
     return "Minor Contributor", confidence
 
 
