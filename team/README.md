@@ -4,6 +4,7 @@
   <summary><h3>T2 Week 2 | January 12 - January 18 </h3></summary>
 
   ### Burnup Chart
+  <img width="1009" height="521" alt="Image" src="https://github.com/user-attachments/assets/fd38e830-0866-4887-84fd-7765ec87d2ae" />
 
   ### Past Work
   - Work towards milestone 2 requirements such as
