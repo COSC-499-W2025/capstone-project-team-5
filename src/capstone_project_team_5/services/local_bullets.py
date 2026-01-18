@@ -50,6 +50,29 @@ if TYPE_CHECKING:
     from capstone_project_team_5.services.project_analysis import ProjectAnalysis
 
 
+def _get_role_action_verb(user_role: str | None) -> str:
+    """Get role-appropriate action verb for bullet points.
+
+    Args:
+        user_role: The detected user role (e.g., "Lead Developer", "Contributor")
+
+    Returns:
+        Action verb that matches the user's role
+    """
+    if not user_role:
+        return "Developed"
+
+    role_verbs = {
+        "Solo Developer": "Independently developed",
+        "Lead Developer": "Led development of",
+        "Major Contributor": "Contributed significantly to",
+        "Contributor": "Contributed to",
+        "Minor Contributor": "Assisted in developing",
+    }
+
+    return role_verbs.get(user_role, "Developed")
+
+
 def generate_local_bullets(project_root: Path | str, *, max_bullets: int = 6) -> list[str]:
     """Generate bullet points using local analysis (no LLM).
 
@@ -296,22 +319,25 @@ def generate_generic_bullets(analysis: ProjectAnalysis, max_bullets: int = 6) ->
     """
     bullets = []
 
+    # Get role-aware action verbs
+    action_verb = _get_role_action_verb(analysis.user_role)
+
     # Determine technology stack
     tech_stack = (
         f"{analysis.language}/{analysis.framework}" if analysis.framework else analysis.language
     )
 
-    # Opening bullet - project scope
+    # Opening bullet - project scope (role-aware)
     if analysis.lines_of_code > 0 and analysis.total_files > 0:
         bullets.append(
-            f"Developed a {tech_stack} application with {analysis.lines_of_code:,} lines "
+            f"{action_verb} a {tech_stack} application with {analysis.lines_of_code:,} lines "
             f"of code across {analysis.total_files} files"
         )
     else:
         file_count = len(analysis.tools | analysis.practices)
         if file_count > 0:
             bullets.append(
-                f"Built a {tech_stack} project with {file_count} identified components "
+                f"{action_verb} a {tech_stack} project with {file_count} identified components "
                 f"and configuration files"
             )
 

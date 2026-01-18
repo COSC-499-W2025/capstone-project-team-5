@@ -76,6 +76,10 @@ class ProjectAnalysis:
     tests_by_language: dict[str, int] = field(default_factory=dict)
     tests_by_framework: dict[str, int] = field(default_factory=dict)
 
+    # User role information (detected from Git contributions)
+    user_role: str | None = None
+    user_contribution_percentage: float | None = None
+
 
 def analyze_project(project_path: Path, consent_tool: ConsentTool | None = None) -> ProjectAnalysis:
     """Analyze a project using all available analyzers.

@@ -8,6 +8,8 @@ CREATE TABLE Project (
     language TEXT, -- Primary programming language
     framework TEXT, -- Primary framework used
     importance_rank INTEGER,
+    user_role TEXT, -- Detected role: Solo Developer, Lead Developer, etc.
+    user_contribution_percentage REAL, -- Percentage of contributions (0-100)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

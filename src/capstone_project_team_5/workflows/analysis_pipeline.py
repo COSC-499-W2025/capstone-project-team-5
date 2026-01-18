@@ -12,6 +12,7 @@ from capstone_project_team_5.contribution_metrics import ContributionMetrics
 from capstone_project_team_5.detection import identify_language_and_framework
 from capstone_project_team_5.file_walker import DirectoryWalker
 from capstone_project_team_5.models.upload import DetectedProject
+from capstone_project_team_5.role_detector import detect_user_role
 from capstone_project_team_5.services.bullet_generator import (
     build_testing_bullet,
     generate_resume_bullets,
@@ -206,6 +207,14 @@ def analyze_projects_structured(
             except RuntimeError:
                 contributions = []
 
+            # Detect user role based on Git contributions
+            user_role_info = detect_user_role(
+                project_path, current_name, contributions, collab_summary[0]
+            )
+            if user_role_info:
+                analysis.user_role = user_role_info.role
+                analysis.user_contribution_percentage = user_role_info.contribution_percentage
+
             for ac in contributions:
                 git_author_contribs.append(
                     {
@@ -276,6 +285,8 @@ def analyze_projects_structured(
                     "current_author_contribution": git_current_contrib,
                     "activity_chart": git_activity_chart,
                 },
+                "user_role": analysis.user_role,
+                "user_contribution_percentage": analysis.user_contribution_percentage,
             }
         )
 
