@@ -107,3 +107,12 @@ This week some members were travelling so no formal meetings took place. This we
 
 ![screenshot](Week9_checklist.png)
 
+## Term 2 - Week #2 (January 12 - 18)
+
+This week time was spent meeting with team members in class on monday discussing our plan for milestone 2 and dividing up milestone requirements. Time coding was spent creating backend functionality for storing user resume specific information. The plan for next week is to keep going on milestone 2 requirements and plan for peer testing. 
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| Resume Services | Done | Comphrehensive functionality for saving, reading, updating and deleting user resume items. |    
+
+![screenshot](Week9_checklist.png)
