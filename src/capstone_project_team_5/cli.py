@@ -14,9 +14,17 @@ from capstone_project_team_5.contribution_metrics import ContributionMetrics
 from capstone_project_team_5.file_walker import DirectoryWalker
 from capstone_project_team_5.models import InvalidZipError
 from capstone_project_team_5.models.upload import DetectedProject
-from capstone_project_team_5.services import upload_zip
-from capstone_project_team_5.services.bullet_generator import generate_resume_bullets
-from capstone_project_team_5.services.code_analysis_persistence import save_code_analysis_to_db
+from capstone_project_team_5.services import (
+    get_project_uploads,
+    incremental_upload_zip,
+    upload_zip,
+)
+from capstone_project_team_5.services.bullet_generator import (
+    generate_resume_bullets,
+)
+from capstone_project_team_5.services.code_analysis_persistence import (
+    save_code_analysis_to_db,
+)
 from capstone_project_team_5.services.project_analysis import ProjectAnalysis, analyze_project
 from capstone_project_team_5.services.ranking import update_project_ranks
 from capstone_project_team_5.utils import display_upload_result, prompt_for_zip_file
@@ -344,6 +352,213 @@ def _get_skill_timeline_for_project(name: str, rel_path: str) -> list[dict[str, 
         return []
 
     return timeline
+
+
+def prompt_for_incremental_upload() -> bool:
+    """Prompt user whether to perform an incremental upload.
+
+    Returns:
+        True if user wants to perform incremental upload, False for fresh upload.
+    """
+    while True:
+        response = (
+            input(
+                "\nDo you want to add files to an existing project (incremental upload)? (yes/no): "
+            )
+            .strip()
+            .lower()
+        )
+        if response in ("yes", "y"):
+            return True
+        if response in ("no", "n"):
+            return False
+        print("Please answer 'yes' or 'no'.")
+
+
+def list_existing_projects() -> list[dict[str, Any]]:
+    """List all existing projects in the database.
+
+    Returns:
+        List of dicts with project info: id, name, file_count, upload_count.
+    """
+    from capstone_project_team_5.data.db import get_session
+    from capstone_project_team_5.data.models import Project
+
+    projects_info: list[dict[str, Any]] = []
+
+    with get_session() as session:
+        projects = session.query(Project).all()
+        for project in projects:
+            projects_info.append(
+                {
+                    "id": project.id,
+                    "name": project.name,
+                    "rel_path": project.rel_path,
+                    "file_count": project.file_count,
+                    "upload_count": len(project.artifact_sources) + 1,  # +1 for initial upload
+                }
+            )
+
+    return projects_info
+
+
+def prompt_for_project_selection(projects: list[dict[str, Any]]) -> int | None:
+    """Prompt user to select a project for incremental upload.
+
+    Args:
+        projects: List of project info dicts.
+
+    Returns:
+        Selected project ID or None if user cancels.
+    """
+    if not projects:
+        print("\n❌ No existing projects found.")
+        return None
+
+    print("\n📋 Existing Projects:")
+    print("-" * 60)
+    for idx, proj in enumerate(projects, 1):
+        display_name = proj["name"]
+        if proj["rel_path"]:
+            display_name += f" ({proj['rel_path']})"
+        print(
+            f"{idx}. {display_name} — {proj['file_count']} files, {proj['upload_count']} upload(s)"
+        )
+
+    while True:
+        try:
+            choice = input("\nSelect project number (or '0' to cancel): ").strip()
+            if choice == "0":
+                return None
+            idx = int(choice) - 1
+            if 0 <= idx < len(projects):
+                return projects[idx]["id"]
+            print(f"Please enter a number between 1 and {len(projects)}.")
+        except ValueError:
+            print("Please enter a valid number.")
+
+
+def prompt_for_project_mapping(detected_names: list[str]) -> dict[str, int] | None:
+    """Prompt user to map detected projects to existing projects.
+
+    Args:
+        detected_names: List of project names detected in the new upload.
+
+    Returns:
+        Dict mapping project names to project IDs, or None if user cancels.
+    """
+    existing_projects = list_existing_projects()
+    mapping: dict[str, int] = {}
+
+    print("\n🔗 Map Detected Projects to Existing Projects")
+    print("-" * 60)
+
+    for detected_name in detected_names:
+        print(f"\nProject detected: '{detected_name}'")
+
+        # Find similar projects
+        matching = [p for p in existing_projects if p["name"].lower() == detected_name.lower()]
+
+        if matching:
+            print(f"Found matching project: {matching[0]['name']}")
+            response = input("Add files to this project? (yes/no): ").strip().lower()
+            if response in ("yes", "y"):
+                mapping[detected_name] = matching[0]["id"]
+                continue
+
+        # Show all projects for manual selection
+        print("\nAvailable projects:")
+        for idx, proj in enumerate(existing_projects, 1):
+            display_name = proj["name"]
+            if proj["rel_path"]:
+                display_name += f" ({proj['rel_path']})"
+            print(f"  {idx}. {display_name}")
+
+        choice = input(
+            f"Select project number to map to '{detected_name}' (or '0' to create new): "
+        ).strip()
+        if choice != "0":
+            try:
+                idx = int(choice) - 1
+                if 0 <= idx < len(existing_projects):
+                    mapping[detected_name] = existing_projects[idx]["id"]
+            except ValueError:
+                pass
+
+    return mapping if mapping else None
+
+
+def run_incremental_upload_flow() -> int:
+    """Run the incremental upload workflow.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+    """
+    print("\n" + "=" * 60)
+    print("Incremental Upload - Add to Existing Project")
+    print("=" * 60)
+
+    consent_tool = ConsentTool()
+    if not consent_tool.generate_consent_form():
+        print("\n❌ Consent denied. Exiting.")
+        return 1
+
+    print("\n✅ Consent granted. Proceeding to file selection...\n")
+
+    zip_path = prompt_for_zip_file()
+    if not zip_path:
+        print("❌ No file selected. Exiting.")
+        return 1
+
+    print(f"\n📦 Processing: {zip_path.name}")
+    print("-" * 60)
+
+    try:
+        # Get project mapping from user
+        # First, do a quick detection to see what projects are in the ZIP
+        from zipfile import ZipFile
+
+        from capstone_project_team_5.services.upload import (
+            _discover_projects,
+            _get_ignore_patterns,
+        )
+
+        with ZipFile(zip_path) as archive:
+            names = archive.namelist()
+
+        detected_projects = _discover_projects(names, _get_ignore_patterns())
+        detected_names = [p.name for p in detected_projects]
+
+        print(f"\nDetected {len(detected_names)} project(s): {', '.join(detected_names)}")
+
+        # Prompt user for mapping
+        project_mapping = prompt_for_project_mapping(detected_names)
+
+        # Perform incremental upload
+        result, associations = incremental_upload_zip(zip_path, project_mapping)
+
+    except InvalidZipError as exc:
+        print(f"\n❌ Error: {exc}")
+        return 1
+
+    display_upload_result(result)
+
+    if associations:
+        print("\n✅ Incremental Update Summary")
+        print("-" * 60)
+        for existing_id, _upload_id in associations:
+            from capstone_project_team_5.data.db import get_session
+            from capstone_project_team_5.data.models import Project
+
+            with get_session() as session:
+                project = session.query(Project).filter(Project.id == existing_id).first()
+                if project:
+                    uploads_info = get_project_uploads(existing_id)
+                    print(f"📁 Project: {project.name}")
+                    print(f"   Total uploads: {len(uploads_info)}")
+                    print(f"   Total files: {project.file_count}")
+
+    return 0
 
 
 def main() -> int:
