@@ -59,6 +59,7 @@ def _ensure_tables_created() -> None:
         consent_record,
         portfolio_item,
         project,
+        resume,
         upload_record,
         user,
         user_code_analysis,

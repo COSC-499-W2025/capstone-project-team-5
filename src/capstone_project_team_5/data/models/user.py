@@ -13,6 +13,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from capstone_project_team_5.data.db import Base
 from capstone_project_team_5.data.models.portfolio_item import PortfolioItem
+from capstone_project_team_5.data.models.resume import Resume
 
 
 class User(Base):
@@ -35,4 +36,7 @@ class User(Base):
     )
     portfolio_items: Mapped[list[PortfolioItem]] = relationship(
         "PortfolioItem", back_populates="user", cascade="all, delete-orphan"
+    )
+    resumes: Mapped[list[Resume]] = relationship(
+        "Resume", back_populates="user", cascade="all, delete-orphan"
     )
