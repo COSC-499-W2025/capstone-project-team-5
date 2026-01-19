@@ -4,6 +4,67 @@
 
 ---
 
+
+# TERM2 Logs - Sparsh Khanna
+
+---
+
+## Week 2 | January  11-18, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1123" height="621" alt="image" src="https://github.com/user-attachments/assets/7b0066a8-9dec-40f2-9cfa-0a314dab39bc" />
+
+
+
+</details>
+
+### Tasks worked on
+
+- Key-role-user Logic Introduction [PR#232](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/232)
+- Made the above change Persistent based off feedback from my teammate Ronit. (SAME PR)
+- Wrote UTs to ensure code correctness and good coverage.
+- Reviewed Teammates code
+
+
+### Personal Contributions
+
+- Key-role-user Logic Introduction [PR#232](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/232)
+This change introduces a user role detection feature based on Git contribution analysis. It adds a new module to determine a user's role (e.g., Lead Developer, Contributor) in a project, integrates this information into the analysis pipeline, and displays the detected role in project summaries and bullet points. 
+
+### Tests Added
+- [PR#232](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/232)
+- tests/test_role_detector.py : comprehensive test suite for the user role detection logic, covering various scenarios and edge cases to ensure robust and accurate classification.
+- tests/test_role_persistence.py: comprehensive test suite that checks for persistence of added db entries for role detections
+
+### PRs Reviewed
+- [PR#231](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/231)
+- [PR#229](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/229)
+
+### Additional Details
+
+This week's contributions were not based of last week's contributions which were centred around the innit structure for the API CRUD endpoints logic. This was worked upon further by my teammate Ronit this week. I focused on another requirement based off which we are required to narrow down the key role of the user in the relevant projects. The logic for the same is mentioned above. I will have a further discussions with my teammates about upcoming week's work plan and proceed accordingly.
+
+## Week 1 | January  4-11, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1470" height="956" alt="Screenshot 2026-01-11 at 8 18 52 AM" src="https://github.com/user-attachments/assets/d883b145-8748-4022-acea-2c41388b3cb0" />
+
+
+</details>
+
+### Team Activities
+- **Requirements Analysis**: Had discussions about Term 2 work structure.
+
+### Personal Contributions
+- **API Skeleton**: Made basic API skeleton for API endpoint work in the future.
+
+---
+# TERM1 Logs - Sparsh Khanna
+
 ## Week 3 | September 15-21, 2025
 
 <details>
@@ -218,23 +279,3 @@ It was a busy week for me due to heavy midterm load and I was unable to be as in
 - **Code Contributions**: Cleaned up consent tool code to better reflect the AI models being used.
 
 ---
-
-# TERM2 Logs - Sparsh Khanna
-
----
-
-## Week 1 | January  4-11, 2025
-
-<details>
-  <summary><h3>Evaluation</h3></summary>
-
-<img width="1470" height="956" alt="Screenshot 2026-01-11 at 8 18 52 AM" src="https://github.com/user-attachments/assets/d883b145-8748-4022-acea-2c41388b3cb0" />
-
-
-</details>
-
-### Team Activities
-- **Requirements Analysis**: Had discussions about Term 2 work structure.
-
-### Personal Contributions
-- **API Skeleton**: Made basic API skeleton for API endpoint work in the future.
