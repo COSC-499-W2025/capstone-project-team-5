@@ -2,6 +2,41 @@
 
 **GitHub:** [@ribhavsharma](https://github.com/ribhavsharma)
 ---
+## **Term 2 – Week 2 | January 12–16, 2026**
+
+
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1596" height="947" alt="image" src="https://github.com/user-attachments/assets/6ded86da-29c4-4794-8713-5cf39a72a8e1" />
+
+ 
+</details>
+
+**Task Progress this week**  
+Building on last week’s cleanup and API design discussions, I focused on persisting user edits end-to-end so that manual changes are no longer lost between sessions. I also spent time reviewing teammates’ work to stay aligned with ongoing backend changes.
+
+### **Coding Tasks**
+- Opened **PR [#239 – Store user edits in DB](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/239)**, which wires the TUI’s portfolio editing flow into the existing `PortfolioItem` infrastructure.
+- Ensured edits made in both *Analyze ZIP* and *Retrieve Projects* flows are persisted as user-specific `PortfolioItem` rows.
+- Updated load logic so saved user edits are shown instead of auto-generated summaries when available.
+
+### **Testing / Debugging**
+- Manually tested edit persistence across multiple TUI flows to confirm changes survive reloads and navigation.
+- Verified no regressions in existing portfolio retrieval behavior.
+
+### **Reviewing / Collaboration**
+- Reviewed **PR [#233](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/233)**, focusing on data modeling and service-layer correctness.
+- Provided feedback on design assumptions and potential follow-up improvements.
+
+### **Issues / Blockers**
+- No major blockers this week. One limitation is that edits are currently saved via service calls only; there is no dedicated API endpoint yet for updating portfolio items.
+
+### **Next Week’s Plans**
+- Add a dedicated backend endpoint for editing `PortfolioItem`s.
+- Continue supporting Milestone 2 feature development.
+- Review additional PRs as they come in.
 
 ## Week 3 | September 15-21, 2025
 
