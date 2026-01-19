@@ -28,6 +28,11 @@ from capstone_project_team_5.services.auth import authenticate_user, create_user
 from capstone_project_team_5.services.portfolio_persistence import (
     get_latest_portfolio_item_for_project,
 )
+from capstone_project_team_5.services.project_thumbnail import (
+    clear_project_thumbnail_url,
+    get_project_thumbnail_url,
+    set_project_thumbnail_url,
+)
 from capstone_project_team_5.tui_rendering import (
     render_detected_list,
     render_project_markdown,
@@ -199,6 +204,11 @@ ProgressBar {
                         Button("Analyze ZIP", id="btn-analyze", variant="primary"),
                         Button("Retrieve Projects", id="btn-retrieve", variant="default"),
                         Button("Delete Analysis", id="btn-delete-analysis", variant="error"),
+                        Button("Set Thumbnail", id="btn-set-thumbnail", variant="default"),
+                        Input(
+                            placeholder="Thumbnail URL",
+                            id="thumbnail-url-input",
+                        ),
                         Button("Configure Consent", id="btn-config", variant="default"),
                         Button("Edit View", id="btn-edit", variant="default"),
                         Button("Exit", id="btn-exit", variant="error"),
@@ -250,6 +260,8 @@ ProgressBar {
         submit_btn = self.query_one("#auth-btn-submit", Button)
         app_screen = self.query_one("#app-screen", Container)
         delete_btn = self.query_one("#btn-delete-analysis", Button)
+        set_thumb_btn = self.query_one("#btn-set-thumbnail", Button)
+        thumbnail_input = self.query_one("#thumbnail-url-input", Input)
 
         editor.display = False
         analysis_list.display = False
@@ -260,12 +272,73 @@ ProgressBar {
         submit_btn.display = False
         # Hide main app screen until a user logs in.
         app_screen.display = False
+        set_thumb_btn.display = False
+        thumbnail_input.display = False
 
     def _reset_analysis_selection_ui(self) -> None:
         """Clear analysis selection state and hide the delete button."""
         self._analysis_selected = False
         delete_btn = self.query_one("#btn-delete-analysis", Button)
         delete_btn.display = False
+
+    def _current_saved_project_id(self) -> int | None:
+        """Return the currently selected saved project ID, if any."""
+        if self._saved_active_project_index is None:
+            return None
+        if not self._saved_projects:
+            return None
+        if self._saved_active_project_index < 0 or self._saved_active_project_index >= len(
+            self._saved_projects
+        ):
+            return None
+        proj_id = self._saved_projects[self._saved_active_project_index].get("id")
+        return int(proj_id) if isinstance(proj_id, int) else None
+
+    def _update_thumbnail_buttons(self, project_id: int | None) -> None:
+        """Enable/disable thumbnail actions based on current state."""
+        set_btn = self.query_one("#btn-set-thumbnail", Button)
+        url_input = self.query_one("#thumbnail-url-input", Input)
+        enabled = (
+            self._view_mode == "saved" and self._current_user is not None and project_id is not None
+        )
+        set_btn.display = enabled
+        url_input.display = enabled
+        if enabled:
+            self._set_thumbnail_input_value(project_id)
+            self._set_thumbnail_button_label(project_id)
+        else:
+            url_input.value = ""
+            set_btn.label = "Set Thumbnail"
+
+    def _set_thumbnail_input_value(self, project_id: int | None) -> None:
+        """Populate thumbnail URL input for the selected project."""
+        url_input = self.query_one("#thumbnail-url-input", Input)
+        if project_id is None:
+            url_input.value = ""
+            return
+
+        url = get_project_thumbnail_url(project_id)
+        url_input.value = url or ""
+
+    def _set_thumbnail_button_label(self, project_id: int | None) -> None:
+        """Toggle the button label based on whether a thumbnail is set."""
+        set_btn = self.query_one("#btn-set-thumbnail", Button)
+        if project_id is None:
+            set_btn.label = "Set Thumbnail"
+            return
+        set_btn.label = (
+            "Clear Thumbnail" if get_project_thumbnail_url(project_id) else "Set Thumbnail"
+        )
+
+    def _thumbnail_status_line(self, project_id: int | None) -> str:
+        """Return a single-line status about the current thumbnail."""
+        if project_id is None:
+            return "- Thumbnail: none"
+
+        url = get_project_thumbnail_url(project_id)
+        if url is None:
+            return "- Thumbnail: none set"
+        return "- Thumbnail: set"
 
     def _show_editor(self) -> None:
         """Show the markdown editor and hide the rendered output."""
@@ -483,6 +556,47 @@ ProgressBar {
         else:
             status.update(f"Failed to delete analysis {analysis_id}.")
 
+    @on(Button.Pressed, "#btn-set-thumbnail")
+    def handle_set_thumbnail(self) -> None:
+        """Attach or clear a thumbnail URL for the selected saved project."""
+
+        status = self.query_one("#status", Label)
+        if self._view_mode != "saved":
+            status.update("Switch to saved view to set a thumbnail.")
+            return
+        if self._current_user is None:
+            status.update("Please log in to set a thumbnail.")
+            return
+
+        project_id = self._current_saved_project_id()
+        if project_id is None:
+            status.update("Select a saved project first.")
+            return
+
+        existing_url = get_project_thumbnail_url(project_id)
+        if existing_url:
+            if clear_project_thumbnail_url(project_id):
+                status.update("Thumbnail cleared.")
+                if self._saved_active_project_index is not None:
+                    self._show_saved_project(self._saved_active_project_index)
+            else:
+                status.update("No thumbnail to clear or operation failed.")
+            return
+
+        url_input = self.query_one("#thumbnail-url-input", Input)
+        thumbnail_url = url_input.value.strip()
+        if not thumbnail_url:
+            status.update("Enter a thumbnail URL first.")
+            return
+
+        saved = set_project_thumbnail_url(project_id, thumbnail_url)
+        if saved:
+            status.update("Thumbnail set.")
+            if self._saved_active_project_index is not None:
+                self._show_saved_project(self._saved_active_project_index)
+        else:
+            status.update("Failed to set thumbnail.")
+
     @on(Button.Pressed, "#btn-load-latest")
     def handle_load_latest_saved(self) -> None:
         """Load the latest saved analysis for the current user into project view."""
@@ -512,6 +626,7 @@ ProgressBar {
         # Switch to live analysis mode.
         self._view_mode = "analysis"
         self._analysis_selected = False
+        self._update_thumbnail_buttons(None)
         analysis_list.display = False
         analysis_list.clear()
         project_list.display = True
@@ -561,6 +676,7 @@ ProgressBar {
         output.update("")
         progress.update(progress=5)
         status.update("Retrieving projects...")
+        self._update_thumbnail_buttons(None)
 
         def work() -> dict:
             result = upload_zip(zip_path)
@@ -586,6 +702,7 @@ ProgressBar {
 
         self._view_mode = "saved"
         self._analysis_selected = False
+        self._update_thumbnail_buttons(None)
         project_list.display = True
         analysis_list.display = True
         project_list.clear()
@@ -764,6 +881,8 @@ ProgressBar {
         output.update("")
         progress.update(progress=5)
         status.update("Loading latest saved analysis...")
+        self._view_mode = "saved"
+        self._update_thumbnail_buttons(None)
 
         current_username = self._current_user
 
@@ -1088,6 +1207,7 @@ ProgressBar {
         project_list.index = 0
         self._saved_active_project_index = 0
         self._show_saved_project(0)
+        self._update_thumbnail_buttons(self._current_saved_project_id())
         status.update("Loaded saved analyses.")
 
     def _handle_worker_success_retrieve(
@@ -1118,6 +1238,7 @@ ProgressBar {
             self._reset_analysis_selection_ui()
 
             self._saved_active_project_index = event.index
+            self._update_thumbnail_buttons(self._current_saved_project_id())
             self._show_saved_project(event.index)
         else:
             self._show_project_detail(event.index)
@@ -1223,6 +1344,7 @@ ProgressBar {
             return
 
         project = self._saved_projects[index]
+        self._update_thumbnail_buttons(project.get("id"))
         analysis_list = self.query_one("#analysis-list", ListView)
         output = self.query_one("#output", Markdown)
 
@@ -1258,6 +1380,7 @@ ProgressBar {
             loc = project.get("lines_of_code")
             if loc is not None:
                 parts.append(f"- Lines of code (sum of analyses): {loc}")
+            parts.append(self._thumbnail_status_line(project.get("id")))
 
             parts.append("")
             if analyses:
@@ -1674,6 +1797,7 @@ ProgressBar {
         auth_screen.display = True
         app_screen.display = False
         status.update("Logged out. Please log in again.")
+        self._update_thumbnail_buttons(None)
 
     @on(Button.Pressed, "#btn-exit")
     def exit_app(self) -> None:
