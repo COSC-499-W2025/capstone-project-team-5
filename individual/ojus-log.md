@@ -4,7 +4,7 @@
 
 ### This Week - 2
 
-<img width="920" height="735" alt="image" src="https://github.com/user-attachments/assets/427994a1-3623-454a-8711-9ea08c3ff203" />
+<img width="600" height="400" alt="image" src="https://github.com/user-attachments/assets/427994a1-3623-454a-8711-9ea08c3ff203" />
 
 #### What Went Well
 - Successfully completed and merged [PR #240](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/240) : Create Skills Endpoint, adding API endpoint functionality for the Skills feature
