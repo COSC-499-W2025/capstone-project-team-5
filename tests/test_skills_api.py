@@ -183,7 +183,7 @@ def test_get_project_tools_pagination_params(
 
     # Last page
     response = client.get(f"/api/projects/{project_with_many_skills}/skills/tools?limit=2&offset=4")
-	assert response.status_code == 200
+    assert response.status_code == 200
     data = response.json()
     assert len(data["items"]) == 1
     assert data["pagination"]["has_more"] is False
