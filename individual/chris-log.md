@@ -253,3 +253,25 @@ Some members were travelling this week, so no formal meetings were held, but com
 | Team Meetings | Not Yet Started | Discuss and finalize Milestone #2 WBS. |
 | Write More Code | Not Yet Started | Code responsibility to be decided in Team Meetings. |
 </details>
+
+## T2 - Week 2 | 11 January - 18 January 2026
+
+<details>
+  <summary><h3></h3></summary>
+
+
+
+This week we furthered work on the API and other requirements for Milestone #2. We also began discussions for the in class demos, but most of the decisions will be made next week in team meetings. For my part I wrote the backend code for Requirement 22 - "Recognize duplicate files and maintains only one in the system."
+
+### Previous Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Write R22 Code | Completed | Write the backend code. |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Team Meetings | Not Yet Started | Prepare for the in class demos. |
+| Write More Code | Not Yet Started | Further code responsibility to be decided in Team Meetings. |
+</details>
