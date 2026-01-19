@@ -2,6 +2,107 @@
 
 **GitHub:** [@ojusharma](https://github.com/ojusharma)
 
+### This Week - 2
+
+<img width="600" height="400" alt="image" src="https://github.com/user-attachments/assets/427994a1-3623-454a-8711-9ea08c3ff203" />
+
+#### What Went Well
+- Successfully completed and merged [PR #240](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/240) : Create Skills Endpoint, adding API endpoint functionality for the Skills feature
+- Reviewed and approved [PR #233](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/233): Resume models + services by @xvardenx - adding user resume storage functionality
+- Reviewed and approved [PR #239](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/239) : feat: store user edits in db by @ribhavsharma - enabling portfolio edit persistence
+- Reviewed and approved Individual logs
+  
+#### What Didn't Go Well
+- Everything went smoothly
+
+#### Planning for Next Week
+- Build on the Skills Endpoint based on feedback
+- Continue reviewing teammates' PRs to support code collaboration
+- Continue enhancing the Diff Checker Tool functionality and connect it to broader project features as needed
+</details>
+
+
+---
+
+
+<details>
+  <summary><h3>January</h3></summary>
+  
+<details>
+  <summary><h3>Week 1</h3></summary>
+  
+<img width="1018" height="671" alt="image" src="https://github.com/user-attachments/assets/34f8f13a-e3b6-4dee-b85e-f1927c47368b" />
+
+### What Went Well
+  - Decided API stack (FASTAPI)
+  - Created a Diff checker tool that will allow faster scanning times
+  - Reviewed PRs
+
+  ### What Didn't Go Well
+  - All good  
+
+  ### Planning for Next Week
+  - Work on integrating diff checker into codebase and add functionality to it
+  - Start migrating skill detector as REST API
+</details>
+
+---
+
+<details>
+  <summary><h3>Week 2</h3></summary>
+  <img width="920" height="735" alt="image" src="https://github.com/user-attachments/assets/df4ec2c9-1278-44e1-a79a-bb0acb5a922c" />
+
+### What Went Well
+
+#### Coding Tasks:
+- Successfully completed and merged [PR #240](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/240) : Create Skills Endpoint, adding API endpoint functionality for the Skills feature
+- Reviewed and approved [PR #233](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/233): Resume models + services by @xvardenx - adding user resume storage functionality
+- Reviewed and approved [PR #239](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/239) : feat: store user edits in db by @ribhavsharma - enabling portfolio edit persistence
+- Reviewed and approved Individual logs
+  
+### What Didn't Go Well
+- Everything went smoothly
+
+### Planning for Next Week
+- Build on the Skills Endpoint based on feedback
+- Continue reviewing teammates' PRs to support code collaboration
+- Continue enhancing the Diff Checker Tool functionality and connect it to broader project features as needed
+</details>
+
+---
+
+<details>
+  <summary><h3>Week X</h3></summary>
+
+### What Went Well
+  - 
+
+  ### What Didn't Go Well
+  - 
+
+  ### Planning for Next Week
+  - 
+</details>
+
+---
+
+<details>
+  <summary><h3>Week X</h3></summary>
+
+### What Went Well
+  - 
+
+  ### What Didn't Go Well
+  - 
+
+  ### Planning for Next Week
+  - 
+</details>
+
+</details>
+
+
+
 ---
 <details>
   <summary><h3>Term 1</summary>
@@ -259,73 +360,5 @@
 </details>
 
 ---
-
-<details>
-  <summary><h3>January</h3></summary>
-  
-<details>
-  <summary><h3>Week 1</h3></summary>
-  
-<img width="1018" height="671" alt="image" src="https://github.com/user-attachments/assets/34f8f13a-e3b6-4dee-b85e-f1927c47368b" />
-
-### What Went Well
-  - Decided API stack (FASTAPI)
-  - Created a Diff checker tool that will allow faster scanning times
-  - Reviewed PRs
-
-  ### What Didn't Go Well
-  - All good  
-
-  ### Planning for Next Week
-  - Work on integrating diff checker into codebase and add functionality to it
-  - Start migrating skill detector as REST API
-</details>
-
----
-
-<details>
-  <summary><h3>Week X</h3></summary>
-
-### What Went Well
-  - 
-
-  ### What Didn't Go Well
-  - 
-
-  ### Planning for Next Week
-  - 
-</details>
-
----
-
-<details>
-  <summary><h3>Week X</h3></summary>
-
-### What Went Well
-  - 
-
-  ### What Didn't Go Well
-  - 
-
-  ### Planning for Next Week
-  - 
-</details>
-
----
-
-<details>
-  <summary><h3>Week X</h3></summary>
-
-### What Went Well
-  - 
-
-  ### What Didn't Go Well
-  - 
-
-  ### Planning for Next Week
-  - 
-</details>
-
-</details>
 
 
