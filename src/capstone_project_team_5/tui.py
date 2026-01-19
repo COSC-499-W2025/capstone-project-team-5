@@ -23,12 +23,11 @@ from textual.widgets import (
 from textual.worker import Worker, WorkerState
 
 from capstone_project_team_5.consent_tool import ConsentTool
-from capstone_project_team_5.services import (
-    create_portfolio_item,
-    get_latest_portfolio_item_for_project,
-    upload_zip,
-)
+from capstone_project_team_5.services import create_portfolio_item, upload_zip
 from capstone_project_team_5.services.auth import authenticate_user, create_user
+from capstone_project_team_5.services.portfolio_persistence import (
+    get_latest_portfolio_item_for_project,
+)
 from capstone_project_team_5.tui_rendering import (
     render_detected_list,
     render_project_markdown,
@@ -1590,7 +1589,7 @@ ProgressBar {
 
     def _persist_saved_project_portfolio(self) -> None:
         """Persist the current markdown as a portfolio item for the active saved project."""
-        if self._saved_active_project_index is None:
+        if self._current_user is None or self._saved_active_project_index is None:
             return
         if self._saved_active_project_index < 0 or self._saved_active_project_index >= len(
             self._saved_projects
@@ -1605,11 +1604,15 @@ ProgressBar {
         title_obj = project.get("name") or "Project Showcase"
         title = str(title_obj)
 
-        create_portfolio_item(
-            project_id=project_id,
-            title=title,
-            content={"markdown": self._current_markdown},
-        )
+        try:
+            create_portfolio_item(
+                username=self._current_user,
+                project_id=project_id,
+                title=title,
+                content={"markdown": self._current_markdown},
+            )
+        except Exception:
+            return
 
     def _persist_analysis_project_portfolio(self) -> None:
         """Persist the current markdown as a portfolio item for the active analysis project."""
@@ -1623,7 +1626,7 @@ ProgressBar {
         project = self._projects[index]
         name = project.get("name")
         rel_path = project.get("rel_path")
-        if not isinstance(name, str) or not isinstance(rel_path, str):
+        if self._current_user is None or not isinstance(name, str) or not isinstance(rel_path, str):
             return
 
         try:
@@ -1639,14 +1642,15 @@ ProgressBar {
                 if proj_row is None:
                     return
 
-                title_obj = project.get("name") or "Project Showcase"
-                title = str(title_obj)
+            title_obj = project.get("name") or "Project Showcase"
+            title = str(title_obj)
 
-                create_portfolio_item(
-                    project_id=proj_row.id,
-                    title=title,
-                    content={"markdown": self._current_markdown},
-                )
+            create_portfolio_item(
+                username=self._current_user,
+                project_id=proj_row.id,
+                title=title,
+                content={"markdown": self._current_markdown},
+            )
         except Exception:
             return
 

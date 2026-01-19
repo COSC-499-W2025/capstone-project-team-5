@@ -7,20 +7,24 @@ from __future__ import annotations
 from typing import Any
 
 from capstone_project_team_5.data.db import get_session
+from capstone_project_team_5.data.models import User
 from capstone_project_team_5.data.models.portfolio_item import PortfolioItem
 
 
 def create_portfolio_item(
     *,
+    username: str,
     project_id: int | None,
     title: str,
     content: dict[str, Any] | list[dict[str, Any]] | list[str],
 ) -> PortfolioItem:
-    """Create and persist a new portfolio item.
+    """Create and persist a new portfolio item for a user.
 
     Args:
-        project_id: ID of the project this portfolio item is associated with.
-        title: Project name
+        username: Username of the owner of this portfolio item.
+        project_id: ID of the project this portfolio item is associated with
+            (or ``None`` for a standalone item).
+        title: Project or showcase name.
         content: Serializable structure describing the showcase details.
             Typical shapes include::
 
@@ -30,13 +34,26 @@ def create_portfolio_item(
 
     Returns:
         The newly created :class:`PortfolioItem` instance with an assigned ID.
+
+    Raises:
+        ValueError: If the user with the given username does not exist.
     """
     import json
 
     encoded_content = json.dumps(content)
 
     with get_session() as session:
-        item = PortfolioItem(project_id=project_id, title=title, content=encoded_content)
+        user = session.query(User).filter(User.username == username).first()
+        if user is None:
+            msg = f"User '{username}' not found when creating portfolio item."
+            raise ValueError(msg)
+
+        item = PortfolioItem(
+            project_id=project_id,
+            user_id=user.id,
+            title=title,
+            content=encoded_content,
+        )
         session.add(item)
         session.flush()
         session.refresh(item)

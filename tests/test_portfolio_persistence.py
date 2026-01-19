@@ -12,7 +12,7 @@ import pytest
 
 from capstone_project_team_5.data import db as db_module
 from capstone_project_team_5.data.db import get_session, init_db
-from capstone_project_team_5.data.models import PortfolioItem, Project, UploadRecord
+from capstone_project_team_5.data.models import PortfolioItem, Project, UploadRecord, User
 from capstone_project_team_5.services.portfolio_persistence import (
     create_portfolio_item,
     get_latest_portfolio_item_for_project,
@@ -74,8 +74,18 @@ def _create_project() -> int:
         return project.id
 
 
+def _create_user(username: str = "testuser") -> str:
+    """Helper to create a user and return their username."""
+    with get_session() as session:
+        user = User(username=username, password_hash="fakehash123")
+        session.add(user)
+        session.flush()
+        return user.username
+
+
 def test_create_portfolio_item_with_project(temp_db: Path) -> None:
     """Create a portfolio item linked to a specific project."""
+    username = _create_user()
     project_id = _create_project()
 
     content = {
@@ -84,7 +94,12 @@ def test_create_portfolio_item_with_project(temp_db: Path) -> None:
         "links": ["https://example.com/demo"],
     }
 
-    item = create_portfolio_item(project_id=project_id, title="Demo Showcase", content=content)
+    item = create_portfolio_item(
+        username=username,
+        project_id=project_id,
+        title="Demo Showcase",
+        content=content,
+    )
 
     assert item.id is not None
     assert item.project_id == project_id
@@ -101,9 +116,15 @@ def test_create_portfolio_item_with_project(temp_db: Path) -> None:
 
 def test_create_portfolio_item_without_project(temp_db: Path) -> None:
     """Create a standalone portfolio item with no associated project."""
+    username = _create_user()
     content = {"summary": "Standalone portfolio entry", "bullets": ["Independent work"]}
 
-    item = create_portfolio_item(project_id=None, title="Independent Showcase", content=content)
+    item = create_portfolio_item(
+        username=username,
+        project_id=None,
+        title="Independent Showcase",
+        content=content,
+    )
 
     assert item.id is not None
     assert item.project_id is None
@@ -112,10 +133,12 @@ def test_create_portfolio_item_without_project(temp_db: Path) -> None:
 
 def test_update_portfolio_item_changes_title_and_content(temp_db: Path) -> None:
     """Update both title and content for an existing portfolio item."""
+    username = _create_user()
     project_id = _create_project()
     original_content = {"summary": "Original", "bullets": ["Old bullet"]}
 
     item = create_portfolio_item(
+        username=username,
         project_id=project_id,
         title="Original Title",
         content=original_content,
@@ -139,10 +162,12 @@ def test_update_portfolio_item_changes_title_and_content(temp_db: Path) -> None:
 
 def test_update_portfolio_item_partial_update(temp_db: Path) -> None:
     """Update only the title, preserving existing content."""
+    username = _create_user()
     project_id = _create_project()
     original_content = {"summary": "keep me", "bullets": ["keep this bullet"]}
 
     item = create_portfolio_item(
+        username=username,
         project_id=project_id,
         title="Initial Title",
         content=original_content,
@@ -165,14 +190,17 @@ def test_update_portfolio_item_nonexistent_returns_none(temp_db: Path) -> None:
 
 def test_get_latest_portfolio_item_for_project(temp_db: Path) -> None:
     """Return the most recently created portfolio item for a project."""
+    username = _create_user()
     project_id = _create_project()
 
     create_portfolio_item(
+        username=username,
         project_id=project_id,
         title="First",
         content={"markdown": "first"},
     )
     second = create_portfolio_item(
+        username=username,
         project_id=project_id,
         title="Second",
         content={"markdown": "second"},
