@@ -35,7 +35,7 @@ def _get_or_create_skill(session: Session, name: str, skill_type: SkillType) -> 
 
 
 @pytest.fixture
-def project_with_skills() -> int:
+def project_with_skills(api_db: None) -> int:
     """Create a project with associated skills and return the project ID."""
     unique_id = uuid.uuid4().hex[:8]
 
@@ -66,7 +66,7 @@ def project_with_skills() -> int:
 
 
 @pytest.fixture
-def project_with_many_skills() -> int:
+def project_with_many_skills(api_db: None) -> int:
     """Create a project with many skills for pagination testing."""
     unique_id = uuid.uuid4().hex[:8]
 
@@ -97,7 +97,7 @@ def project_with_many_skills() -> int:
 
 
 @pytest.fixture
-def project_without_skills() -> int:
+def project_without_skills(api_db: None) -> int:
     """Create a project without any skills and return the project ID."""
     unique_id = uuid.uuid4().hex[:8]
 
