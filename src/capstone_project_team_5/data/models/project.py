@@ -37,6 +37,8 @@ class Project(Base):
     thumbnail_url: Mapped[str | None] = mapped_column(String, nullable=True)
     importance_rank: Mapped[int | None] = mapped_column(Integer, nullable=True)
     importance_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    user_role: Mapped[str | None] = mapped_column(String, nullable=True)
+    user_contribution_percentage: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )
