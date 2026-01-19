@@ -23,8 +23,11 @@ from textual.widgets import (
 from textual.worker import Worker, WorkerState
 
 from capstone_project_team_5.consent_tool import ConsentTool
-from capstone_project_team_5.services import upload_zip
+from capstone_project_team_5.services import create_portfolio_item, upload_zip
 from capstone_project_team_5.services.auth import authenticate_user, create_user
+from capstone_project_team_5.services.portfolio_persistence import (
+    get_latest_portfolio_item_for_project,
+)
 from capstone_project_team_5.tui_rendering import (
     render_detected_list,
     render_project_markdown,
@@ -1230,34 +1233,40 @@ ProgressBar {
             label = f"{a.get('language')} @ {a.get('created_at')}"
             analysis_list.append(ListItem(Label(label)))
 
-        # Show a brief project summary in the markdown pane.
-        parts: list[str] = []
-        parts.append("# Saved Project\n")
-        parts.append(
-            f"## {project.get('name')}  \n"
-            f"`{project.get('rel_path')}` (Upload: {project.get('upload_filename')})\n"
-        )
-        parts.append(f"- Files: {project.get('file_count')}")
-        parts.append(f"- Upload ID: {project.get('upload_id')}")
-        langs = project.get("languages") or []
-        if langs:
-            parts.append(f"- Languages: {', '.join(langs)}")
-        practices = project.get("practices") or []
-        tools = project.get("tools") or []
-        skills = practices + tools
-        if skills:
-            parts.append(f"- Skills (Tools/Practices): {', '.join(skills[:12])}")
-        loc = project.get("lines_of_code")
-        if loc is not None:
-            parts.append(f"- Lines of code (sum of analyses): {loc}")
-
-        parts.append("")
-        if analyses:
-            parts.append("Select an analysis on the left to view its detailed summary.")
+        # Prefer a saved portfolio markdown for this project if available.
+        custom_markdown = self._get_saved_project_portfolio_markdown(project)
+        if custom_markdown is not None:
+            md = custom_markdown
         else:
-            parts.append("No analyses have been saved for this project yet.")
+            # Show a brief project summary in the markdown pane.
+            parts: list[str] = []
+            parts.append("# Saved Project\n")
+            parts.append(
+                f"## {project.get('name')}  \n"
+                f"`{project.get('rel_path')}` (Upload: {project.get('upload_filename')})\n"
+            )
+            parts.append(f"- Files: {project.get('file_count')}")
+            parts.append(f"- Upload ID: {project.get('upload_id')}")
+            langs = project.get("languages") or []
+            if langs:
+                parts.append(f"- Languages: {', '.join(langs)}")
+            practices = project.get("practices") or []
+            tools = project.get("tools") or []
+            skills = practices + tools
+            if skills:
+                parts.append(f"- Skills (Tools/Practices): {', '.join(skills[:12])}")
+            loc = project.get("lines_of_code")
+            if loc is not None:
+                parts.append(f"- Lines of code (sum of analyses): {loc}")
 
-        md = "\n".join(parts)
+            parts.append("")
+            if analyses:
+                parts.append("Select an analysis on the left to view its detailed summary.")
+            else:
+                parts.append("No analyses have been saved for this project yet.")
+
+            md = "\n".join(parts)
+
         self._current_markdown = md
         output.update(md)
 
@@ -1291,8 +1300,22 @@ ProgressBar {
             or getattr(analysis_row, "language", None)
             or "Unknown"
         )
+        project_languages = project_dict.get("languages") or []
+        if not isinstance(project_languages, (list, tuple)):
+            project_languages = []
+        normalized_project_langs = [
+            str(lang).strip() for lang in project_languages if str(lang).strip()
+        ]
+
+        # Fallback: if language is still unknown, try aggregated project languages.
+        if (
+            (not isinstance(language, str)) or not language.strip() or language == "Unknown"
+        ) and normalized_project_langs:
+            language = normalized_project_langs[0]
         framework = metrics.get("framework")
         parts.append(f"- Language: {language}")
+        if normalized_project_langs:
+            parts.append(f"- Project languages: {', '.join(sorted(set(normalized_project_langs)))}")
         parts.append(f"- Framework: {framework or 'None detected'}")
 
         total_files = (
@@ -1380,6 +1403,76 @@ ProgressBar {
 
         return "\n".join(parts)
 
+    def _extract_markdown_from_portfolio_content(self, raw: str) -> str | None:
+        """Extract a markdown string from stored portfolio content.
+
+        Content is stored as JSON; we accept either a plain string or an
+        object with a ``\"markdown\"`` field.
+        """
+        try:
+            import json
+
+            decoded = json.loads(raw)
+        except Exception:
+            decoded = raw
+
+        if isinstance(decoded, dict):
+            markdown = decoded.get("markdown")
+            if isinstance(markdown, str) and markdown.strip():
+                return markdown
+            return None
+
+        if isinstance(decoded, str) and decoded.strip():
+            return decoded
+
+        return None
+
+    def _get_saved_project_portfolio_markdown(self, project: dict[str, object]) -> str | None:
+        """Return saved portfolio markdown for a project in the saved view, if any."""
+        project_id = project.get("id")
+        if not isinstance(project_id, int):
+            return None
+
+        try:
+            item = get_latest_portfolio_item_for_project(project_id)
+        except Exception:
+            return None
+
+        if item is None:
+            return None
+
+        return self._extract_markdown_from_portfolio_content(item.content)
+
+    def _get_analysis_project_portfolio_markdown(self, project: dict[str, object]) -> str | None:
+        """Return saved portfolio markdown for a project in analysis view, if any."""
+        name = project.get("name")
+        rel_path = project.get("rel_path")
+        if not isinstance(name, str) or not isinstance(rel_path, str):
+            return None
+
+        try:
+            from capstone_project_team_5.data.db import get_session
+            from capstone_project_team_5.data.models import Project as ProjectModel
+
+            with get_session() as session:
+                proj_row = (
+                    session.query(ProjectModel)
+                    .filter(ProjectModel.name == name, ProjectModel.rel_path == rel_path)
+                    .first()
+                )
+
+                if proj_row is None:
+                    return None
+
+                item = get_latest_portfolio_item_for_project(proj_row.id)
+        except Exception:
+            return None
+
+        if item is None:
+            return None
+
+        return self._extract_markdown_from_portfolio_content(item.content)
+
     def _show_project_detail(self, index: int) -> None:
         """Render details for a single selected project into the markdown view."""
         if not self._projects or self._upload_summary is None:
@@ -1388,8 +1481,13 @@ ProgressBar {
             return
 
         proj = self._projects[index]
-        rank = self._ranks.get(index)
-        md = render_project_markdown(self._upload_summary, proj, rank)
+        # Prefer any saved portfolio markdown for this project.
+        custom_markdown = self._get_analysis_project_portfolio_markdown(proj)
+        if custom_markdown is not None:
+            md = custom_markdown
+        else:
+            rank = self._ranks.get(index)
+            md = render_project_markdown(self._upload_summary, proj, rank)
         self._current_markdown = md
         self.query_one("#output", Markdown).update(md)
 
@@ -1456,22 +1554,24 @@ ProgressBar {
         if not editor.display:
             return
 
-        edited_text = editor.text
+        self._current_markdown = editor.text
+        output.update(self._current_markdown)
+        editor.display = False
+        output.display = True
 
-        # Try to save edit to db
-        if self._view_mode == "saved" and self._current_user:
-            if self._save_current_edit_to_db(edited_text):
-                self._current_markdown = edited_text
-                editor.display = False
-                output.display = True
+        if self._view_mode == "saved" and self._saved_active_project_index is not None:
+            try:
+                self._persist_saved_project_portfolio()
                 status.update("Edits saved to portfolio.")
-            else:
-                status.update("Failed to save edit to the database.")
+            except Exception as exc:  # pragma: no cover - defensive
+                status.update(f"Edits saved locally, but failed to persist: {exc}")
+        elif self._view_mode == "analysis":
+            try:
+                self._persist_analysis_project_portfolio()
+                status.update("Edits saved to portfolio.")
+            except Exception as exc:  # pragma: no cover - defensive
+                status.update(f"Edits saved locally, but failed to persist: {exc}")
         else:
-            self._current_markdown = editor.text
-            output.update(self._current_markdown)
-            editor.display = False
-            output.display = True
             status.update("Edits saved.")
 
     def action_cancel_edit(self) -> None:
@@ -1486,6 +1586,73 @@ ProgressBar {
         editor.display = False
         output.display = True
         status.update("Edit cancelled.")
+
+    def _persist_saved_project_portfolio(self) -> None:
+        """Persist the current markdown as a portfolio item for the active saved project."""
+        if self._current_user is None or self._saved_active_project_index is None:
+            return
+        if self._saved_active_project_index < 0 or self._saved_active_project_index >= len(
+            self._saved_projects
+        ):
+            return
+
+        project = self._saved_projects[self._saved_active_project_index]
+        project_id = project.get("id")
+        if not isinstance(project_id, int):
+            return
+
+        title_obj = project.get("name") or "Project Showcase"
+        title = str(title_obj)
+
+        try:
+            create_portfolio_item(
+                username=self._current_user,
+                project_id=project_id,
+                title=title,
+                content={"markdown": self._current_markdown},
+            )
+        except Exception:
+            return
+
+    def _persist_analysis_project_portfolio(self) -> None:
+        """Persist the current markdown as a portfolio item for the active analysis project."""
+        project_list = self.query_one("#project-list", ListView)
+        index = project_list.index
+        if index is None:
+            return
+        if index < 0 or index >= len(self._projects):
+            return
+
+        project = self._projects[index]
+        name = project.get("name")
+        rel_path = project.get("rel_path")
+        if self._current_user is None or not isinstance(name, str) or not isinstance(rel_path, str):
+            return
+
+        try:
+            from capstone_project_team_5.data.db import get_session
+            from capstone_project_team_5.data.models import Project as ProjectModel
+
+            with get_session() as session:
+                proj_row = (
+                    session.query(ProjectModel)
+                    .filter(ProjectModel.name == name, ProjectModel.rel_path == rel_path)
+                    .first()
+                )
+                if proj_row is None:
+                    return
+
+            title_obj = project.get("name") or "Project Showcase"
+            title = str(title_obj)
+
+            create_portfolio_item(
+                username=self._current_user,
+                project_id=proj_row.id,
+                title=title,
+                content={"markdown": self._current_markdown},
+            )
+        except Exception:
+            return
 
     @on(Button.Pressed, "#btn-logout")
     def handle_logout(self) -> None:
