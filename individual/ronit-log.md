@@ -2,16 +2,51 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-_Last Updated:_ January 11, 2026
+_Last Updated:_ January 18, 2026
 
 ---
+
+## Week 2 | January 12-18, 2026
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1083" height="635" alt="image" src="https://github.com/user-attachments/assets/6f0131b7-f9e0-4b9e-864f-19b60cf94667" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| **Coding Tasks** | | |
+| Implemented project thumbnail URL support | ✅ Done | Added `thumbnail_url` field to Project model, created service layer functions, updated TUI with set/clear functionality, added URL validation ([PR #225](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/225)) |
+| Implemented Projects API CRUD endpoints | ✅ Done | Added GET /api/projects, GET /api/projects/{id}, POST /api/projects/upload, PATCH /api/projects/{id}, DELETE /api/projects/{id} ([PR #229](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/229)) |
+| **Testing/Debugging Tasks** | | |
+| Added tests for thumbnail URL service | ✅ Done | Tests cover validation, set/get/clear operations, error handling |
+| Added comprehensive API endpoint tests | ✅ Done | Full test coverage for all project CRUD operations using FastAPI TestClient |
+| **Reviewing/Collaboration Tasks** | | |
+| Reviewed [PR #231](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/231) (duplicate file recognition) | ✅ Done | noted potential edge case with hash collisions where different files could overwrite each other if they share same filename and 8-char hash |
+| Reviewed [PR #239](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/239) (store user edits in db) | ✅ Done | suggested early return optimization when both title and content are None |
+| Reviewed [PR #232](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/232) (user's role in project) | ✅ Done | suggested persisting the information in db for future api usage |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Expand API endpoints to incorporate project analysis | ❌ Not Started | Add endpoints for analysis workflows, importance scoring, etc. |
+| Continue code reviews | | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Extend API functionality | ✅ Done | Implemented Projects API CRUD endpoints and thumbnail URL support |
+| Continue code reviews | ✅ Done | Ongoing task |
+
+---
+
+## Week 1 | January 5-11, 2026
 
 <details>
   <summary><h3>Evaluation</h3></summary>
     <img width="1082" height="642" alt="image" src="https://github.com/user-attachments/assets/419a5217-fac0-41ff-8758-f62e7550e0d9" />
 </details>
-
-## Week 1 | January 5-11, 2026
 
 ### Current Cycle
 | Task | Status | Notes |
