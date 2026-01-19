@@ -258,7 +258,7 @@ Some members were travelling this week, so no formal meetings were held, but com
 
 <details>
   <summary><h3></h3></summary>
-
+<img alt="Screenshot 2026-01-18 194528" src="https://github.com/user-attachments/assets/e1160fc5-0696-4ff5-a4cc-e7248d28828f" />
 
 
 This week we furthered work on the API and other requirements for Milestone #2. We also began discussions for the in class demos, but most of the decisions will be made next week in team meetings. For my part I wrote the backend code for Requirement 22 - "Recognize duplicate files and maintains only one in the system."
