@@ -3,6 +3,9 @@
 **GitHub:** [@ojusharma](https://github.com/ojusharma)
 
 ### This Week - 2
+
+<img width="920" height="735" alt="image" src="https://github.com/user-attachments/assets/427994a1-3623-454a-8711-9ea08c3ff203" />
+
 #### What Went Well
 - Successfully completed and merged [PR #240](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/240) : Create Skills Endpoint, adding API endpoint functionality for the Skills feature
 - Reviewed and approved [PR #233](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/233): Resume models + services by @xvardenx - adding user resume storage functionality
@@ -47,7 +50,8 @@
 
 <details>
   <summary><h3>Week 2</h3></summary>
-  
+  <img width="920" height="735" alt="image" src="https://github.com/user-attachments/assets/df4ec2c9-1278-44e1-a79a-bb0acb5a922c" />
+
 ### What Went Well
 
 #### Coding Tasks:
