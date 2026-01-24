@@ -215,11 +215,11 @@ def extract_and_merge_files(
         suffix = Path(filename).suffix
         alt_name = f"{stem}-{content_hash[:8]}{suffix}"
         alt_candidate = base_dir / alt_name
-        
+
         # Check if the alternative name already exists (edge case: hash prefix collision)
         if not alt_candidate.exists():
             return alt_candidate
-        
+
         # If alt_name also exists, append counter to ensure uniqueness
         counter = 1
         while True:
@@ -245,10 +245,8 @@ def extract_and_merge_files(
             if content_hash in dedupe_index:
                 # Validate that the indexed file actually exists and has correct size
                 indexed_path = target_dir / dedupe_index[content_hash]
-                if indexed_path.exists():
-                    # Verify file size matches expected (sanity check)
-                    if indexed_path.stat().st_size == len(data):
-                        continue  # File exists and is valid, skip writing
+                if indexed_path.exists() and indexed_path.stat().st_size == len(data):
+                    continue  # File exists and is valid, skip writing
                 # If file doesn't exist or size mismatch, remove from index and continue to write
                 del dedupe_index[content_hash]
 

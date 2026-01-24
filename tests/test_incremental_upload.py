@@ -431,52 +431,52 @@ def test_deduplicates_across_multiple_zips(tmp_path: Path) -> None:
 def test_extract_and_merge_validates_dedupe_index(temp_db: None, tmp_path: Path) -> None:
     """Test that dedupe index entries are validated before skipping files."""
     target_dir = tmp_path / "merged"
-    
+
     # Create first ZIP
     zip1 = tmp_path / "first.zip"
     content = b"print('hello')\n"
     _create_zip(zip1, entries=[("project/file.py", content)])
-    
+
     # Extract first time
     written1 = extract_and_merge_files(zip1, target_dir, "project")
     assert written1 == 1
-    
+
     # Manually remove the extracted file to simulate corruption/deletion
     project_dir = target_dir / "project"
     extracted_file = list(project_dir.glob("*.py"))[0]
     extracted_file.unlink()
-    
+
     # Create second ZIP with same content
     zip2 = tmp_path / "second.zip"
     _create_zip(zip2, entries=[("project/file.py", content)])
-    
+
     # Should write again since the indexed file no longer exists
     written2 = extract_and_merge_files(zip2, target_dir, "project")
     assert written2 == 1
-    
+
 
 def test_extract_and_merge_validates_file_size(temp_db: None, tmp_path: Path) -> None:
     """Test that file size is validated when checking dedupe index."""
     target_dir = tmp_path / "merged"
-    
+
     # Create first ZIP
     zip1 = tmp_path / "first.zip"
     content = b"print('hello')\n"
     _create_zip(zip1, entries=[("project/data.py", content)])
-    
+
     # Extract first time
     written1 = extract_and_merge_files(zip1, target_dir, "project")
     assert written1 == 1
-    
+
     # Manually corrupt the file by changing its content
     project_dir = target_dir / "project"
     extracted_file = list(project_dir.glob("*.py"))[0]
     extracted_file.write_bytes(b"corrupted")
-    
+
     # Create second ZIP with same content
     zip2 = tmp_path / "second.zip"
     _create_zip(zip2, entries=[("project/data.py", content)])
-    
+
     # Should write again since the file size doesn't match
     written2 = extract_and_merge_files(zip2, target_dir, "project")
     assert written2 == 1
@@ -490,42 +490,43 @@ def test_extract_and_merge_filename_collision_with_hash_prefix_collision(
     target_dir.mkdir()
     project_dir = target_dir / "myproject"
     project_dir.mkdir()
-    
+
     # Pre-create a file with the same name that will trigger alt_name
     existing_file = project_dir / "data.txt"
     existing_file.write_bytes(b"existing content")
-    
+
     # Create a ZIP with a file that has the same name but different content
     # This will trigger the alt_name path
     zip_path = tmp_path / "upload.zip"
     _create_zip(zip_path, entries=[("myproject/data.txt", b"new content 1")])
-    
+
     # Extract and merge
     written1 = extract_and_merge_files(zip_path, target_dir, "myproject")
     assert written1 == 1
-    
+
     # Now manually create a file with the hash-based alt_name to simulate collision
     # We need to compute what the hash would be for "new content 2"
     import hashlib
+
     content2 = b"new content 2"
     hash2 = hashlib.sha256(content2).hexdigest()
-    
+
     # Create a file that would conflict with the alt_name
     collision_file = project_dir / f"data-{hash2[:8]}.txt"
     collision_file.write_bytes(b"collision content")
-    
+
     # Now try to extract a second file with same name but yet different content
     zip_path2 = tmp_path / "upload2.zip"
     _create_zip(zip_path2, entries=[("myproject/data.txt", content2)])
-    
+
     # This should create a file with a counter suffix to avoid overwriting
     written2 = extract_and_merge_files(zip_path2, target_dir, "myproject")
     assert written2 == 1
-    
+
     # Check that we now have 4 files: original, first alt, collision, and counter-suffixed
     files = list(project_dir.glob("data*.txt"))
     assert len(files) == 4
-    
+
     # Verify the counter-suffixed file exists
     counter_file = project_dir / f"data-{hash2[:8]}-1.txt"
     assert counter_file.exists()
