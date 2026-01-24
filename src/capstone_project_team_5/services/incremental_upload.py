@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 from zipfile import ZipFile
@@ -260,11 +261,15 @@ def extract_and_merge_files(
             written_count += 1
 
     # Persist the dedupe index
-    import contextlib
-
-    with contextlib.suppress(Exception):
+    try:
         index_path.write_text(
             json.dumps(dedupe_index, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    except (OSError, IOError, json.JSONDecodeError) as e:
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            f"Failed to persist dedupe index at {index_path}: {e}. "
+            "Deduplication may not work optimally in future uploads."
         )
 
     return written_count
