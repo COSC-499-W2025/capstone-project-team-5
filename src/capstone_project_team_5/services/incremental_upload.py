@@ -67,6 +67,9 @@ def incremental_upload_zip(
     # Perform standard upload
     result = _upload_zip(zip_path)
 
+    # Get the size of the uploaded file
+    uploaded_file_size = result.size
+
     # If no mapping provided, return early
     if not project_mapping:
         return result, []
@@ -186,6 +189,27 @@ def extract_and_merge_files(
     zip_path = Path(zip_path)
     if zip_path.suffix.lower() != ".zip" or not zip_path.is_file():
         raise InvalidZipError(f"Expected a .zip file. Received: {zip_path.name}")
+
+    # Perform standard upload
+    result = _upload_zip(zip_path)
+
+    # Get the size of the uploaded file
+    uploaded_file_size = result.size
+
+    # Check if the file exists and validate it
+    existing_file_path = Path(zip_path)
+    if existing_file_path.exists():
+        # Compare sizes
+        if uploaded_file_size != existing_file_path.stat().st_size:
+            raise ValueError(f"File size mismatch for {zip_path}. Expected {uploaded_file_size}, found {existing_file_path.stat().st_size}.")
+        # Check for JSON errors
+        try:
+            with open(existing_file_path) as f:
+                json.load(f)
+        except json.JSONDecodeError:
+            raise ValueError(f"JSON error in file {zip_path}.")
+    else:
+        raise FileNotFoundError(f"File {zip_path} does not exist.")
 
     target_dir.mkdir(parents=True, exist_ok=True)
     project_dir = target_dir / project_name
