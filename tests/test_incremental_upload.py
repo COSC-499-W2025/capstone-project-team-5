@@ -426,3 +426,36 @@ def test_deduplicates_across_multiple_zips(tmp_path: Path) -> None:
     files_p2 = list((target_dir / "p2").glob("*"))
     assert len(files_p1) == 1
     assert len(files_p2) == 0
+
+
+def test_incremental_upload_zip_file_exists(temp_db: None, tmp_path: Path) -> None:
+    """Test incremental upload when the file exists and sizes match."""
+    zip_path = tmp_path / "upload.zip"
+    _create_zip(zip_path, entries=[("myproject/main.py", b"print('hello')\n")])
+    incremental_upload_zip(zip_path, project_mapping={"myproject": 1})
+
+
+def test_incremental_upload_zip_file_size_mismatch(temp_db: None, tmp_path: Path) -> None:
+    """Test incremental upload raises ValueError on file size mismatch."""
+    zip_path = tmp_path / "upload.zip"
+    _create_zip(zip_path, entries=[("myproject/main.py", b"print('hello')\n")])
+    incremental_upload_zip(zip_path, project_mapping={"myproject": 1})
+    # Modify the file size
+    with open(zip_path, 'ab') as f:
+        f.write(b"extra data")
+    with pytest.raises(ValueError, match="File size mismatch"):  
+        incremental_upload_zip(zip_path, project_mapping={"myproject": 1})
+
+
+def test_incremental_upload_zip_json_error(temp_db: None, tmp_path: Path) -> None:
+    """Test incremental upload raises ValueError on JSON error."""
+    zip_path = tmp_path / "upload.zip"
+    _create_zip(zip_path, entries=[("myproject/main.py", b"{invalid_json}")])
+    with pytest.raises(ValueError, match="JSON error in file"):  
+        incremental_upload_zip(zip_path, project_mapping={"myproject": 1})
+
+
+def test_incremental_upload_zip_file_not_found(temp_db: None) -> None:
+    """Test incremental upload raises FileNotFoundError when file does not exist."""
+    with pytest.raises(FileNotFoundError, match="File does not exist"):  
+        incremental_upload_zip("non_existent.zip", project_mapping={"myproject": 1})
