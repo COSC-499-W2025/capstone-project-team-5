@@ -428,34 +428,105 @@ def test_deduplicates_across_multiple_zips(tmp_path: Path) -> None:
     assert len(files_p2) == 0
 
 
-def test_incremental_upload_zip_file_exists(temp_db: None, tmp_path: Path) -> None:
-    """Test incremental upload when the file exists and sizes match."""
+def test_extract_and_merge_validates_dedupe_index(temp_db: None, tmp_path: Path) -> None:
+    """Test that dedupe index entries are validated before skipping files."""
+    target_dir = tmp_path / "merged"
+    
+    # Create first ZIP
+    zip1 = tmp_path / "first.zip"
+    content = b"print('hello')\n"
+    _create_zip(zip1, entries=[("project/file.py", content)])
+    
+    # Extract first time
+    written1 = extract_and_merge_files(zip1, target_dir, "project")
+    assert written1 == 1
+    
+    # Manually remove the extracted file to simulate corruption/deletion
+    project_dir = target_dir / "project"
+    extracted_file = list(project_dir.glob("*.py"))[0]
+    extracted_file.unlink()
+    
+    # Create second ZIP with same content
+    zip2 = tmp_path / "second.zip"
+    _create_zip(zip2, entries=[("project/file.py", content)])
+    
+    # Should write again since the indexed file no longer exists
+    written2 = extract_and_merge_files(zip2, target_dir, "project")
+    assert written2 == 1
+    
+
+def test_extract_and_merge_validates_file_size(temp_db: None, tmp_path: Path) -> None:
+    """Test that file size is validated when checking dedupe index."""
+    target_dir = tmp_path / "merged"
+    
+    # Create first ZIP
+    zip1 = tmp_path / "first.zip"
+    content = b"print('hello')\n"
+    _create_zip(zip1, entries=[("project/data.py", content)])
+    
+    # Extract first time
+    written1 = extract_and_merge_files(zip1, target_dir, "project")
+    assert written1 == 1
+    
+    # Manually corrupt the file by changing its content
+    project_dir = target_dir / "project"
+    extracted_file = list(project_dir.glob("*.py"))[0]
+    extracted_file.write_bytes(b"corrupted")
+    
+    # Create second ZIP with same content
+    zip2 = tmp_path / "second.zip"
+    _create_zip(zip2, entries=[("project/data.py", content)])
+    
+    # Should write again since the file size doesn't match
+    written2 = extract_and_merge_files(zip2, target_dir, "project")
+    assert written2 == 1
+
+
+def test_extract_and_merge_filename_collision_with_hash_prefix_collision(
+    temp_db: None, tmp_path: Path
+) -> None:
+    """Test that filename collision with same 8-char hash prefix is handled correctly."""
+    target_dir = tmp_path / "target"
+    target_dir.mkdir()
+    project_dir = target_dir / "myproject"
+    project_dir.mkdir()
+    
+    # Pre-create a file with the same name that will trigger alt_name
+    existing_file = project_dir / "data.txt"
+    existing_file.write_bytes(b"existing content")
+    
+    # Create a ZIP with a file that has the same name but different content
+    # This will trigger the alt_name path
     zip_path = tmp_path / "upload.zip"
-    _create_zip(zip_path, entries=[("myproject/main.py", b"print('hello')\n")])
-    incremental_upload_zip(zip_path, project_mapping={"myproject": 1})
-
-
-def test_incremental_upload_zip_file_size_mismatch(temp_db: None, tmp_path: Path) -> None:
-    """Test incremental upload raises ValueError on file size mismatch."""
-    zip_path = tmp_path / "upload.zip"
-    _create_zip(zip_path, entries=[("myproject/main.py", b"print('hello')\n")])
-    incremental_upload_zip(zip_path, project_mapping={"myproject": 1})
-    # Modify the file size
-    with open(zip_path, 'ab') as f:
-        f.write(b"extra data")
-    with pytest.raises(ValueError, match="File size mismatch"):  
-        incremental_upload_zip(zip_path, project_mapping={"myproject": 1})
-
-
-def test_incremental_upload_zip_json_error(temp_db: None, tmp_path: Path) -> None:
-    """Test incremental upload raises ValueError on JSON error."""
-    zip_path = tmp_path / "upload.zip"
-    _create_zip(zip_path, entries=[("myproject/main.py", b"{invalid_json}")])
-    with pytest.raises(ValueError, match="JSON error in file"):  
-        incremental_upload_zip(zip_path, project_mapping={"myproject": 1})
-
-
-def test_incremental_upload_zip_file_not_found(temp_db: None) -> None:
-    """Test incremental upload raises FileNotFoundError when file does not exist."""
-    with pytest.raises(FileNotFoundError, match="File does not exist"):  
-        incremental_upload_zip("non_existent.zip", project_mapping={"myproject": 1})
+    _create_zip(zip_path, entries=[("myproject/data.txt", b"new content 1")])
+    
+    # Extract and merge
+    written1 = extract_and_merge_files(zip_path, target_dir, "myproject")
+    assert written1 == 1
+    
+    # Now manually create a file with the hash-based alt_name to simulate collision
+    # We need to compute what the hash would be for "new content 2"
+    import hashlib
+    content2 = b"new content 2"
+    hash2 = hashlib.sha256(content2).hexdigest()
+    
+    # Create a file that would conflict with the alt_name
+    collision_file = project_dir / f"data-{hash2[:8]}.txt"
+    collision_file.write_bytes(b"collision content")
+    
+    # Now try to extract a second file with same name but yet different content
+    zip_path2 = tmp_path / "upload2.zip"
+    _create_zip(zip_path2, entries=[("myproject/data.txt", content2)])
+    
+    # This should create a file with a counter suffix to avoid overwriting
+    written2 = extract_and_merge_files(zip_path2, target_dir, "myproject")
+    assert written2 == 1
+    
+    # Check that we now have 4 files: original, first alt, collision, and counter-suffixed
+    files = list(project_dir.glob("data*.txt"))
+    assert len(files) == 4
+    
+    # Verify the counter-suffixed file exists
+    counter_file = project_dir / f"data-{hash2[:8]}-1.txt"
+    assert counter_file.exists()
+    assert counter_file.read_bytes() == content2
