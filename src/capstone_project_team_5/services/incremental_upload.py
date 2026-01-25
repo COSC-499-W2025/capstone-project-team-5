@@ -244,7 +244,6 @@ def extract_and_merge_files(
             content_hash = compute_content_hash(data)
 
             filename = Path(info.filename).name
-            is_deduplicated = False
             actual_location = None
 
             # Skip writing if this exact content already exists in the system
