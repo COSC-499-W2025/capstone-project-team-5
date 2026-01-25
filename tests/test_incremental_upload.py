@@ -254,8 +254,8 @@ def test_extract_and_merge_files(temp_db: None, tmp_path: Path) -> None:
     # Verify files were created
     merged_project_dir = target_dir / "myproject"
     assert merged_project_dir.exists()
-    # Note: extract_and_merge_files flattens files to project directory
-    files = list(merged_project_dir.glob("*"))
+    # Note: extract_and_merge_files flattens files to project directory (excluding manifest)
+    files = [f for f in merged_project_dir.glob("*") if f.name != ".files_manifest.json"]
     assert len(files) == 3
 
 
@@ -402,7 +402,7 @@ def test_deduplicates_within_single_zip(tmp_path: Path) -> None:
 
     # Only one unique file should be written
     assert written == 1
-    files = list((target_dir / "proj").glob("*"))
+    files = [f for f in (target_dir / "proj").glob("*") if f.name != ".files_manifest.json"]
     assert len(files) == 1
 
 
@@ -424,8 +424,8 @@ def test_deduplicates_across_multiple_zips(tmp_path: Path) -> None:
     assert written2 == 0
 
     # System-level index should result in a single stored file across projects
-    files_p1 = list((target_dir / "p1").glob("*"))
-    files_p2 = list((target_dir / "p2").glob("*"))
+    files_p1 = [f for f in (target_dir / "p1").glob("*") if f.name != ".files_manifest.json"]
+    files_p2 = [f for f in (target_dir / "p2").glob("*") if f.name != ".files_manifest.json"]
     assert len(files_p1) == 1
     assert len(files_p2) == 0
 

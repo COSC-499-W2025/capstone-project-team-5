@@ -252,7 +252,6 @@ def extract_and_merge_files(
                 indexed_path = target_dir / dedupe_index[content_hash]
                 if indexed_path.exists() and indexed_path.stat().st_size == len(data):
                     # File is deduplicated, track it but don't write
-                    is_deduplicated = True
                     actual_location = dedupe_index[content_hash]
                     files_manifest.append(
                         {
