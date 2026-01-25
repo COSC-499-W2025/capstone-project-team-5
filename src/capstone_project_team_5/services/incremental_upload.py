@@ -231,6 +231,7 @@ def extract_and_merge_files(
             counter += 1
 
     written_count = 0
+    files_manifest: list[dict[str, any]] = []
 
     with ZipFile(zip_path) as archive:
         for info in archive.infolist():
@@ -242,16 +243,32 @@ def extract_and_merge_files(
                 data = source.read()
             content_hash = compute_content_hash(data)
 
+            filename = Path(info.filename).name
+            is_deduplicated = False
+            actual_location = None
+
             # Skip writing if this exact content already exists in the system
             if content_hash in dedupe_index:
                 # Validate that the indexed file actually exists and has correct size
                 indexed_path = target_dir / dedupe_index[content_hash]
                 if indexed_path.exists() and indexed_path.stat().st_size == len(data):
-                    continue  # File exists and is valid, skip writing
+                    # File is deduplicated, track it but don't write
+                    is_deduplicated = True
+                    actual_location = dedupe_index[content_hash]
+                    files_manifest.append(
+                        {
+                            "filename": filename,
+                            "path": filename,
+                            "is_deduplicated": True,
+                            "actual_location": actual_location,
+                            "hash": content_hash,
+                        }
+                    )
+                    continue
                 # If file doesn't exist or size mismatch, remove from index and continue to write
                 del dedupe_index[content_hash]
 
-            filename = Path(info.filename).name
+            # Write the file (either new or recovering from corruption)
             target_path = _unique_target_path(project_dir, filename, content_hash)
             target_path.write_bytes(data)
 
@@ -259,6 +276,16 @@ def extract_and_merge_files(
             rel_record_path = str(target_path.relative_to(target_dir))
             dedupe_index[content_hash] = rel_record_path
             written_count += 1
+
+            # Record in manifest
+            files_manifest.append(
+                {
+                    "filename": filename,
+                    "path": str(target_path.relative_to(project_dir)),
+                    "is_deduplicated": False,
+                    "hash": content_hash,
+                }
+            )
 
     # Persist the dedupe index
     try:
@@ -270,6 +297,19 @@ def extract_and_merge_files(
         logger.warning(
             f"Failed to persist dedupe index at {index_path}: {e}. "
             "Deduplication may not work optimally in future uploads."
+        )
+
+    # Persist the files manifest
+    try:
+        manifest_path = project_dir / ".files_manifest.json"
+        manifest_path.write_text(
+            json.dumps(files_manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    except (OSError, json.JSONDecodeError) as e:
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            f"Failed to persist files manifest at {project_dir}: {e}. "
+            "File metadata tracking may be incomplete."
         )
 
     return written_count

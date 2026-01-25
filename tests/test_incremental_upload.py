@@ -559,3 +559,60 @@ def test_extract_and_merge_handles_index_write_gracefully(
         if record.levelname == "WARNING" and "dedupe" in record.message.lower()
     ]
     assert len(warning_messages) == 0
+
+
+def test_extract_merge_creates_files_manifest(temp_db: None, tmp_path: Path) -> None:
+    """Test that files manifest is created tracking deduplicated and regular files."""
+    target_dir = tmp_path / "merged"
+
+    # Create first ZIP with some files
+    zip1 = tmp_path / "first.zip"
+    _create_zip(
+        zip1,
+        entries=[
+            ("project/main.py", b"print('hello')\n"),
+            ("project/utils.py", b"def helper(): pass\n"),
+        ],
+    )
+
+    extract_and_merge_files(zip1, target_dir, "project")
+
+    # Verify manifest was created
+    manifest_path = target_dir / "project" / ".files_manifest.json"
+    assert manifest_path.exists()
+
+    # Load and verify manifest
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert len(manifest) == 2
+    assert all("filename" in f and "hash" in f for f in manifest)
+    assert all("is_deduplicated" in f for f in manifest)
+    # First extraction should have no deduplicated files
+    assert all(not f["is_deduplicated"] for f in manifest)
+
+
+def test_extract_merge_tracks_deduplicated_files(temp_db: None, tmp_path: Path) -> None:
+    """Test that manifest correctly marks deduplicated files."""
+    target_dir = tmp_path / "merged"
+
+    # Create first ZIP
+    zip1 = tmp_path / "first.zip"
+    content = b"print('same')\n"
+    _create_zip(zip1, entries=[("project/main.py", content)])
+
+    extract_and_merge_files(zip1, target_dir, "project")
+
+    # Create second ZIP with duplicate content
+    zip2 = tmp_path / "second.zip"
+    _create_zip(zip2, entries=[("project/main.py", content)])
+
+    extract_and_merge_files(zip2, target_dir, "project")
+
+    # Load the second manifest (should now have deduplicated entry)
+    manifest_path = target_dir / "project" / ".files_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    # Should have the deduplicated file marked
+    assert len(manifest) == 1
+    assert manifest[0]["is_deduplicated"] is True
+    assert "actual_location" in manifest[0]
+    assert "hash" in manifest[0]
