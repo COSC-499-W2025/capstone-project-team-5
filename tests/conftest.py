@@ -13,6 +13,8 @@ def api_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Use a temporary SQLite DB for API tests."""
     db_path = tmp_path / "api.db"
     monkeypatch.setenv("DB_URL", f"sqlite:///{db_path.as_posix()}")
+    upload_root = tmp_path / "uploads"
+    monkeypatch.setenv("ZIP2JOB_UPLOAD_DIR", upload_root.as_posix())
     app_db._engine = None
     app_db._SessionLocal = None
     init_db()
