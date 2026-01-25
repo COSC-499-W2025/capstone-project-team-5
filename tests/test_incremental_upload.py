@@ -536,7 +536,7 @@ def test_extract_and_merge_filename_collision_with_hash_prefix_collision(
 
 
 def test_extract_and_merge_handles_index_write_gracefully(
-    temp_db: None, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    temp_db: None, tmp_path: Path, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test that index write failures are logged but don't crash the function."""
     target_dir = tmp_path / "merged"
@@ -546,20 +546,31 @@ def test_extract_and_merge_handles_index_write_gracefully(
     zip_path = tmp_path / "upload.zip"
     _create_zip(zip_path, entries=[("project/file.py", b"print('hello')\n")])
 
-    # Extract files normally - this should succeed and log if there are any issues
+    # Mock Path.write_text to raise OSError when writing the dedupe index
+    original_write_text = Path.write_text
+
+    def mock_write_text(self: Path, *args: any, **kwargs: any) -> int:
+        if self.name == ".dedupe_index.json":
+            raise OSError("Simulated write failure")
+        return original_write_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", mock_write_text)
+
+    # Extract files - should succeed despite index write failure
     with caplog.at_level(logging.WARNING):
         written = extract_and_merge_files(zip_path, target_dir, "project")
 
-    # Normal case should succeed
+    # Function should complete successfully
     assert written == 1
 
-    # No warnings should be logged in normal operation
+    # Should log a warning about the index write failure
     warning_messages = [
         record.message
         for record in caplog.records
         if record.levelname == "WARNING" and "dedupe" in record.message.lower()
     ]
-    assert len(warning_messages) == 0
+    assert len(warning_messages) == 1
+    assert "Failed to persist dedupe index" in warning_messages[0]
 
 
 def test_extract_merge_creates_files_manifest(temp_db: None, tmp_path: Path) -> None:
