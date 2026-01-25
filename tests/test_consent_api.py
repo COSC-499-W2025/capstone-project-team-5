@@ -116,7 +116,11 @@ class TestCreateConsentRecord:
             "default_ignore_patterns": [".git", "node_modules", "__pycache__"],
         }
 
-        response = client.post("/api/consent", json=payload)
+        response = client.post(
+            "/api/consent",
+            json=payload,
+            headers={"X-User-Id": str(test_user.id)},
+        )
 
         assert response.status_code == 201
         data = response.json()
@@ -130,12 +134,18 @@ class TestCreateConsentRecord:
 
     def test_create_consent_with_invalid_user_id(self, client: TestClient) -> None:
         """Test creating a consent record with non-existent user ID."""
+        invalid_user_id = 99999
         payload = {
-            "user_id": 99999,  # Non-existent user
+            "user_id": invalid_user_id,  # Non-existent user
             "consent_given": True,
         }
 
-        response = client.post("/api/consent", json=payload)
+        # Try to create as the non-existent user
+        response = client.post(
+            "/api/consent",
+            json=payload,
+            headers={"X-User-Id": str(invalid_user_id)},
+        )
 
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
@@ -185,12 +195,29 @@ class TestGetConsentRecords:
             # Create a global record (no user_id)
             session.add(ConsentRecord(consent_given=True, use_external_services=False))
 
-        response = client.get(f"/api/consent?user_id={test_user.id}")
+        # Get records as test_user (should see own + global by default)
+        response = client.get(
+            "/api/consent",
+            headers={"X-User-Id": str(test_user.id)},
+        )
 
         assert response.status_code == 200
         data = response.json()
 
-        # Should only return records for this user
+        # Should return records for this user and global records
+        for record in data:
+            assert record["user_id"] in [test_user.id, None]
+
+        # Get only user-specific records
+        response = client.get(
+            "/api/consent?include_global=false",
+            headers={"X-User-Id": str(test_user.id)},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Should only return user-specific records
         for record in data:
             assert record["user_id"] == test_user.id
 
@@ -242,7 +269,10 @@ class TestGetLatestConsentRecord:
                 )
             )
 
-        response = client.get(f"/api/consent/latest?user_id={test_user.id}")
+        response = client.get(
+            "/api/consent/latest",
+            headers={"X-User-Id": str(test_user.id)},
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -253,7 +283,10 @@ class TestGetLatestConsentRecord:
     def test_get_latest_consent_not_found(self, client: TestClient) -> None:
         """Test retrieving latest consent when none exists for filter."""
         # Try to get for a non-existent user
-        response = client.get("/api/consent/latest?user_id=99999")
+        response = client.get(
+            "/api/consent/latest?fallback_to_global=false",
+            headers={"X-User-Id": "99999"},
+        )
 
         assert response.status_code == 404
         detail = response.json()["detail"].lower()
@@ -464,7 +497,10 @@ class TestLLMConfig:
                 )
             )
 
-        response = client.get(f"/api/consent/llm/config?user_id={test_user.id}")
+        response = client.get(
+            "/api/consent/llm/config",
+            headers={"X-User-Id": str(test_user.id)},
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -491,7 +527,10 @@ class TestLLMConfig:
             )
 
         # Request for a user that has no consent record
-        response = client.get(f"/api/consent/llm/config?user_id={test_user.id}")
+        response = client.get(
+            "/api/consent/llm/config",
+            headers={"X-User-Id": str(test_user.id)},
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -499,3 +538,283 @@ class TestLLMConfig:
         # Should fall back to global record
         assert data["is_allowed"] is True
         assert data["model_preferences"] == ["Gemini 2.5 Flash (Google)"]
+
+
+class TestAuthenticationAndAuthorization:
+    """Tests for authentication and authorization in consent API."""
+
+    def test_create_consent_for_self_allowed(self, client: TestClient, test_user: User) -> None:
+        """Test that users can create consent records for themselves."""
+        payload = {
+            "user_id": test_user.id,
+            "consent_given": True,
+            "use_external_services": False,
+        }
+
+        response = client.post(
+            "/api/consent",
+            json=payload,
+            headers={"X-User-Id": str(test_user.id)},
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["user_id"] == test_user.id
+
+    def test_create_consent_for_different_user_forbidden(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Test that users cannot create consent records for other users."""
+        # Try to create a record for a different user
+        other_user_id = test_user.id + 1
+
+        payload = {
+            "user_id": other_user_id,
+            "consent_given": True,
+            "use_external_services": False,
+        }
+
+        response = client.post(
+            "/api/consent",
+            json=payload,
+            headers={"X-User-Id": str(test_user.id)},
+        )
+
+        assert response.status_code == 403
+        assert "can only create consent records for yourself" in response.json()["detail"]
+
+    def test_get_consent_records_filtered_to_current_user(
+        self, client: TestClient, test_user: User
+    ) -> None:
+        """Test that users only see their own records and global records."""
+        # Create another user
+        with get_session() as session:
+            other_user = User(username="other_user", password_hash="hash123")
+            session.add(other_user)
+            session.flush()
+            session.refresh(other_user)
+            other_user_id = other_user.id
+
+            # Create records for test_user, other_user, and global
+            session.add(
+                ConsentRecord(
+                    user_id=test_user.id,
+                    consent_given=True,
+                    use_external_services=False,
+                )
+            )
+            session.add(
+                ConsentRecord(
+                    user_id=other_user_id,
+                    consent_given=True,
+                    use_external_services=False,
+                )
+            )
+            session.add(
+                ConsentRecord(
+                    user_id=None,
+                    consent_given=True,
+                    use_external_services=False,
+                )
+            )
+
+        # Get records as test_user
+        response = client.get(
+            "/api/consent",
+            headers={"X-User-Id": str(test_user.id)},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Should only see own records and global records
+        for record in data:
+            assert record["user_id"] in [test_user.id, None]
+
+        # Cleanup other_user
+        with get_session() as session:
+            other_user = session.query(User).filter(User.id == other_user_id).first()
+            if other_user:
+                session.delete(other_user)
+
+    def test_update_own_consent_record_allowed(self, client: TestClient, test_user: User) -> None:
+        """Test that users can update their own consent records."""
+        # Create a record for test_user
+        with get_session() as session:
+            record = ConsentRecord(
+                user_id=test_user.id,
+                consent_given=True,
+                use_external_services=False,
+            )
+            session.add(record)
+            session.flush()
+            session.refresh(record)
+            record_id = record.id
+
+        # Update as test_user
+        response = client.patch(
+            f"/api/consent/{record_id}",
+            json={"consent_given": False},
+            headers={"X-User-Id": str(test_user.id)},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["consent_given"] is False
+
+    def test_update_other_user_consent_forbidden(self, client: TestClient, test_user: User) -> None:
+        """Test that users cannot update other users' consent records."""
+        # Create another user and their consent record
+        with get_session() as session:
+            other_user = User(username="other_user_2", password_hash="hash123")
+            session.add(other_user)
+            session.flush()
+            session.refresh(other_user)
+            other_user_id = other_user.id
+
+            record = ConsentRecord(
+                user_id=other_user_id,
+                consent_given=True,
+                use_external_services=False,
+            )
+            session.add(record)
+            session.flush()
+            session.refresh(record)
+            record_id = record.id
+
+        # Try to update as test_user
+        response = client.patch(
+            f"/api/consent/{record_id}",
+            json={"consent_given": False},
+            headers={"X-User-Id": str(test_user.id)},
+        )
+
+        assert response.status_code == 403
+        assert "do not have permission" in response.json()["detail"]
+
+        # Cleanup
+        with get_session() as session:
+            other_user = session.query(User).filter(User.id == other_user_id).first()
+            if other_user:
+                session.delete(other_user)
+
+    def test_delete_own_consent_record_allowed(self, client: TestClient, test_user: User) -> None:
+        """Test that users can delete their own consent records."""
+        # Create a record for test_user
+        with get_session() as session:
+            record = ConsentRecord(
+                user_id=test_user.id,
+                consent_given=True,
+                use_external_services=False,
+            )
+            session.add(record)
+            session.flush()
+            session.refresh(record)
+            record_id = record.id
+
+        # Delete as test_user
+        response = client.delete(
+            f"/api/consent/{record_id}",
+            headers={"X-User-Id": str(test_user.id)},
+        )
+
+        assert response.status_code == 204
+
+    def test_delete_other_user_consent_forbidden(self, client: TestClient, test_user: User) -> None:
+        """Test that users cannot delete other users' consent records."""
+        # Create another user and their consent record
+        with get_session() as session:
+            other_user = User(username="other_user_3", password_hash="hash123")
+            session.add(other_user)
+            session.flush()
+            session.refresh(other_user)
+            other_user_id = other_user.id
+
+            record = ConsentRecord(
+                user_id=other_user_id,
+                consent_given=True,
+                use_external_services=False,
+            )
+            session.add(record)
+            session.flush()
+            session.refresh(record)
+            record_id = record.id
+
+        # Try to delete as test_user
+        response = client.delete(
+            f"/api/consent/{record_id}",
+            headers={"X-User-Id": str(test_user.id)},
+        )
+
+        assert response.status_code == 403
+        assert "do not have permission" in response.json()["detail"]
+
+        # Cleanup
+        with get_session() as session:
+            other_user = session.query(User).filter(User.id == other_user_id).first()
+            if other_user:
+                session.delete(other_user)
+
+    def test_get_record_by_id_ownership_check(self, client: TestClient, test_user: User) -> None:
+        """Test that users cannot view other users' consent records by ID."""
+        # Create another user and their consent record
+        with get_session() as session:
+            other_user = User(username="other_user_4", password_hash="hash123")
+            session.add(other_user)
+            session.flush()
+            session.refresh(other_user)
+            other_user_id = other_user.id
+
+            record = ConsentRecord(
+                user_id=other_user_id,
+                consent_given=True,
+                use_external_services=False,
+            )
+            session.add(record)
+            session.flush()
+            session.refresh(record)
+            record_id = record.id
+
+        # Try to view as test_user
+        response = client.get(
+            f"/api/consent/{record_id}",
+            headers={"X-User-Id": str(test_user.id)},
+        )
+
+        assert response.status_code == 403
+        assert "do not have permission" in response.json()["detail"]
+
+        # Cleanup
+        with get_session() as session:
+            other_user = session.query(User).filter(User.id == other_user_id).first()
+            if other_user:
+                session.delete(other_user)
+
+    def test_global_records_accessible_by_all(self, client: TestClient) -> None:
+        """Test that global records (user_id=None) are accessible by anyone."""
+        # Create a global record
+        with get_session() as session:
+            record = ConsentRecord(
+                user_id=None,
+                consent_given=True,
+                use_external_services=False,
+            )
+            session.add(record)
+            session.flush()
+            session.refresh(record)
+            record_id = record.id
+
+        # Access without authentication
+        response = client.get(f"/api/consent/{record_id}")
+        assert response.status_code == 200
+
+        # Update without authentication (global records can be updated by anyone)
+        response = client.patch(
+            f"/api/consent/{record_id}",
+            json={"consent_given": False},
+        )
+        assert response.status_code == 200
+
+        # Delete without authentication
+        response = client.delete(f"/api/consent/{record_id}")
+        assert response.status_code == 204
