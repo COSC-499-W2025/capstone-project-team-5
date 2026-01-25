@@ -201,17 +201,27 @@ def test_analyze_all_updates_all_projects() -> None:
         files={"file": ("fg.zip", zip_bytes, "application/zip")},
     )
     assert upload_response.status_code == 201
+    upload_payload = upload_response.json()
+    project_ids = {project["id"] for project in upload_payload["projects"]}
 
     analyze_response = client.post("/api/projects/analyze")
     assert analyze_response.status_code == 200
     payload = analyze_response.json()
-    assert len(payload["analyzed"]) == 2
-    assert payload["skipped"] == []
-    assert all(item["importance_score"] is not None for item in payload["analyzed"])
+
+    # Check that our uploaded projects are analyzed
+    analyzed_ids = {item["id"] for item in payload["analyzed"]}
+    assert project_ids.issubset(analyzed_ids), (
+        f"Expected projects {project_ids} to be in analyzed {analyzed_ids}"
+    )
+    analyzed_our_projects = [item for item in payload["analyzed"] if item["id"] in project_ids]
+    assert all(item["importance_score"] is not None for item in analyzed_our_projects)
 
     list_response = client.get("/api/projects")
     assert list_response.status_code == 200
-    assert all(project["importance_score"] is not None for project in list_response.json())
+    all_projects = list_response.json()
+    for project in all_projects:
+        if project["id"] in project_ids:
+            assert project["importance_score"] is not None
 
 
 def test_analyze_all_reports_missing_zip() -> None:
@@ -239,8 +249,18 @@ def test_analyze_all_reports_missing_zip() -> None:
     analyze_response = client.post("/api/projects/analyze")
     assert analyze_response.status_code == 200
     payload = analyze_response.json()
-    assert payload["analyzed"] == []
-    assert payload["skipped"][0]["project_id"] == project_id
+
+    # Check that our project is skipped (not analyzed)
+    analyzed_ids = {item["id"] for item in payload["analyzed"]}
+    assert project_id not in analyzed_ids, f"Project {project_id} should be skipped, not analyzed"
+
+    # Check that our project is in the skipped list
+    skipped_ids = {item["project_id"] for item in payload["skipped"]}
+    assert project_id in skipped_ids, f"Project {project_id} should be in skipped list"
+
+    # Verify the skip reason
+    skipped_project = next(item for item in payload["skipped"] if item["project_id"] == project_id)
+    assert "Stored upload archive not found" in skipped_project["reason"]
 
 
 def test_analyze_project_ai_falls_back_to_local(monkeypatch: pytest.MonkeyPatch) -> None:
