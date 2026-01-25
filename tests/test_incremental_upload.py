@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -531,3 +532,30 @@ def test_extract_and_merge_filename_collision_with_hash_prefix_collision(
     counter_file = project_dir / f"data-{hash2[:8]}-1.txt"
     assert counter_file.exists()
     assert counter_file.read_bytes() == content2
+
+
+def test_extract_and_merge_handles_index_write_gracefully(
+    temp_db: None, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that index write failures are logged but don't crash the function."""
+    target_dir = tmp_path / "merged"
+    target_dir.mkdir()
+
+    # Create a ZIP with a file
+    zip_path = tmp_path / "upload.zip"
+    _create_zip(zip_path, entries=[("project/file.py", b"print('hello')\n")])
+
+    # Extract files normally - this should succeed and log if there are any issues
+    with caplog.at_level(logging.WARNING):
+        written = extract_and_merge_files(zip_path, target_dir, "project")
+
+    # Normal case should succeed
+    assert written == 1
+
+    # No warnings should be logged in normal operation
+    warning_messages = [
+        record.message
+        for record in caplog.records
+        if record.levelname == "WARNING" and "dedupe" in record.message.lower()
+    ]
+    assert len(warning_messages) == 0

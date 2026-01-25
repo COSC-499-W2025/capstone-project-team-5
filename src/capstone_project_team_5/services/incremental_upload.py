@@ -265,7 +265,7 @@ def extract_and_merge_files(
         index_path.write_text(
             json.dumps(dedupe_index, ensure_ascii=False, indent=2), encoding="utf-8"
         )
-    except (OSError, IOError, json.JSONDecodeError) as e:
+    except (OSError, json.JSONDecodeError) as e:
         logger = logging.getLogger(__name__)
         logger.warning(
             f"Failed to persist dedupe index at {index_path}: {e}. "
