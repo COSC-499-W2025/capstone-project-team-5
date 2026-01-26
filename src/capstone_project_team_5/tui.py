@@ -56,6 +56,8 @@ class Zip2JobTUI(App[None]):
         ("e", "toggle_edit", "Edit view"),
         ("ctrl+s", "save_edit", "Save edit"),
         ("escape", "cancel_edit", "Cancel edit"),
+        ("p", "export_pdf", "Export PDF"),
+        ("t", "export_txt", "Export TXT"),
     ]
 
     CSS = """
@@ -211,6 +213,8 @@ ProgressBar {
                         ),
                         Button("Configure Consent", id="btn-config", variant="default"),
                         Button("Edit View", id="btn-edit", variant="default"),
+                        Button("Export PDF", id="btn-export-pdf", variant="default"),
+                        Button("Export TXT", id="btn-export-txt", variant="default"),
                         Button("Exit", id="btn-exit", variant="error"),
                         id="sidebar",
                     ),
@@ -262,10 +266,14 @@ ProgressBar {
         delete_btn = self.query_one("#btn-delete-analysis", Button)
         set_thumb_btn = self.query_one("#btn-set-thumbnail", Button)
         thumbnail_input = self.query_one("#thumbnail-url-input", Input)
+        export_pdf_btn = self.query_one("#btn-export-pdf", Button)
+        export_txt_btn = self.query_one("#btn-export-txt", Button)
 
         editor.display = False
         analysis_list.display = False
         delete_btn.display = False
+        export_pdf_btn.display = False
+        export_txt_btn.display = False
         # Auth inputs are hidden until user chooses login or signup.
         username_input.display = False
         password_input.display = False
@@ -276,10 +284,14 @@ ProgressBar {
         thumbnail_input.display = False
 
     def _reset_analysis_selection_ui(self) -> None:
-        """Clear analysis selection state and hide the delete button."""
+        """Clear analysis selection state and hide the delete/export buttons."""
         self._analysis_selected = False
         delete_btn = self.query_one("#btn-delete-analysis", Button)
         delete_btn.display = False
+        export_pdf_btn = self.query_one("#btn-export-pdf", Button)
+        export_txt_btn = self.query_one("#btn-export-txt", Button)
+        export_pdf_btn.display = False
+        export_txt_btn.display = False
 
     def _current_saved_project_id(self) -> int | None:
         """Return the currently selected saved project ID, if any."""
@@ -1266,6 +1278,12 @@ ProgressBar {
         delete_btn = self.query_one("#btn-delete-analysis", Button)
         delete_btn.display = True
 
+        # Show export buttons when analysis is selected
+        export_pdf_btn = self.query_one("#btn-export-pdf", Button)
+        export_txt_btn = self.query_one("#btn-export-txt", Button)
+        export_pdf_btn.display = True
+        export_txt_btn.display = True
+
         analysis = analyses[event.index]
 
         analysis_id = analysis.get("id")
@@ -1646,6 +1664,156 @@ ProgressBar {
         # Hide delete button when switching to edit view
         self._reset_analysis_selection_ui()
         self.action_toggle_edit()
+
+    @on(Button.Pressed, "#btn-export-pdf")
+    def handle_export_pdf_button(self) -> None:
+        """Handle Export PDF button press."""
+        self._do_export_direct("pdf")
+
+    @on(Button.Pressed, "#btn-export-txt")
+    def handle_export_txt_button(self) -> None:
+        """Handle Export TXT button press."""
+        self._do_export_direct("txt")
+
+    def _get_current_project_name(self) -> str | None:
+        """Get the name of the currently selected project for export filename."""
+        if (
+            self._view_mode == "saved"
+            and self._saved_active_project_index is not None
+            and 0 <= self._saved_active_project_index < len(self._saved_projects)
+        ):
+            return self._saved_projects[self._saved_active_project_index].get("name")
+        return None
+
+    def _export_analysis(self, export_format: str) -> None:
+        """Export current analysis to the specified format.
+
+        Args:
+            export_format: Either "pdf" or "txt"
+        """
+        status = self.query_one("#status", Label)
+
+        if not self._current_markdown.strip():
+            status.update("Nothing to export. Select an analysis first.")
+            return
+
+        if self._view_mode != "saved" or not self._analysis_selected:
+            status.update("Export is only available for saved analyses.")
+            return
+
+        status.update(f"Select save location for {export_format.upper()}...")
+
+        # Schedule the blocking dialog to run after the current event completes
+        # This allows the TUI to update before the blocking call
+        self.call_later(self._do_export, export_format)
+
+    def _do_export_direct(self, export_format: str) -> None:
+        """Export directly from button press (like prompt_for_zip_file pattern).
+
+        Args:
+            export_format: Either "pdf" or "txt"
+        """
+        import easygui
+
+        status = self.query_one("#status", Label)
+
+        if not self._current_markdown.strip():
+            status.update("Nothing to export. Select an analysis first.")
+            return
+
+        if self._view_mode != "saved" or not self._analysis_selected:
+            status.update("Export is only available for saved analyses.")
+            return
+
+        # Import export utilities
+        from capstone_project_team_5.utils.export import (
+            _generate_filename,
+            export_to_pdf,
+            export_to_txt,
+        )
+
+        project_name = self._get_current_project_name()
+        filename = _generate_filename(project_name, export_format)
+
+        status.update(f"Select save location for {export_format.upper()}...")
+
+        # Call dialog directly like prompt_for_zip_file does
+        result = easygui.filesavebox(
+            msg=f"Save {export_format.upper()} file",
+            title=f"Export Analysis as {export_format.upper()}",
+            default=filename,
+            filetypes=[f"*.{export_format}"],
+        )
+
+        if result is None:
+            status.update("Export cancelled.")
+            return
+
+        output_path = Path(result)
+
+        # Ensure correct extension
+        if output_path.suffix.lower() != f".{export_format}":
+            output_path = output_path.with_suffix(f".{export_format}")
+
+        status.update(f"Writing {export_format.upper()} file...")
+
+        try:
+            if export_format == "pdf":
+                export_to_pdf(self._current_markdown, output_path)
+            else:
+                export_to_txt(self._current_markdown, output_path)
+            status.update(f"Exported to: {output_path}")
+        except Exception as e:
+            status.update(f"Export error: {e}")
+
+    def _do_export(self, export_format: str) -> None:
+        """Perform the actual export after dialog selection.
+
+        Args:
+            export_format: Either "pdf" or "txt"
+        """
+        status = self.query_one("#status", Label)
+
+        # Import export utilities
+        from capstone_project_team_5.utils.export import (
+            _generate_filename,
+            export_to_pdf,
+            export_to_txt,
+            prompt_export_location,
+        )
+
+        project_name = self._get_current_project_name()
+        filename = _generate_filename(project_name, export_format)
+
+        # Prompt for location - this blocks but TUI has already updated
+        output_path = prompt_export_location(filename)
+
+        if output_path is None:
+            status.update("Export cancelled.")
+            return
+
+        # Ensure correct extension
+        if output_path.suffix.lower() != f".{export_format}":
+            output_path = output_path.with_suffix(f".{export_format}")
+
+        status.update(f"Writing {export_format.upper()} file...")
+
+        try:
+            if export_format == "pdf":
+                export_to_pdf(self._current_markdown, output_path)
+            else:
+                export_to_txt(self._current_markdown, output_path)
+            status.update(f"Exported to: {output_path}")
+        except Exception as e:
+            status.update(f"Export error: {e}")
+
+    def action_export_pdf(self) -> None:
+        """Export current analysis as PDF."""
+        self._export_analysis("pdf")
+
+    def action_export_txt(self) -> None:
+        """Export current analysis as TXT."""
+        self._export_analysis("txt")
 
     def action_toggle_edit(self) -> None:
         """Toggle between view and edit modes."""
