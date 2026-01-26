@@ -1,6 +1,34 @@
 # Team Weekly Logs
 
 <details>
+  <summary><h3>T2 Week 3 | January 19 - January 23 </h3></summary>
+
+  ### Burnup Chart
+<img width="1384" height="1008" alt="image" src="https://github.com/user-attachments/assets/affb8fe9-0e86-430e-926b-3e42a5921444" />
+
+
+  ### Past Work
+  - [Added endpoints for editing portfolios](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/256)
+  - [Improvements for R22, with hashing and added validation.](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/250)
+  - [[BIG] FILE EXPORTS!!! ](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/257)
+  - [Skills development over time, now aggregated!!!](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/252)
+  - [Project analysis endpoints WITH zip storage.](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/251)
+  - [Consent Tool API endpoints](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/248)
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Prepare for Peer Testing | ✅ Done | Questionnaire prepared and Task List complete |
+  | Continue with Milestone #2 requirements| ✅ Done | Continuous process.|
+  | Decide on Improvements to be Implemented | ❌ In Progress | Doing some refactoring / improvements of past work. Continuous process. |
+  
+  ### Future Work
+  - Continue with Milestone 2 requirements
+  - Participate in Peer Testing, and incorporate feedback.
+  - Handling edge cases and ensure holistic integration when working with endpoints.
+</details>
+
+<details>
   <summary><h3>T2 Week 2 | January 12 - January 18 </h3></summary>
 
   ### Burnup Chart
