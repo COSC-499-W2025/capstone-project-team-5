@@ -2,9 +2,47 @@
 
 **GitHub:** [@ribhavsharma](https://github.com/ribhavsharma)
 ---
+
+
+## **Term 2 – Week 3 | January 19–23, 2026**
+
+
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+
+<img width="1560" height="925" alt="image" src="https://github.com/user-attachments/assets/514478d0-7189-486c-944a-454000281ee2" />
+
+ 
+</details>
+
+## **Task Progress this week**  
+Building on last week’s work around edit persistence and backend integration, I focused on stabilizing the TUI experience and closing smaller feature gaps. I also spent time coordinating peer testing tasks and reviewing teammates’ PRs to keep the team aligned heading into the next milestone.
+
+### **Coding Tasks**
+- Fixed a rendering bug in the TUI that was affecting how content was displayed during navigation.
+- Added a backend endpoint for editing `PortfolioItem`s, completing the end-to-end flow for persisting user edits.
+- Opened **PR [#256 – Peer testing task setup](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/256)** to define and coordinate tasks for Monday’s peer testing session.
+
+### **Testing / Debugging**
+- Verified the TUI rendering fix across affected views to ensure consistent behavior.
+- Sanity-checked the new portfolio edit endpoint to confirm updates are correctly persisted and reflected in the UI.
+
+### **Reviewing / Collaboration**
+- Reviewed **PR [#257](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/257)**, focusing on correctness and alignment with existing backend patterns.
+- Reviewed **PR [#248](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/248)**, with attention to implementation details and potential edge cases.
+- Helped decide and scope peer testing tasks during team discussions.
+
+### **Issues / Blockers**
+- No major issues or blockers this week.
+
+### **Next Week’s Plans**
+- Start work on authentication.
+- Continue picking off small tickets and cleanup tasks.
+- Review incoming PRs and support ongoing development.
+
 ## **Term 2 – Week 2 | January 12–16, 2026**
-
-
 
 <details>
   <summary><h3>Evaluation</h3></summary>
