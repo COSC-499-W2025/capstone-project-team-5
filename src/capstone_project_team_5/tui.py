@@ -1272,19 +1272,26 @@ ProgressBar {
         if analysis_id is None:
             return
 
+        status = self.query_one("#status", Label)
         portfolio_item = None
 
         if self._current_user and project_id:
             from capstone_project_team_5.services.portfolio import get_portfolio_item
 
-            portfolio_item = get_portfolio_item(self._current_user, project_id)
-            status = self.query_one("#status", Label)
+            candidate = get_portfolio_item(self._current_user, project_id)
+            # Only treat a portfolio item as an edited analysis version
+            # when it is explicitly linked to this analysis via
+            # source_analysis_id. This avoids showing unrelated
+            # project-level portfolio content for every analysis.
+            if candidate and candidate.get("source_analysis_id") == analysis_id:
+                portfolio_item = candidate
 
-        if portfolio_item:
+        if portfolio_item is not None:
             status.update("Retrieved portfolio item.")
             # Show user's edited version
             title = portfolio_item["title"]
-            content = portfolio_item["content"]
+            raw_content = portfolio_item["content"]
+            content = self._extract_markdown_from_portfolio_content(raw_content) or str(raw_content)
             updated = portfolio_item["updated_at"].strftime("%Y-%m-%d %H:%M")
 
             analysis_lang = analysis.get("language", "Unknown")
@@ -1604,13 +1611,9 @@ ProgressBar {
             return
 
         proj = self._projects[index]
-        # Prefer any saved portfolio markdown for this project.
-        custom_markdown = self._get_analysis_project_portfolio_markdown(proj)
-        if custom_markdown is not None:
-            md = custom_markdown
-        else:
-            rank = self._ranks.get(index)
-            md = render_project_markdown(self._upload_summary, proj, rank)
+        # Always render the latest analysis summary for this project.
+        rank = self._ranks.get(index)
+        md = render_project_markdown(self._upload_summary, proj, rank)
         self._current_markdown = md
         self.query_one("#output", Markdown).update(md)
 
@@ -1728,12 +1731,42 @@ ProgressBar {
         title = str(title_obj)
 
         try:
-            create_portfolio_item(
-                username=self._current_user,
-                project_id=project_id,
-                title=title,
-                content={"markdown": self._current_markdown},
-            )
+            # If an analysis is selected, treat this as an edited
+            # analysis-level portfolio entry and link it to the
+            # specific CodeAnalysis via source_analysis_id. This
+            # ensures the edited text is shown only for that
+            # analysis when revisiting the saved view.
+            analysis_list = self.query_one("#analysis-list", ListView)
+            analyses = project.get("analyses") or []
+            analysis_id: int | None = None
+            if analysis_list.index is not None and 0 <= analysis_list.index < len(analyses):
+                selected = analyses[analysis_list.index]
+                selected_id = selected.get("id")
+                if isinstance(selected_id, int):
+                    analysis_id = selected_id
+
+            if analysis_id is not None:
+                import json
+
+                from capstone_project_team_5.services.portfolio import save_portfolio_item
+
+                save_portfolio_item(
+                    username=self._current_user,
+                    project_id=project_id,
+                    title=title,
+                    content=json.dumps({"markdown": self._current_markdown}),
+                    is_user_edited=True,
+                    is_showcase=False,
+                    source_analysis_id=analysis_id,
+                )
+            else:
+                # No analysis selected – persist a project‑level portfolio item.
+                create_portfolio_item(
+                    username=self._current_user,
+                    project_id=project_id,
+                    title=title,
+                    content={"markdown": self._current_markdown},
+                )
         except Exception:
             return
 
