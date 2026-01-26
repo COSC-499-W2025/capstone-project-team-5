@@ -20,9 +20,11 @@ def _create_zip_bytes(entries: list[tuple[str, bytes]]) -> bytes:
 
 def _create_user(username: str) -> None:
     with get_session() as session:
-        user = User(username=username, password_hash="hash")
-        session.add(user)
-        session.commit()
+        user = session.query(User).filter(User.username == username).first()
+        if user is None:
+            user = User(username=username, password_hash="hash")
+            session.add(user)
+            session.commit()
 
 
 def test_portfolio_edit_endpoint_creates_and_updates_item() -> None:

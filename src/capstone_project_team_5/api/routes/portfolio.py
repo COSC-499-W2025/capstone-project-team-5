@@ -12,7 +12,6 @@ from capstone_project_team_5.api.schemas.portfolio import (
 )
 from capstone_project_team_5.data.db import get_session
 from capstone_project_team_5.data.models import PortfolioItem, Project, User
-from capstone_project_team_5.services.portfolio import save_portfolio_item
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
@@ -62,45 +61,38 @@ def upsert_portfolio_item(request: PortfolioEditRequest) -> PortfolioItemRespons
                 detail="User not found.",
             )
 
-    encoded_content = json.dumps({"markdown": request.markdown})
-    saved = save_portfolio_item(
-        username=request.username,
-        project_id=request.project_id,
-        title=request.title or project.name,
-        content=encoded_content,
-        is_user_edited=True,
-        is_showcase=request.is_showcase,
-        source_analysis_id=request.source_analysis_id,
-    )
-    if not saved:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to save portfolio item.",
-        )
-
-    with get_session() as session:
-        user = session.query(User).filter(User.username == request.username).first()
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found.",
-            )
+        encoded_content = json.dumps({"markdown": request.markdown})
 
         item = (
             session.query(PortfolioItem)
             .filter(
                 PortfolioItem.user_id == user.id,
                 PortfolioItem.project_id == request.project_id,
+                PortfolioItem.source_analysis_id == request.source_analysis_id,
             )
             .order_by(PortfolioItem.updated_at.desc())
             .first()
         )
 
         if item is None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Portfolio item not found after save.",
+            item = PortfolioItem(
+                project_id=request.project_id,
+                user_id=user.id,
+                title=request.title or project.name,
+                content=encoded_content,
+                is_user_edited=True,
+                is_showcase=request.is_showcase,
+                source_analysis_id=request.source_analysis_id,
             )
+            session.add(item)
+        else:
+            item.title = request.title or project.name
+            item.content = encoded_content
+            item.is_user_edited = True
+            item.is_showcase = request.is_showcase
+            item.source_analysis_id = request.source_analysis_id
+
+        session.flush()
 
         markdown = _extract_markdown(item.content)
 
