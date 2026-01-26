@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from capstone_project_team_5.api.routes import consent, health, projects, skills, portfolio
+from capstone_project_team_5.api.routes import consent, health, portfolio, projects, skills
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
