@@ -116,3 +116,13 @@ This week time was spent meeting with team members in class on monday discussing
 | Resume Services | Done | Comphrehensive functionality for saving, reading, updating and deleting user resume items. |    
 
 ![screenshot](Week9_checklist.png)
+
+## Term 2 - Week #3 (January 19 - 25)
+
+This week time was spent meeting with team members in class on monday discussing our plan for peer testing and upcoming milestone work. A list of tasks and a small questionaire for peer testing was put together this week. Code contributions including aggregating a users skills accross all their projects sorted chronologically.
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| Aggregated Skills | Done | Service completed, will add to TUI after peer testing. |    
+
+![screenshot](Week9_checklist.png)
