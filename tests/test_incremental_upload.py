@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import logging
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -252,8 +254,8 @@ def test_extract_and_merge_files(temp_db: None, tmp_path: Path) -> None:
     # Verify files were created
     merged_project_dir = target_dir / "myproject"
     assert merged_project_dir.exists()
-    # Note: extract_and_merge_files flattens files to project directory
-    files = list(merged_project_dir.glob("*"))
+    # Note: extract_and_merge_files flattens files to project directory (excluding manifest)
+    files = [f for f in merged_project_dir.glob("*") if f.name != ".files_manifest.json"]
     assert len(files) == 3
 
 
@@ -400,7 +402,7 @@ def test_deduplicates_within_single_zip(tmp_path: Path) -> None:
 
     # Only one unique file should be written
     assert written == 1
-    files = list((target_dir / "proj").glob("*"))
+    files = [f for f in (target_dir / "proj").glob("*") if f.name != ".files_manifest.json"]
     assert len(files) == 1
 
 
@@ -422,7 +424,207 @@ def test_deduplicates_across_multiple_zips(tmp_path: Path) -> None:
     assert written2 == 0
 
     # System-level index should result in a single stored file across projects
-    files_p1 = list((target_dir / "p1").glob("*"))
-    files_p2 = list((target_dir / "p2").glob("*"))
+    files_p1 = [f for f in (target_dir / "p1").glob("*") if f.name != ".files_manifest.json"]
+    files_p2 = [f for f in (target_dir / "p2").glob("*") if f.name != ".files_manifest.json"]
     assert len(files_p1) == 1
     assert len(files_p2) == 0
+
+
+def test_extract_and_merge_validates_dedupe_index(temp_db: None, tmp_path: Path) -> None:
+    """Test that dedupe index entries are validated before skipping files."""
+    target_dir = tmp_path / "merged"
+
+    # Create first ZIP
+    zip1 = tmp_path / "first.zip"
+    content = b"print('hello')\n"
+    _create_zip(zip1, entries=[("project/file.py", content)])
+
+    # Extract first time
+    written1 = extract_and_merge_files(zip1, target_dir, "project")
+    assert written1 == 1
+
+    # Manually remove the extracted file to simulate corruption/deletion
+    project_dir = target_dir / "project"
+    extracted_file = list(project_dir.glob("*.py"))[0]
+    extracted_file.unlink()
+
+    # Create second ZIP with same content
+    zip2 = tmp_path / "second.zip"
+    _create_zip(zip2, entries=[("project/file.py", content)])
+
+    # Should write again since the indexed file no longer exists
+    written2 = extract_and_merge_files(zip2, target_dir, "project")
+    assert written2 == 1
+
+
+def test_extract_and_merge_validates_file_size(temp_db: None, tmp_path: Path) -> None:
+    """Test that file size is validated when checking dedupe index."""
+    target_dir = tmp_path / "merged"
+
+    # Create first ZIP
+    zip1 = tmp_path / "first.zip"
+    content = b"print('hello')\n"
+    _create_zip(zip1, entries=[("project/data.py", content)])
+
+    # Extract first time
+    written1 = extract_and_merge_files(zip1, target_dir, "project")
+    assert written1 == 1
+
+    # Manually corrupt the file by changing its content
+    project_dir = target_dir / "project"
+    extracted_file = list(project_dir.glob("*.py"))[0]
+    extracted_file.write_bytes(b"corrupted")
+
+    # Create second ZIP with same content
+    zip2 = tmp_path / "second.zip"
+    _create_zip(zip2, entries=[("project/data.py", content)])
+
+    # Should write again since the file size doesn't match
+    written2 = extract_and_merge_files(zip2, target_dir, "project")
+    assert written2 == 1
+
+
+def test_extract_and_merge_filename_collision_with_hash_prefix_collision(
+    temp_db: None, tmp_path: Path
+) -> None:
+    """Test that filename collision with same 8-char hash prefix is handled correctly."""
+    target_dir = tmp_path / "target"
+    target_dir.mkdir()
+    project_dir = target_dir / "myproject"
+    project_dir.mkdir()
+
+    # Pre-create a file with the same name that will trigger alt_name
+    existing_file = project_dir / "data.txt"
+    existing_file.write_bytes(b"existing content")
+
+    # Create a ZIP with a file that has the same name but different content
+    # This will trigger the alt_name path
+    zip_path = tmp_path / "upload.zip"
+    _create_zip(zip_path, entries=[("myproject/data.txt", b"new content 1")])
+
+    # Extract and merge
+    written1 = extract_and_merge_files(zip_path, target_dir, "myproject")
+    assert written1 == 1
+
+    # Now manually create a file with the hash-based alt_name to simulate collision
+    # We need to compute what the hash would be for "new content 2"
+    import hashlib
+
+    content2 = b"new content 2"
+    hash2 = hashlib.sha256(content2).hexdigest()
+
+    # Create a file that would conflict with the alt_name
+    collision_file = project_dir / f"data-{hash2[:8]}.txt"
+    collision_file.write_bytes(b"collision content")
+
+    # Now try to extract a second file with same name but yet different content
+    zip_path2 = tmp_path / "upload2.zip"
+    _create_zip(zip_path2, entries=[("myproject/data.txt", content2)])
+
+    # This should create a file with a counter suffix to avoid overwriting
+    written2 = extract_and_merge_files(zip_path2, target_dir, "myproject")
+    assert written2 == 1
+
+    # Check that we now have 4 files: original, first alt, collision, and counter-suffixed
+    files = list(project_dir.glob("data*.txt"))
+    assert len(files) == 4
+
+    # Verify the counter-suffixed file exists
+    counter_file = project_dir / f"data-{hash2[:8]}-1.txt"
+    assert counter_file.exists()
+    assert counter_file.read_bytes() == content2
+
+
+def test_extract_and_merge_handles_index_write_gracefully(
+    temp_db: None, tmp_path: Path, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that index write failures are logged but don't crash the function."""
+    target_dir = tmp_path / "merged"
+    target_dir.mkdir()
+
+    # Create a ZIP with a file
+    zip_path = tmp_path / "upload.zip"
+    _create_zip(zip_path, entries=[("project/file.py", b"print('hello')\n")])
+
+    # Mock Path.write_text to raise OSError when writing the dedupe index
+    original_write_text = Path.write_text
+
+    def mock_write_text(self: Path, *args: any, **kwargs: any) -> int:
+        if self.name == ".dedupe_index.json":
+            raise OSError("Simulated write failure")
+        return original_write_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", mock_write_text)
+
+    # Extract files - should succeed despite index write failure
+    with caplog.at_level(logging.WARNING):
+        written = extract_and_merge_files(zip_path, target_dir, "project")
+
+    # Function should complete successfully
+    assert written == 1
+
+    # Should log a warning about the index write failure
+    warning_messages = [
+        record.message
+        for record in caplog.records
+        if record.levelname == "WARNING" and "dedupe" in record.message.lower()
+    ]
+    assert len(warning_messages) == 1
+    assert "Failed to persist dedupe index" in warning_messages[0]
+
+
+def test_extract_merge_creates_files_manifest(temp_db: None, tmp_path: Path) -> None:
+    """Test that files manifest is created tracking deduplicated and regular files."""
+    target_dir = tmp_path / "merged"
+
+    # Create first ZIP with some files
+    zip1 = tmp_path / "first.zip"
+    _create_zip(
+        zip1,
+        entries=[
+            ("project/main.py", b"print('hello')\n"),
+            ("project/utils.py", b"def helper(): pass\n"),
+        ],
+    )
+
+    extract_and_merge_files(zip1, target_dir, "project")
+
+    # Verify manifest was created
+    manifest_path = target_dir / "project" / ".files_manifest.json"
+    assert manifest_path.exists()
+
+    # Load and verify manifest
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert len(manifest) == 2
+    assert all("filename" in f and "hash" in f for f in manifest)
+    assert all("is_deduplicated" in f for f in manifest)
+    # First extraction should have no deduplicated files
+    assert all(not f["is_deduplicated"] for f in manifest)
+
+
+def test_extract_merge_tracks_deduplicated_files(temp_db: None, tmp_path: Path) -> None:
+    """Test that manifest correctly marks deduplicated files."""
+    target_dir = tmp_path / "merged"
+
+    # Create first ZIP
+    zip1 = tmp_path / "first.zip"
+    content = b"print('same')\n"
+    _create_zip(zip1, entries=[("project/main.py", content)])
+
+    extract_and_merge_files(zip1, target_dir, "project")
+
+    # Create second ZIP with duplicate content
+    zip2 = tmp_path / "second.zip"
+    _create_zip(zip2, entries=[("project/main.py", content)])
+
+    extract_and_merge_files(zip2, target_dir, "project")
+
+    # Load the second manifest (should now have deduplicated entry)
+    manifest_path = target_dir / "project" / ".files_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    # Should have the deduplicated file marked
+    assert len(manifest) == 1
+    assert manifest[0]["is_deduplicated"] is True
+    assert "actual_location" in manifest[0]
+    assert "hash" in manifest[0]
