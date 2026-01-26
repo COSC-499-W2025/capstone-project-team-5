@@ -1,6 +1,167 @@
 # Team Weekly Logs
 
 <details>
+  <summary><h3>T2 Week 3 | January 19 - January 23 </h3></summary>
+
+  ### Burnup Chart
+<img width="1384" height="1008" alt="image" src="https://github.com/user-attachments/assets/affb8fe9-0e86-430e-926b-3e42a5921444" />
+
+
+  ### Past Work
+  - [Added endpoints for editing portfolios](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/256)
+  - [Improvements for R22, with hashing and added validation.](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/250)
+  - [[BIG] FILE EXPORTS!!! ](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/257)
+  - [Skills development over time, now aggregated!!!](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/252)
+  - [Project analysis endpoints WITH zip storage.](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/251)
+  - [Consent Tool API endpoints](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/248)
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Prepare for Peer Testing | ✅ Done | Questionnaire prepared and Task List complete |
+  | Continue with Milestone #2 requirements| ✅ Done | Continuous process.|
+  | Decide on Improvements to be Implemented | ❌ In Progress | Doing some refactoring / improvements of past work. Continuous process. |
+  
+  ### Future Work
+  - Continue with Milestone 2 requirements
+  - Participate in Peer Testing, and incorporate feedback.
+  - Handling edge cases and ensure holistic integration when working with endpoints.
+</details>
+
+<details>
+  <summary><h3>T2 Week 2 | January 12 - January 18 </h3></summary>
+
+  ### Burnup Chart
+  <img width="1009" height="521" alt="Image" src="https://github.com/user-attachments/assets/fd38e830-0866-4887-84fd-7765ec87d2ae" />
+
+  ### Past Work
+  - Work towards milestone 2 requirements such as
+  - User role detection
+  - Recognizing duplicate files
+  - Saving user resume items
+  - API routes for all available CRUD endpoints we have at this time
+  - Adding project thumbnail support
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Discuss and Create WBS for Milestone #2 | ✅ Done | Requirements added as GitHub issues and self assigned. |
+  | Decide on Improvements to be Implemented | ❌ In Progress | Doing some refactoring / improvements of past work. Continuous process. |
+  
+  ### Future Work
+  - Continue with Milestone #2 requirements
+  - Start to prepare for peer testing
+  - Decide on improvements to make from past milestone requirements
+
+</details>
+
+<details>
+  <summary><h3>T2 Week 1 | January 04 - January 11 </h3></summary>
+
+  ### Burnup Chart
+<img alt="Screenshot 2026-01-11 163909" src="https://github.com/user-attachments/assets/9ff9917f-681d-4bf4-9936-000f6bb7f16a" />
+
+  ### Past Work
+  - Reflected on presentation
+  - General refactoring
+  - Started work on API code
+  - Started code for saving portfolio changes to database
+  - Started Requirement 21 for Milestone #2
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Review suggestions from Milestone 1 Presentation | ✅ Done | |
+  | Decide on Improvements to be Implemented | ❌ Not Done | |
+  
+  ### Future Work
+  - Decide on improvements to be implemented from feedback
+  - Discuss and Create WBS for Milestone #2
+
+</details>
+
+
+<details>
+  <summary><h3>Week 14 | November 30 - December 07 </h3></summary>
+
+  ### Burnup Chart
+
+<img width="1072" height="795" alt="image" src="https://github.com/user-attachments/assets/cf956aeb-be89-4c15-aa0a-5313186c71cd" />
+
+
+  ### Past Work
+  - Implemented LLM check in SKill detector
+  - Code Cleanup for Consent Tool
+  - Conducted in Class Presentation
+  - Completed Team contract
+  - Completed Video Demo
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Complete video demo for milestone #1 | ✅ Done | |
+  | Conduct presentation in class |  ✅ Done | |
+  | Finalize milestone #1 submissions |  ✅ Done | |
+  
+  ### Future Work
+  - Review suggestions from milestone 1 presentation
+  - Decide on improvements to be implemented and divide work
+
+</details>
+
+
+<details>
+  <summary><h3>Week 13 | November 24 - 30</h3></summary>
+
+  ### Burnup Chart
+  <img width="916" height="486" alt="image" src="https://github.com/user-attachments/assets/97201e1d-87d7-4463-8330-016745b3d823" />
+
+
+  ### Past Work
+  - Implemented language-agnostic test analysis pipeline and integrated testing metrics
+  - Enhanced and integrated Java, Python, and JS/TS language analyzers into CLI workflow with improved analysis depth
+  - Integrated code analysis logic flow and enhanced local resume bullet point generation
+  - Improved TUI with project/analysis retrieval features and enhanced UX/flow changes across the application
+  - Enhanced code analysis persistence layer with deletion logic and prepared presentation materials for milestone #1
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Integrating All Features | ✅ Done | Major integration work completed - language analyzers, test analysis, TUI features all integrated |
+  | Prepare for milestone 1 | 🚧 In Progress | Presentation materials completed, video demo and final submissions pending |
+
+  ### Upcoming Work
+  - Complete video demo for milestone #1
+  - Finalize milestone #1 submissions (team contract, self-reflection, deliverable, peer evaluation)
+  - Conduct presentation in class
+</details>
+
+<details>
+  <summary><h3>Week 12 | November 17 - 23</h3></summary>
+
+  ### Burnup Chart
+  <img width="930" height="675" alt="image" src="https://github.com/user-attachments/assets/51ee191e-da7b-45b9-bb2d-96d12522074b" />
+
+  ### Past Work
+  - Implemented deep analysis Java, C, C++, JS, TS, Python.
+  - Add project ranking based on user contributions
+  - Summarize top ranked projects
+  - Update consent tool for integration preparation
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Sync main with Develop |✅ Done | Need to get all PR's merged and sync this week. |
+  | Integrating All Features | In Progress | Primary focus for next week.
+  | Database | ✅ Done| Database set up and refactors for SQLAlchemy complete. |
+  | Refactoring to make codebase cleaner |  ✅ Done| Multiple services refactored. |
+
+  ### Upcoming Work
+  - Integrate all features and components, and prepare for milestone 1.
+</details>
+
+
+<details>
   <summary><h3>Week 10 | November 3 - 7</h3></summary>
 
   ### Burnup Chart
