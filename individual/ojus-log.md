@@ -2,23 +2,27 @@
 
 **GitHub:** [@ojusharma](https://github.com/ojusharma)
 
-### This Week - 2
+### This Week - 3
 
-<img width="600" height="400" alt="image" src="https://github.com/user-attachments/assets/427994a1-3623-454a-8711-9ea08c3ff203" />
+<img width="600" height="400" alt="image" src="https://github.com/user-attachments/assets/cb533892-3c37-4b5e-9512-4a331534fc77" />
+
 
 #### What Went Well
-- Successfully completed and merged [PR #240](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/240) : Create Skills Endpoint, adding API endpoint functionality for the Skills feature
-- Reviewed and approved [PR #233](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/233): Resume models + services by @xvardenx - adding user resume storage functionality
-- Reviewed and approved [PR #239](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/239) : feat: store user edits in db by @ribhavsharma - enabling portfolio edit persistence
+- Successfully completed and merged [PR #257](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/257) : Export Saved Analysis as PDF/TXT
+- Reviewed and approved [PR #256](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/256): feat: add endpoint for portfolio edit by Ribhav. Added suggested improvements (persisting sessions)
+- Reviewed and approved [PR #251](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/251) : feat(api): add project analysis endpoints with ZIP storage by Ronit
 - Reviewed and approved Individual logs
+- Prepared for Peer Testing
   
 #### What Didn't Go Well
-- Everything went smoothly
+- Had to attend check-in online due to a (horribly inconvenient) infection
 
 #### Planning for Next Week
-- Build on the Skills Endpoint based on feedback
+- Work with team to cover any missed/incomplete requirements (from my end, I will bring up the diff checker tool and how we can integrate it)
 - Continue reviewing teammates' PRs to support code collaboration
-- Continue enhancing the Diff Checker Tool functionality and connect it to broader project features as needed
+- Enhance the PDF/TXT analysis export to support better styling
+- Do Peer Testing
+  
 </details>
 
 
@@ -72,16 +76,26 @@
 ---
 
 <details>
-  <summary><h3>Week X</h3></summary>
+  <summary><h3>Week 3</h3></summary>
 
-### What Went Well
-  - 
+<img width="600" height="400" alt="image" src="https://github.com/user-attachments/assets/cb533892-3c37-4b5e-9512-4a331534fc77" />
 
-  ### What Didn't Go Well
-  - 
 
-  ### Planning for Next Week
-  - 
+#### What Went Well
+- Successfully completed and merged [PR #257](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/257) : Export Saved Analysis as PDF/TXT
+- Reviewed and approved [PR #256](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/256): feat: add endpoint for portfolio edit by Ribhav. Added suggested improvements (persisting sessions)
+- Reviewed and approved [PR #251](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/251) : feat(api): add project analysis endpoints with ZIP storage by Ronit
+- Reviewed and approved Individual logs
+- Prepared for Peer Testing
+  
+#### What Didn't Go Well
+- Had to attend check-in online due to a (horribly inconvenient) infection
+
+#### Planning for Next Week
+- Work with team to cover any missed/incomplete requirements (from my end, I will bring up the diff checker tool and how we can integrate it)
+- Continue reviewing teammates' PRs to support code collaboration
+- Enhance the PDF/TXT analysis export to support better styling
+- Do Peer Testing
 </details>
 
 ---
