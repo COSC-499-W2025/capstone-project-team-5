@@ -275,3 +275,27 @@ This week we furthered work on the API and other requirements for Milestone #2. 
 | Team Meetings | Not Yet Started | Prepare for the in class demos. |
 | Write More Code | Not Yet Started | Further code responsibility to be decided in Team Meetings. |
 </details>
+
+## T2 - Week 3 | 18 January - 25 January 2026
+
+<details>
+  <summary><h3></h3></summary>
+
+
+
+This week we focused on code contributions and planning for the upcoming in class demos. For my part, I decided not to implement any new major features, to avoid any unforeseen issues with the demo, and chose to implement enhancements to Requirement 22, as per team member suggestions. These included adding validation to see if indexed files exist before skipping them, adding hash prefix collision to prevent collisions from overwriting files in rare circumstances, and added specific exception handling and logging. Next week we will conduct the in class demos, have further team meetings to decide on future steps and code contributions, and I will begin my next code contributions based on the outcomes of those meetings.
+
+### Previous Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Team Meetings | Completed | Prepare for the in class demos. |
+| R22 Enhancements | Completed | Wrote code for Requirement 22 based on team member feedback. |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| In Class Demos | Not Yet Started | Conduct demos. |
+| Team Meetings | Not Yet Started | Decide on next steps. |
+| Write Code | Not Yet Started | Begin next code contribution based on team meetings. |
+</details>
