@@ -84,7 +84,7 @@ def _try_ai_generation(analysis: ProjectAnalysis, max_bullets: int) -> list[str]
         return generate_bullet_points_from_analysis(
             language=analysis.language,
             framework=analysis.framework,
-            skills=sorted(all_skills),
+            practices=sorted(all_skills),
             tools=sorted(analysis.tools),
             max_bullets=max_bullets,
         )

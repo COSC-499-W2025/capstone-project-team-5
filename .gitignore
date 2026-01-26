@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/linux,macos,visualstudiocode,vim,python,jupyternotebooks,venv,virtualenv
 # Edit at https://www.toptal.com/developers/gitignore?templates=linux,macos,visualstudiocode,vim,python,jupyternotebooks,venv,virtualenv
 
+# Zip2Job upload storage
+.zip2job_uploads/
+
 ### JupyterNotebooks ###
 # gitignore template for Jupyter Notebooks
 # website: http://jupyter.org/
