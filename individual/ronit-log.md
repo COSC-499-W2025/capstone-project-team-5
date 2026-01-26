@@ -2,7 +2,42 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-_Last Updated:_ January 18, 2026
+_Last Updated:_ January 25, 2026
+
+---
+
+## Week 3 | January 19-25, 2026
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1083" height="634" alt="image" src="https://github.com/user-attachments/assets/3b31aa25-5d7b-41ab-8153-864380b347a7" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| **Coding Tasks** | | |
+| Implemented project analysis API endpoints with ZIP storage | ✅ Done | Added `POST /api/projects/{project_id}/analyze` and `POST /api/projects/analyze` endpoints, ZIP storage system for persisted uploads, ... ([PR #251](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/251)) |
+| **Testing/Debugging Tasks** | | |
+| Added tests for project analysis endpoints | ✅ Done | covering importance score updates, analyze-all, missing ZIP handling, AI fallback |
+| **Reviewing/Collaboration Tasks** | | |
+| Reviewed [PR #248](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/248) (consent API endpoints) | ✅ Done | Noted test isolation issue - `session.query(ConsentRecord).delete()` deletes all records regardless of user_id; suggested using nonexistent user or transaction rollback |
+| Reviewed [PR #250](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/250) (R22 improvements) | ✅ Done | Noted test coverage gap - test name says failures are logged but test only verifies normal operation |
+| **Other Tasks** | | |
+| Prepared for peer testing | ✅ Done | |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Expand remaining API endpoints | ❌ Not Started | Further API development |
+| Work on resume generation | ❌ Not Started | Aggregate all data and create API endpoint |
+| Continue code reviews | | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Expand API endpoints to incorporate project analysis | ✅ Done | Implemented project analysis endpoints with ZIP storage |
+| Continue code reviews | ✅ Done | Ongoing task |
 
 ---
 
