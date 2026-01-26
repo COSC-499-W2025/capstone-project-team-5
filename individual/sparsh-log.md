@@ -8,6 +8,44 @@
 # TERM2 Logs - Sparsh Khanna
 
 ---
+## Week 3 | January  18-25, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1139" height="636" alt="image" src="https://github.com/user-attachments/assets/d02cfd18-9d55-4ff4-92ee-132abdfdf5cb" />
+
+
+
+
+</details>
+
+### Tasks worked on
+
+- Consent Api endpoints Introduction [PR#248](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/248)
+- Made the above change have authorisation and authentication based off feedback from my teammate Ethan. (SAME PR)
+- Wrote UTs to ensure code correctness and good coverage.
+- Reviewed Teammates code
+
+
+### Personal Contributions
+
+- Key-role-user Logic Introduction 
+This pull request introduces a new consent management API to the project, allowing clients to manage user consent records, query available external services and AI models, and check LLM (Large Language Model) configuration status. The main changes include the addition of new API endpoints for consent, the implementation of related business logic, and the introduction of Pydantic schemas for request and response validation.
+
+### Tests Added
+- [PR#248](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/248)
+- tests/test_consent_api.py
+
+### PRs Reviewed
+- [PR#252](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/252)
+- [PR#251](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/251)
+- [PR#250](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/250)
+
+### Additional Details
+
+This week's contributions were focused on adding api endpoints for my consent tool that i had worked upon earlier for milestone 1.
+
 
 ## Week 2 | January  11-18, 2025
 
