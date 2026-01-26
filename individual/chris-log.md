@@ -112,7 +112,7 @@ I failed to complete one of the tasks I set out to do from last week's log. Alth
 </details>
 
 
-## Week 9 | 26 October- 02 November 2025
+## Week 9 | 26 October - 02 November 2025
 
 <details>
   <summary><h3></h3></summary>
@@ -133,4 +133,169 @@ This week I started work on syncing our main branch with develop, but ran into s
 | :---- | :----- | :------- |
 | Reorganize GitHub Branches | In Progress | Merge main into develop. |
 | Refactor R16 Code | Not Yet Started | Restructure to work with SQL Alchemy |
+</details>
+
+## Week 10 | 02 November - 09 November 2025
+
+<details>
+  <summary><h3></h3></summary>
+<img alt="Screenshot 2025-11-09 191148" src="https://github.com/user-attachments/assets/fda32c4b-08ff-409a-bc5c-36250f1ce5b6" />
+
+
+This week I've finalized refactoring all code, including code for Requirement 16, to work with SQL Alchemy. Next week is reading week, so work will be light. Since all, or most, of the requirements have been covered, I intend to reasses where we're at, and discuss as a group, how to proceed. We may have the code for each requirement, but we need to ensure that all of the code is integrated properly into the overall program.
+
+### Previous Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Reorganize GitHub Branches | In Progress | Merge main into develop; waiting for reviews to merge. |
+| Refactor R16 Code | Completed | Restructure to work with SQL Alchemy. |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Reorganize GitHub Branches | In Progress | Finally merge develop into main. |
+| Further Planning | Not Yet Started | Discuss next steps with group in preparation for return to classes. |
+</details>
+
+## Week 12 | 16 November - 23 November 2025
+
+<details>
+  <summary><h3></h3></summary>
+<img alt="Screenshot 2025-11-23 120204" src="https://github.com/user-attachments/assets/acfe15a3-33aa-44aa-bec9-c2f2c47c72a1" />
+
+
+Coming back from reading week, we started the week off by reorienting the group and discussing the priorities for the final weeks of Milestone #1. For myself, I worked on completing code for Requirement 18: "Summarize the top-ranked projects." This went well, and next week I plan on contributing to whatever final integrations we need, including the possibility of deeper analysis of code contributions in different programming languages.
+
+### Previous Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Reorganize GitHub Branches | In Progress | Merge main into develop; waiting for reviews to merge. |
+| Further Planning | In Progress | Discussed the final steps with regards to completing all necessary requirements. |
+| Write R18 Code | Completed | Summarize the top-ranked projects. |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Reorganize GitHub Branches | In Progress | Merge develop into main (possibly wait for Milestone #1 completion). |
+| Further Planning | In Progress | Discuss next steps with group with regards to final integration prior to Milestone #1 completion. |
+| Write Code for Deep Analysis | Not Yet Started | Write and finalize code for deeper code analysis on any necessary missing programming languages. |
+</details>
+
+## Week 13 | 23 November - 30 November 2025
+
+<details>
+  <summary><h3></h3></summary>
+<img alt="Screenshot 2025-11-30 145121" src="https://github.com/user-attachments/assets/24b90dc0-bec2-4f21-9a29-94699ce16207" />
+
+
+This week we spent integrating code, and preparing for next week's presentation. To this end, came together to plan and create a Text UI. My part of building the Text UI was writing the code that ensures that previously saved projects and analyses are able to be accessed from the database with a button click. Next week we will conduct our presentations, discuss next steps for the project following the presentations, and write and sign the Team Contract which is due at the end of the semester.
+
+### Previous Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Reorganize GitHub Branches | In Progress | Merge develop into main (possibly wait for Milestone #1 completion). |
+| Further Planning | Completed | Discuss next steps with group with regards to final integration prior to Milestone #1 completion. |
+| Write Code for TUI | Completed | Feature: Retrieve previously generated projects and analyses in the TUI. |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Presentations | Not Yet Started | Conduct presentations in class. |
+| Further Planning | In Progress | Discuss next steps following the presentation. |
+| Team Contract | In Progress | Write and sign the Team Contract due at the end of semester. |
+</details>
+
+## Week 14 | 30 November - 07 December 2025
+
+<details>
+  <summary><h3></h3></summary>
+<img alt="Screenshot 2025-12-07 173146" src="https://github.com/user-attachments/assets/c347da22-1aed-4f29-8b24-7ce667a01380" />
+
+
+This week was spent wrapping up Milestone #1. We prepared and conducted our Presentation, watched other teams and completed Peer Evaluations, wrote and signed the Team Contract, and created the Video Demo. Individually, my main focus was writing up the Team Contract. Next week is the start of Christmas holidays, and so nothing is explicitly planned.
+
+### Previous Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Presentations | Completed | Conduct presentations in class. |
+| Further Planning | Completed | Discuss next steps following the presentation. |
+| Team Contract | Completed | Write and sign the Team Contract due at the end of semester. |
+| Video Demo | Compelted | Create the video demo for milestone #1. |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Holidays | Not Yet Started | Drink rum and egg nog. |
+</details>
+
+## T2 - Week 1 | 04 January - 11 January 2026
+
+<details>
+  <summary><h3></h3></summary>
+<img alt="Screenshot 2026-01-11 131414" src="https://github.com/user-attachments/assets/3495524b-c2f7-4418-9da7-f9e64c1a6aee" />
+
+
+Some members were travelling this week, so no formal meetings were held, but communication was upheld via Discord. Each of us took on a small task to contribute code, and next week we will solidify a Work Breakdown Structure for Milestone #2. For my part, I began work on Requirement 21 - "Allow incremental information by adding another zipped folder of files for the same portfolio or résumé," completing much of the backend development.
+
+### Previous Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Start R21 | Completed | Write the backend code. |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Team Meetings | Not Yet Started | Discuss and finalize Milestone #2 WBS. |
+| Write More Code | Not Yet Started | Code responsibility to be decided in Team Meetings. |
+</details>
+
+## T2 - Week 2 | 11 January - 18 January 2026
+
+<details>
+  <summary><h3></h3></summary>
+<img alt="Screenshot 2026-01-18 194528" src="https://github.com/user-attachments/assets/e1160fc5-0696-4ff5-a4cc-e7248d28828f" />
+
+
+This week we furthered work on the API and other requirements for Milestone #2. We also began discussions for the in class demos, but most of the decisions will be made next week in team meetings. For my part I wrote the backend code for Requirement 22 - "Recognize duplicate files and maintains only one in the system."
+
+### Previous Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Write R22 Code | Completed | Write the backend code. |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Team Meetings | Not Yet Started | Prepare for the in class demos. |
+| Write More Code | Not Yet Started | Further code responsibility to be decided in Team Meetings. |
+</details>
+
+## T2 - Week 3 | 18 January - 25 January 2026
+
+<details>
+  <summary><h3></h3></summary>
+<img alt="Screenshot 2026-01-25 162117" src="https://github.com/user-attachments/assets/2fe09309-4f2a-4e0a-9d52-9131e46e45d1" />
+
+
+This week we focused on code contributions and planning for the upcoming in class demos. For my part, I decided not to implement any new major features, to avoid any unforeseen issues with the demo, and chose to implement enhancements to Requirement 22, as per team member suggestions. These included adding validation to see if indexed files exist before skipping them, adding hash prefix collision to prevent collisions from overwriting files in rare circumstances, and added specific exception handling and logging. Next week we will conduct the in class demos, have further team meetings to decide on future steps and code contributions, and I will begin my next code contributions based on the outcomes of those meetings.
+
+### Previous Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Team Meetings | Completed | Prepare for the in class demos. |
+| R22 Enhancements | Completed | Wrote code for Requirement 22 based on team member feedback. |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| In Class Demos | Not Yet Started | Conduct demos. |
+| Team Meetings | Not Yet Started | Decide on next steps. |
+| Write Code | Not Yet Started | Begin next code contribution based on team meetings. |
 </details>

@@ -2,7 +2,225 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-_Last Updated:_ November 2, 2025
+_Last Updated:_ January 25, 2026
+
+---
+
+## Week 3 | January 19-25, 2026
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1083" height="634" alt="image" src="https://github.com/user-attachments/assets/3b31aa25-5d7b-41ab-8153-864380b347a7" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| **Coding Tasks** | | |
+| Implemented project analysis API endpoints with ZIP storage | ✅ Done | Added `POST /api/projects/{project_id}/analyze` and `POST /api/projects/analyze` endpoints, ZIP storage system for persisted uploads, ... ([PR #251](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/251)) |
+| **Testing/Debugging Tasks** | | |
+| Added tests for project analysis endpoints | ✅ Done | covering importance score updates, analyze-all, missing ZIP handling, AI fallback |
+| **Reviewing/Collaboration Tasks** | | |
+| Reviewed [PR #248](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/248) (consent API endpoints) | ✅ Done | Noted test isolation issue - `session.query(ConsentRecord).delete()` deletes all records regardless of user_id; suggested using nonexistent user or transaction rollback |
+| Reviewed [PR #250](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/250) (R22 improvements) | ✅ Done | Noted test coverage gap - test name says failures are logged but test only verifies normal operation |
+| **Other Tasks** | | |
+| Prepared for peer testing | ✅ Done | |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Expand remaining API endpoints | ❌ Not Started | Further API development |
+| Work on resume generation | ❌ Not Started | Aggregate all data and create API endpoint |
+| Continue code reviews | | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Expand API endpoints to incorporate project analysis | ✅ Done | Implemented project analysis endpoints with ZIP storage |
+| Continue code reviews | ✅ Done | Ongoing task |
+
+---
+
+## Week 2 | January 12-18, 2026
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1083" height="635" alt="image" src="https://github.com/user-attachments/assets/6f0131b7-f9e0-4b9e-864f-19b60cf94667" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| **Coding Tasks** | | |
+| Implemented project thumbnail URL support | ✅ Done | Added `thumbnail_url` field to Project model, created service layer functions, updated TUI with set/clear functionality, added URL validation ([PR #225](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/225)) |
+| Implemented Projects API CRUD endpoints | ✅ Done | Added GET /api/projects, GET /api/projects/{id}, POST /api/projects/upload, PATCH /api/projects/{id}, DELETE /api/projects/{id} ([PR #229](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/229)) |
+| **Testing/Debugging Tasks** | | |
+| Added tests for thumbnail URL service | ✅ Done | Tests cover validation, set/get/clear operations, error handling |
+| Added comprehensive API endpoint tests | ✅ Done | Full test coverage for all project CRUD operations using FastAPI TestClient |
+| **Reviewing/Collaboration Tasks** | | |
+| Reviewed [PR #231](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/231) (duplicate file recognition) | ✅ Done | noted potential edge case with hash collisions where different files could overwrite each other if they share same filename and 8-char hash |
+| Reviewed [PR #239](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/239) (store user edits in db) | ✅ Done | suggested early return optimization when both title and content are None |
+| Reviewed [PR #232](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/232) (user's role in project) | ✅ Done | suggested persisting the information in db for future api usage |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Expand API endpoints to incorporate project analysis | ❌ Not Started | Add endpoints for analysis workflows, importance scoring, etc. |
+| Continue code reviews | | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Extend API functionality | ✅ Done | Implemented Projects API CRUD endpoints and thumbnail URL support |
+| Continue code reviews | ✅ Done | Ongoing task |
+
+---
+
+## Week 1 | January 5-11, 2026
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1082" height="642" alt="image" src="https://github.com/user-attachments/assets/419a5217-fac0-41ff-8758-f62e7550e0d9" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Refactored CLI and TUI to utilize new workflows.analysis_pipeline module | ✅ Done | Moved ~400 lines of analysis logic from CLI into dedicated pipeline module |
+| Replaced ConsentTool usage with utility function for ignore patterns | ✅ Done | |
+| Conducted code reviews | ✅ Done | Ongoing task |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Extend API functionality | ❌ Not Started | |
+| Continue code reviews | | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Refactor codebase | ✅ Done | |
+| Continue code reviews | ✅ Done | Ongoing task |
+
+---
+
+## Week 14 | December 01-07, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1071" height="628" alt="image" src="https://github.com/user-attachments/assets/45940ca9-b086-44b0-a35f-703f0ebefdaa" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Recorded + Edited video demo | ✅ Done | |
+| Added importance score breakdown to tui | ✅ Done | |
+| Conducted code reviews | ✅ Done | Ongoing task |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Refactor codebase | | | |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Complete video demo | ✅ Done | Video work for milestone #1 |
+| Complete milestone #1 submissions | ✅ Done | Video demo, team contract, self-reflection, deliverable, peer evaluation (of other teams) |
+| Continue code reviews | ✅ Done | Ongoing task |
+
+---
+
+## Week 13 | November 24-30, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1086" height="636" alt="image" src="https://github.com/user-attachments/assets/b15a1cfe-54ed-4e8e-805f-7f99bc73a10f" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Implemented language-agnostic test analysis pipeline | ✅ Done | Added pipeline that walks every project, counts unit/integration tests per language |
+| Wired testing metrics into CLI/TUI flows and bullet generator | ✅ Done | |
+| Added regression tests for test analyzer, bullet generation, and persistence | ✅ Done | Updated expectations to cover new UX |
+| Worked on presentation materials | ✅ Done | Prepared for milestone #1 presentation |
+| Conducted code reviews | ✅ Done | Ongoing task |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Complete video demo | ❌ Not Started | Video work for milestone #1 |
+| Complete milestone #1 submissions | ❌ Not Started | Video demo, team contract, self-reflection, deliverable, peer evaluation (of other teams) |
+| Continue code reviews | ❌ Not Started | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Prepare for presentation/video demo | 🚧 In Progress | Presentation materials done, video demo pending |
+| Pending integration stuff | ❌ Not Started |  |
+| Continue code reviews | ✅ Done | Ongoing task |
+
+---
+
+## Week 12 | November 17-23, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1126" height="646" alt="image" src="https://github.com/user-attachments/assets/c5e99486-147b-4055-96a5-16b6e6fcc19c" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Implemented project importance ranking system | ✅ Done | Calculates + displays project importance scores based on contribution volume, diversity, project duration and file count |
+| Added comprehensive unit tests for ranking system | ✅ Done | 14 test cases: score calculation, empty metrics, zero duration, diversity bonus, duration factor, ranking ties, edge cases and score breakdown formatting |
+| Added integration test for database persistence | ✅ Done | |
+| Conducted code reviews | ✅ Done |  |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Prepare for presentation/video demo | ❌ Not Started |  |
+| Pending integration stuff | ❌ Not Started |  |
+| Continue code reviews | ❌ Not Started | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Implement project ranking based on contributions | ✅ Done | |
+| Continue code reviews | ✅ Done | Ongoing task |
+
+---
+
+## Week 10 | November 3-9, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1377" height="810" alt="image" src="https://github.com/user-attachments/assets/b1b6424d-6244-4b66-95f3-4ea283fffba5" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Refactored CLI to display analysis per project | ✅ Done | Each project now shows individual analysis sections for Language, Framework, Skills, Tools, File Analysis, and AI bullet points |
+| Implemented fallback to root-level analysis | ✅ Done | When no valid projects found or all projects skipped |
+| Refactored analysis logic into helper functions | ✅ Done | Improved code maintainability and organization |
+| Added comprehensive tests for per-project analysis | ✅ Done | 3 test cases: per-project display, root fallback, and single AI warning |
+| Conducted code reviews | ✅ Done |  |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Implement project ranking based on contributions | ❌ Not Started |  |
+| Continue code reviews | ❌ Not Started | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Implement project ranking based on contributions | ❌ Not Started | Deferred to next cycle |
+| Continue code reviews | ✅ Done | Ongoing task |
 
 ---
 

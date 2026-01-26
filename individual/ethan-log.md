@@ -56,3 +56,73 @@ Time this week was spent coding a new feature for extracting key contrtibution m
 | Refactoring| In progress | Refactoring any part of code base where it is needed. |
 
 ![screenshot](Week9_checklist.png)
+
+## Week #10 (November 3 - November 9)
+
+This week time was spent in team meetings on monday discussing what is needed going forward as well as coding. Some features from previous weeks were not yet implemented in the main program. This week I refactored contribution metrics and collaboration detection features and added them into the main program. Next week is reading week so I don't know the exact plans for this next sprint.
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| Refactoring| Done | Refactored previous features and added to main program CLI. |
+
+![screenshot](Week10_checklist.png)
+
+## Week #12 (November 17 - November 23)
+
+This week time was spenting coding specific analysis for each major programming language to deepen our project analysis insights. I worked on JavaScript / TypeScript projects. The feature is complete. Next sprint time will be spent refactoring and making sure that all is met for the upcoming milestone.
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| JS/TS | Done | JS/TS project analysis to create resume-relevant insights. |
+
+![screenshot](Week12_checklist.png)
+
+## Week #13 (November 24 - November 30)
+
+This week time was spent integrating past JS/TS specific language analysis feature. The feature is fully integated into the project flow, matching the unified programming language analysis output class as well as specific local bullet point generation for JS/TS projects. Time was spent outlining the presentation and creating slides. The plan for next sprint is to cleanup any lose ends to have all requirements completed for video demo / checklist.
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| JS/TS Integration | Done | Fully integrated into project flow. |
+
+![screenshot](Week13_checklist.png)
+
+## Week #14 (December 1 - December 7)
+
+Time this week was spent presenting in class on monday as well as creating the team contract and completing most of the required fields. Code contributions included enhancing previous JavaScript / TypeScript code analysis using AST analysis. This included updating the local JS bullet point generation to reflect the new analysis.
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| JS/TS AST Analysis | Done | Fully integrated into project flow. |
+
+![screenshot](Week14_checklist.png)
+
+## Term 2 - Week #1 (January 05 - 11)
+
+This week some members were travelling so no formal meetings took place. This week time was spent starting milestone 2 requirements. Code contributions this week included saving the user edits to portfolio items to the db and retreiving these items for the user if present. The plan for next sprint is to meet with the whole team and get on track for milestone 2.
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| Saver user edits | Done | Allows for user edits to output to be saved as a portfolio item. |    
+
+![screenshot](Week9_checklist.png)
+
+## Term 2 - Week #2 (January 12 - 18)
+
+This week time was spent meeting with team members in class on monday discussing our plan for milestone 2 and dividing up milestone requirements. Time coding was spent creating backend functionality for storing user resume specific information. The plan for next week is to keep going on milestone 2 requirements and plan for peer testing. 
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| Resume Services | Done | Comphrehensive functionality for saving, reading, updating and deleting user resume items. |    
+
+![screenshot](Week9_checklist.png)
+
+## Term 2 - Week #3 (January 19 - 25)
+
+This week time was spent meeting with team members in class on monday discussing our plan for peer testing and upcoming milestone work. A list of tasks and a small questionaire for peer testing was put together this week. Code contributions including aggregating a users skills accross all their projects sorted chronologically.
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| Aggregated Skills | Done | Service completed, will add to TUI after peer testing. |    
+
+![screenshot](Week9_checklist.png)

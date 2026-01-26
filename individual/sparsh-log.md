@@ -4,6 +4,105 @@
 
 ---
 
+
+# TERM2 Logs - Sparsh Khanna
+
+---
+## Week 3 | January  18-25, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1139" height="636" alt="image" src="https://github.com/user-attachments/assets/d02cfd18-9d55-4ff4-92ee-132abdfdf5cb" />
+
+
+
+
+</details>
+
+### Tasks worked on
+
+- Consent Api endpoints Introduction [PR#248](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/248)
+- Made the above change have authorisation and authentication based off feedback from my teammate Ethan. (SAME PR)
+- Wrote UTs to ensure code correctness and good coverage.
+- Reviewed Teammates code
+
+
+### Personal Contributions
+
+- Key-role-user Logic Introduction 
+This pull request introduces a new consent management API to the project, allowing clients to manage user consent records, query available external services and AI models, and check LLM (Large Language Model) configuration status. The main changes include the addition of new API endpoints for consent, the implementation of related business logic, and the introduction of Pydantic schemas for request and response validation.
+
+### Tests Added
+- [PR#248](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/248)
+- tests/test_consent_api.py
+
+### PRs Reviewed
+- [PR#252](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/252)
+- [PR#251](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/251)
+- [PR#250](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/250)
+
+### Additional Details
+
+This week's contributions were focused on adding api endpoints for my consent tool that i had worked upon earlier for milestone 1.
+
+
+## Week 2 | January  11-18, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1123" height="621" alt="image" src="https://github.com/user-attachments/assets/7b0066a8-9dec-40f2-9cfa-0a314dab39bc" />
+
+
+
+</details>
+
+### Tasks worked on
+
+- Key-role-user Logic Introduction [PR#232](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/232)
+- Made the above change Persistent based off feedback from my teammate Ronit. (SAME PR)
+- Wrote UTs to ensure code correctness and good coverage.
+- Reviewed Teammates code
+
+
+### Personal Contributions
+
+- Key-role-user Logic Introduction [PR#232](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/232)
+This change introduces a user role detection feature based on Git contribution analysis. It adds a new module to determine a user's role (e.g., Lead Developer, Contributor) in a project, integrates this information into the analysis pipeline, and displays the detected role in project summaries and bullet points. 
+
+### Tests Added
+- [PR#232](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/232)
+- tests/test_role_detector.py : comprehensive test suite for the user role detection logic, covering various scenarios and edge cases to ensure robust and accurate classification.
+- tests/test_role_persistence.py: comprehensive test suite that checks for persistence of added db entries for role detections
+
+### PRs Reviewed
+- [PR#231](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/231)
+- [PR#229](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/229)
+
+### Additional Details
+
+This week's contributions were not based of last week's contributions which were centred around the innit structure for the API CRUD endpoints logic. This was worked upon further by my teammate Ronit this week. I focused on another requirement based off which we are required to narrow down the key role of the user in the relevant projects. The logic for the same is mentioned above. I will have a further discussions with my teammates about upcoming week's work plan and proceed accordingly.
+
+## Week 1 | January  4-11, 2025
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1470" height="956" alt="Screenshot 2026-01-11 at 8 18 52 AM" src="https://github.com/user-attachments/assets/d883b145-8748-4022-acea-2c41388b3cb0" />
+
+
+</details>
+
+### Team Activities
+- **Requirements Analysis**: Had discussions about Term 2 work structure.
+
+### Personal Contributions
+- **API Skeleton**: Made basic API skeleton for API endpoint work in the future.
+
+---
+# TERM1 Logs - Sparsh Khanna
+
 ## Week 3 | September 15-21, 2025
 
 <details>
@@ -150,3 +249,71 @@ It was a busy week for me due to heavy midterm load and I was unable to be as in
 ### TODOs for Next week 
 - **Sql Migration**:  modify this week's PR to better reflect and work with the latest suggested infra for db.
 - **Multithreading** Look into multithreading and wherever possible implement it without breaking existing functionality.
+
+## Week #10 (November 02 2025 - November 09 2025)
+<details>
+  <summary><h3>Evaluation</h3></summary
+<img width="1198" height="630" alt="image" src="https://github.com/user-attachments/assets/61c3777c-e5f0-4e5d-9198-c9722acd56d1" />
+
+
+</details>
+
+### Team Activities
+- **PR Actions**: Reviewed PRs and provided any feedback/suggestions necessary.  
+
+
+### Personal Contributions
+- **Code Contributions**: Provided further code changes and UT changes to migrate from sqllite to ORM sqlalchemy to keep the logic and approach across the project consistent.
+### TODOs for Next week 
+- **Backlog Tasks**: Discuss with the team and pick up any free tasks.
+- **Multithreading** Look into multithreading and wherever possible implement it without breaking existing functionality.
+- 
+## Week #12 (November 16 2025 - November 23 2025)
+<details>
+  <summary><h3>Evaluation</h3></summary
+
+<img width="2940" height="1912" alt="image" src="https://github.com/user-attachments/assets/69cd170d-dae0-4163-a4e1-4bf87da326f0" />
+
+</details>
+
+### Team Activities
+- **PR Actions**: Reviewed PRs and provided any feedback/suggestions necessary.  
+
+### Personal Contributions
+- **Code Contributions**: Provided code for local C and C++ code analysis in the absence of a llm model , also provided small updates to the consent tool to allow for more ignore patterns. 
+### TODOs for Next week 
+- **Backlog Tasks**: Discuss with the team and pick up any free tasks.
+- **Integration**: Work with the team on integrating any modules that arent already connected and do any code cleanups if necessary.
+
+## Week #13 (November 23 2025 - November 30 2025)
+<details>
+  <summary><h3>Evaluation</h3></summary
+<img width="2940" height="1912" alt="image" src="https://github.com/user-attachments/assets/582957dc-3997-42ad-b802-6ccae43972d2" />
+</details>
+
+### Team Activities
+- **PR Actions**: Reviewed PRs and provided any feedback/suggestions necessary.  
+
+### Personal Contributions
+
+- **Code Contributions**: Integrated Code analysis logic flow and made local resume bullet points nore robust.
+### TODOs for Next week 
+- **Finishing Touches**: Discuss with the team and work on any final remaining bugs or features before milestone 1 submission.
+
+## Week #14 (November 30 2025 - December 07 2025)
+<details>
+  <summary><h3>Evaluation</h3></summary
+<img width="1062" height="604" alt="image" src="https://github.com/user-attachments/assets/f0c6918b-5025-459a-a364-a54f8df40dbd" />
+
+</details>
+
+### Team Activities
+- **PR Actions**: Reviewed PRs and provided any feedback/suggestions necessary.
+- **Team Contract**: Worked and reviewed the team contract
+- **Presentation**: Did the final Presentation in Class
+
+### Personal Contributions
+
+- **Code Contributions**: Cleaned up consent tool code to better reflect the AI models being used.
+
+---

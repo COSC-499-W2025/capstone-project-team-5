@@ -2,7 +2,111 @@
 
 **GitHub:** [@ojusharma](https://github.com/ojusharma)
 
+### This Week - 2
+
+<img width="600" height="400" alt="image" src="https://github.com/user-attachments/assets/427994a1-3623-454a-8711-9ea08c3ff203" />
+
+#### What Went Well
+- Successfully completed and merged [PR #240](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/240) : Create Skills Endpoint, adding API endpoint functionality for the Skills feature
+- Reviewed and approved [PR #233](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/233): Resume models + services by @xvardenx - adding user resume storage functionality
+- Reviewed and approved [PR #239](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/239) : feat: store user edits in db by @ribhavsharma - enabling portfolio edit persistence
+- Reviewed and approved Individual logs
+  
+#### What Didn't Go Well
+- Everything went smoothly
+
+#### Planning for Next Week
+- Build on the Skills Endpoint based on feedback
+- Continue reviewing teammates' PRs to support code collaboration
+- Continue enhancing the Diff Checker Tool functionality and connect it to broader project features as needed
+</details>
+
+
 ---
+
+
+<details>
+  <summary><h3>January</h3></summary>
+  
+<details>
+  <summary><h3>Week 1</h3></summary>
+  
+<img width="1018" height="671" alt="image" src="https://github.com/user-attachments/assets/34f8f13a-e3b6-4dee-b85e-f1927c47368b" />
+
+### What Went Well
+  - Decided API stack (FASTAPI)
+  - Created a Diff checker tool that will allow faster scanning times
+  - Reviewed PRs
+
+  ### What Didn't Go Well
+  - All good  
+
+  ### Planning for Next Week
+  - Work on integrating diff checker into codebase and add functionality to it
+  - Start migrating skill detector as REST API
+</details>
+
+---
+
+<details>
+  <summary><h3>Week 2</h3></summary>
+  <img width="920" height="735" alt="image" src="https://github.com/user-attachments/assets/df4ec2c9-1278-44e1-a79a-bb0acb5a922c" />
+
+### What Went Well
+
+#### Coding Tasks:
+- Successfully completed and merged [PR #240](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/240) : Create Skills Endpoint, adding API endpoint functionality for the Skills feature
+- Reviewed and approved [PR #233](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/233): Resume models + services by @xvardenx - adding user resume storage functionality
+- Reviewed and approved [PR #239](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/239) : feat: store user edits in db by @ribhavsharma - enabling portfolio edit persistence
+- Reviewed and approved Individual logs
+  
+### What Didn't Go Well
+- Everything went smoothly
+
+### Planning for Next Week
+- Build on the Skills Endpoint based on feedback
+- Continue reviewing teammates' PRs to support code collaboration
+- Continue enhancing the Diff Checker Tool functionality and connect it to broader project features as needed
+</details>
+
+---
+
+<details>
+  <summary><h3>Week X</h3></summary>
+
+### What Went Well
+  - 
+
+  ### What Didn't Go Well
+  - 
+
+  ### Planning for Next Week
+  - 
+</details>
+
+---
+
+<details>
+  <summary><h3>Week X</h3></summary>
+
+### What Went Well
+  - 
+
+  ### What Didn't Go Well
+  - 
+
+  ### Planning for Next Week
+  - 
+</details>
+
+</details>
+
+
+
+---
+<details>
+  <summary><h3>Term 1</summary>
+    
 <details>
   <summary><h3>September</summary>
 
@@ -164,47 +268,97 @@
 ---
 
 <details>
-  <summary><h3>Week X</h3></summary>
+  <summary><h3>Week 10</h3></summary>
+
+  <img width="1131" height="630" alt="image" src="https://github.com/user-attachments/assets/b6db910a-0f00-419e-9cf7-5af69a0737cc" />
+
 
 ### What Went Well
-  - 
+  - (FINALLY) Fully intgerated LLM service into the skill detection tool
+  - Enhanced functionality of LLM tool to handle json extractino from llm response
+  - Reviewed PRs :)
 
   ### What Didn't Go Well
-  - 
+  - All good
 
   ### Planning for Next Week
-  - 
+  - Need to make small teaks in prompt for skill detection tool
+  - Discuss with team about the new analysis requirements laid (time complexity, data structures, etc)
+  - Review more PRs :)
 </details>
 
 ---
 
 <details>
-  <summary><h3>Week X</h3></summary>
+  <summary><h3>Week 12</h3></summary>
+<img width="642" height="771" alt="image" src="https://github.com/user-attachments/assets/35f21254-5d7e-42c7-85c7-6f8fcbd3c695" />
 
 ### What Went Well
-  - 
+  - Created Java File analyzer for OOP prinicples, and other attributes
+  - Reviewed more PRs
+  - Got started on new OpenAI provider (next week's PR)
 
   ### What Didn't Go Well
-  - 
+  - All good
 
   ### Planning for Next Week
-  - 
+  - Integrate all components and tools for the milestone
+  - Complete OpenAI Provider implementation
 </details>
 
 ---
 
 <details>
-  <summary><h3>Week X</h3></summary>
+  <summary><h3>Week 14</h3></summary>
+<img width="1325" height="774" alt="image" src="https://github.com/user-attachments/assets/b67b9633-10de-4d4e-8870-bab8c981a8a1" />
 
 ### What Went Well
-  - 
+  - Enhanced Java Analyzer and Python analyzer to prepare them for integration
+  - Integrated Java and python analyzer into cli workflow
+  - Added deletion logic to code anlaysis persistence layer
+  - Opened PR for OpenAI LLM Provider integration (will be closed next week)
 
   ### What Didn't Go Well
-  - 
+  - ALl good :)
 
   ### Planning for Next Week
-  - 
+  - Improve TUI integration in the project
+  - Fix OpenAI LLM merge conflicts
+  - Code cleanup + Cover Edge cases in code logic + Complete remiaing Todos
+
 </details>
 
 </details>
+
+---
+
+<details>
+  <summary><h3>December</h3></summary>
+
+<details>
+  <summary><h3>Week 14</h3></summary>
+
+  <img width="1146" height="625" alt="image" src="https://github.com/user-attachments/assets/ddc3bb6e-e068-4ad7-8819-67bfdd2a5d67" />
+
+
+### What Went Well
+  - Presented Milestone 1
+  - Integrated consent tool check ebfore using LLM for skill detetction
+  - Refactored "Skills" section in TUI to split it into tools and practices, for better UX
+  - Implemenetd Skills ORM to track skills over time
+  - Reviewed PRs :)
+
+  ### What Didn't Go Well
+  - All good :)
+
+  ### Planning for Next Term
+  - Review more PRs
+  - Discuss sugegstions from milestone 1 with team
+</details>
+
+</details>
+</details>
+
+---
+
 
