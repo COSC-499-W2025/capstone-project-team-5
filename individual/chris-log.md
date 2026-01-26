@@ -280,7 +280,7 @@ This week we furthered work on the API and other requirements for Milestone #2. 
 
 <details>
   <summary><h3></h3></summary>
-
+<img alt="Screenshot 2026-01-25 162117" src="https://github.com/user-attachments/assets/2fe09309-4f2a-4e0a-9d52-9131e46e45d1" />
 
 
 This week we focused on code contributions and planning for the upcoming in class demos. For my part, I decided not to implement any new major features, to avoid any unforeseen issues with the demo, and chose to implement enhancements to Requirement 22, as per team member suggestions. These included adding validation to see if indexed files exist before skipping them, adding hash prefix collision to prevent collisions from overwriting files in rare circumstances, and added specific exception handling and logging. Next week we will conduct the in class demos, have further team meetings to decide on future steps and code contributions, and I will begin my next code contributions based on the outcomes of those meetings.
