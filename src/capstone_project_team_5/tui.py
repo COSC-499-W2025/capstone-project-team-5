@@ -33,6 +33,10 @@ from capstone_project_team_5.services.project_thumbnail import (
     get_project_thumbnail_url,
     set_project_thumbnail_url,
 )
+from capstone_project_team_5.services.user_skill_list import (
+    get_chronological_skills,
+    render_skills_as_markdown,
+)
 from capstone_project_team_5.tui_rendering import (
     render_detected_list,
     render_project_markdown,
@@ -205,6 +209,7 @@ ProgressBar {
                         Button("Log Out", id="btn-logout", variant="default"),
                         Button("Analyze ZIP", id="btn-analyze", variant="primary"),
                         Button("Retrieve Projects", id="btn-retrieve", variant="default"),
+                        Button("View Skills", id="btn-skills", variant="default"),
                         Button("Delete Analysis", id="btn-delete-analysis", variant="error"),
                         Button("Set Thumbnail", id="btn-set-thumbnail", variant="default"),
                         Input(
@@ -520,6 +525,43 @@ ProgressBar {
             self._run_list_saved()
         except Exception as exc:
             status.update(f"Error querying saved uploads: {exc}")
+
+    @on(Button.Pressed, "#btn-skills")
+    def handle_view_skills(self) -> None:
+        """
+        Lists the users aggregated skills from across
+        all their stored projects.
+        """
+
+        status = self.query_one("#status", Label)
+
+        if self._current_user is None:
+            status.update("Please login before viewing skills.")
+            return
+
+        try:
+            from capstone_project_team_5.data.db import get_session
+            from capstone_project_team_5.data.models import User
+
+            with get_session() as session:
+                user = (
+                    session.query(User).filter(User.username == self._current_user.strip()).first()
+                )
+
+                if user is None:
+                    status.update("User not found.")
+                    return
+
+                skills = get_chronological_skills(session=session, user_id=user.id)
+
+            md = render_skills_as_markdown(skills)
+            self._current_markdown = md
+            self.query_one("#output", Markdown).update(md)
+            self._reset_analysis_selection_ui()
+            status.update(f"Showing {len(skills)} skill(s).")
+
+        except Exception as e:
+            status.update(f"Error fetching skills: {e}")
 
     @on(Button.Pressed, "#btn-delete-analysis")
     def handle_delete_analysis(self) -> None:

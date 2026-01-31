@@ -59,88 +59,44 @@ def get_chronological_skills(session: Session, user_id: int) -> list[dict]:
     return skills
 
 
-def format_skills_for_display(
-    skills: list[dict], format_type: str, include_dates: bool = False
-) -> str:
+def render_skills_as_markdown(skills: list[dict]) -> str:
     """
-    Formats the list of skills for user display.
+    Renders a list of skills as displayable markdown for the TUI.
 
-    :param skills: List of skills to format.
+    :param skills: List of skills to render.
     :type skills: list[dict]
-    :param format_type: Either chronological or grouped.
-    :type format_type: str
-    :param include_dates: Whether to include dates in the output or not.
-    :type include_dates: bool
-    :return: Formatted string of skills.
+    :return: String representation of the markdown.
     :rtype: str
-    :raises: ValueError: If format type is invalid.
     """
 
     if not skills:
-        return ""
-
-    if format_type == "grouped":
-        return _format_skills_grouped(skills, include_dates)
-    elif format_type == "chronological":
-        return _format_skills_chronological(skills, include_dates)
-    else:
-        raise ValueError("Invalid format type.")
-
-
-def _format_skills_grouped(skills: list[dict], include_dates: bool) -> str:
-    """
-    Formats skills grouped by skill type.
-    """
+        return "# Your Skills\n\nNo skills detected yet. Analyze a project first."
 
     tools = [s for s in skills if s["skill_type"] == SkillType.TOOL]
     practices = [s for s in skills if s["skill_type"] == SkillType.PRACTICE]
 
-    output = []
+    parts: list[str] = ["# Your Skills\n"]
 
     if tools:
-        output.append("Tools:")
+        parts.append("## Tools\n")
 
-        for skill in tools:
-            if include_dates:
-                date_str = _format_date(skill["first_used"])
-                output.append(f"  - {skill['skill_name']} ({date_str})")
-            else:
-                output.append(f"  - {skill['skill_name']}")
+        for tool in tools:
+            time: datetime = tool["first_used"]
+            date_str: str = time.strftime("%b %Y")
+            parts.append(f"- **{tool['skill_name']}** *(since {date_str})*")
+        parts.append("")
+
     if practices:
-        if tools:
-            output.append("")
-        output.append("Practices:")
+        parts.append("## Practices\n")
 
-        for skill in practices:
-            if include_dates:
-                date_str = _format_date(skill["first_used"])
-                output.append(f"  - {skill['skill_name']} ({date_str})")
-            else:
-                output.append(f"  - {skill['skill_name']}")
+        for practice in practices:
+            time: datetime = practice["first_used"]
+            date_str: str = time.strftime("%b %Y")
+            parts.append(f"- **{practice['skill_name']}** *(since {date_str})*")
+        parts.append("")
 
-    return "\n".join(output)
+    parts.append(f"---\n*{len(tools)} {'tools' if len(tools) > 1 else 'tool'}, ")
+    parts.append(f"{len(practices)} {'practices' if len(practices) > 1 else 'practice'}")
+    parts.append(" detected across your projects.*")
 
-
-def _format_skills_chronological(skills: list[dict], include_dates: bool) -> str:
-    """Formats skills in chronological order."""
-
-    output = ["Skills:"]
-
-    for skill in skills:
-        type_indicator = "[Tool]" if skill["skill_type"] == SkillType.TOOL else "[Practice]"
-
-        if include_dates:
-            date_str = _format_date(skill["first_used"])
-            output.append(f"- {type_indicator} {skill['skill_name']} ({date_str})")
-        else:
-            output.append(f"{type_indicator} {skill['skill_name']}")
-
-    return "\n".join(output)
-
-
-def _format_date(dt: datetime) -> str:
-    """
-    Format datetime for display.
-    """
-
-    return dt.strftime("%b %Y")
+    return "\n".join(parts)
