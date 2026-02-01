@@ -21,6 +21,8 @@ class ProjectSummary(BaseModel):
     thumbnail_url: str | None
     importance_rank: int | None
     importance_score: float | None
+    user_role: str | None
+    user_contribution_percentage: float | None
     created_at: datetime
     updated_at: datetime
 
@@ -44,6 +46,18 @@ class ProjectUpdateRequest(BaseModel):
     thumbnail_url: str | None = None
     importance_rank: int | None = None
     importance_score: float | None = None
+    user_role: str | None = None
+    user_contribution_percentage: float | None = None
+
+
+class ProjectRoleResponse(BaseModel):
+    """Response schema for project role information."""
+
+    project_id: int
+    project_name: str
+    user_role: str | None
+    user_contribution_percentage: float | None
+    is_collaborative: bool
 
 
 class CollaboratorsRaw(BaseModel):
