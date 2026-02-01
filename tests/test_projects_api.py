@@ -18,6 +18,19 @@ def _create_zip_bytes(entries: list[tuple[str, bytes]]) -> bytes:
     return buffer.getvalue()
 
 
+PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"fake"
+
+
+def _upload_single_project(client: TestClient, name: str) -> int:
+    zip_bytes = _create_zip_bytes([(f"{name}/main.py", b"print('hello')\n")])
+    response = client.post(
+        "/api/projects/upload",
+        files={"file": (f"{name}.zip", zip_bytes, "application/zip")},
+    )
+    assert response.status_code == 201
+    return response.json()["projects"][0]["id"]
+
+
 def test_upload_projects_returns_metadata() -> None:
     client = TestClient(app)
     zip_bytes = _create_zip_bytes(
@@ -59,11 +72,16 @@ def test_list_and_get_project() -> None:
     list_response = client.get("/api/projects")
     assert list_response.status_code == 200
     list_payload = list_response.json()
-    assert any(project["id"] == project_id for project in list_payload)
+    listed = next(project for project in list_payload if project["id"] == project_id)
+    assert listed["has_thumbnail"] is False
+    assert listed["thumbnail_url"] is None
 
     detail_response = client.get(f"/api/projects/{project_id}")
     assert detail_response.status_code == 200
-    assert detail_response.json()["id"] == project_id
+    detail_payload = detail_response.json()
+    assert detail_payload["id"] == project_id
+    assert detail_payload["has_thumbnail"] is False
+    assert detail_payload["thumbnail_url"] is None
 
 
 def test_get_project_not_found_returns_404() -> None:
@@ -110,7 +128,7 @@ def test_patch_project_not_found_returns_404() -> None:
     assert response.status_code == 404
 
 
-def test_patch_project_rejects_invalid_thumbnail() -> None:
+def test_patch_project_rejects_thumbnail_url_field() -> None:
     client = TestClient(app)
     zip_bytes = _create_zip_bytes(
         [
@@ -129,7 +147,64 @@ def test_patch_project_rejects_invalid_thumbnail() -> None:
         f"/api/projects/{project_id}",
         json={"thumbnail_url": "not-a-url"},
     )
-    assert patch_response.status_code == 400
+    assert patch_response.status_code == 422
+
+
+def test_thumbnail_get_missing_returns_404() -> None:
+    client = TestClient(app)
+    project_id = _upload_single_project(client, "thumb_missing")
+
+    response = client.get(f"/api/projects/{project_id}/thumbnail")
+    assert response.status_code == 404
+
+
+def test_thumbnail_upload_and_get() -> None:
+    client = TestClient(app)
+    project_id = _upload_single_project(client, "thumb_upload")
+
+    upload_response = client.put(
+        f"/api/projects/{project_id}/thumbnail",
+        files={"file": ("thumb.png", PNG_BYTES, "image/png")},
+    )
+    assert upload_response.status_code == 204
+
+    get_response = client.get(f"/api/projects/{project_id}/thumbnail")
+    assert get_response.status_code == 200
+    assert get_response.headers["content-type"].startswith("image/png")
+    assert get_response.content
+
+    detail_response = client.get(f"/api/projects/{project_id}")
+    detail_payload = detail_response.json()
+    assert detail_payload["has_thumbnail"] is True
+    assert detail_payload["thumbnail_url"] == f"/api/projects/{project_id}/thumbnail"
+
+    list_response = client.get("/api/projects")
+    list_payload = list_response.json()
+    listed = next(project for project in list_payload if project["id"] == project_id)
+    assert listed["has_thumbnail"] is True
+    assert listed["thumbnail_url"] == f"/api/projects/{project_id}/thumbnail"
+
+
+def test_thumbnail_delete_removes() -> None:
+    client = TestClient(app)
+    project_id = _upload_single_project(client, "thumb_delete")
+
+    upload_response = client.put(
+        f"/api/projects/{project_id}/thumbnail",
+        files={"file": ("thumb.png", PNG_BYTES, "image/png")},
+    )
+    assert upload_response.status_code == 204
+
+    delete_response = client.delete(f"/api/projects/{project_id}/thumbnail")
+    assert delete_response.status_code == 204
+
+    get_response = client.get(f"/api/projects/{project_id}/thumbnail")
+    assert get_response.status_code == 404
+
+    detail_response = client.get(f"/api/projects/{project_id}")
+    detail_payload = detail_response.json()
+    assert detail_payload["has_thumbnail"] is False
+    assert detail_payload["thumbnail_url"] is None
 
 
 def test_delete_project_removes_record() -> None:
