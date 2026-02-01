@@ -13,6 +13,7 @@ from sqlalchemy import desc
 from capstone_project_team_5.api.schemas.projects import (
     ProjectAnalysisResult,
     ProjectAnalysisSkipped,
+    ProjectRoleResponse,
     ProjectsAnalyzeAllResponse,
     ProjectSummary,
     ProjectUpdateRequest,
@@ -185,6 +186,30 @@ def update_project(project_id: int, update: ProjectUpdateRequest) -> ProjectSumm
         session.flush()
         session.refresh(project)
         return _project_to_summary(project)
+
+
+@router.get(
+    "/{project_id}/role",
+    response_model=ProjectRoleResponse,
+    summary="Get project role information",
+    description="Retrieve the user's role and contribution percentage for a project.",
+    responses={404: {"description": "Project not found"}},
+)
+def get_project_role(project_id: int) -> ProjectRoleResponse:
+    with get_session() as session:
+        project = session.query(Project).filter(Project.id == project_id).first()
+        if project is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found.",
+            )
+        return ProjectRoleResponse(
+            project_id=project.id,
+            project_name=project.name,
+            user_role=project.user_role,
+            user_contribution_percentage=project.user_contribution_percentage,
+            is_collaborative=project.is_collaborative,
+        )
 
 
 @router.delete(
