@@ -42,6 +42,8 @@ def _project_to_summary(project: Project) -> ProjectSummary:
         thumbnail_url=project.thumbnail_url,
         importance_rank=project.importance_rank,
         importance_score=project.importance_score,
+        user_role=project.user_role,
+        user_contribution_percentage=project.user_contribution_percentage,
         created_at=project.created_at,
         updated_at=project.updated_at,
     )
