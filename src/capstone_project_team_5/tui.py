@@ -29,9 +29,10 @@ from capstone_project_team_5.services.portfolio_persistence import (
     get_latest_portfolio_item_for_project,
 )
 from capstone_project_team_5.services.project_thumbnail import (
-    clear_project_thumbnail_url,
-    get_project_thumbnail_url,
-    set_project_thumbnail_url,
+    THUMBNAIL_EXTENSIONS,
+    clear_project_thumbnail,
+    has_project_thumbnail,
+    set_project_thumbnail,
 )
 from capstone_project_team_5.tui_rendering import (
     render_detected_list,
@@ -207,10 +208,6 @@ ProgressBar {
                         Button("Retrieve Projects", id="btn-retrieve", variant="default"),
                         Button("Delete Analysis", id="btn-delete-analysis", variant="error"),
                         Button("Set Thumbnail", id="btn-set-thumbnail", variant="default"),
-                        Input(
-                            placeholder="Thumbnail URL",
-                            id="thumbnail-url-input",
-                        ),
                         Button("Configure Consent", id="btn-config", variant="default"),
                         Button("Edit View", id="btn-edit", variant="default"),
                         Button("Export PDF", id="btn-export-pdf", variant="default"),
@@ -265,7 +262,6 @@ ProgressBar {
         app_screen = self.query_one("#app-screen", Container)
         delete_btn = self.query_one("#btn-delete-analysis", Button)
         set_thumb_btn = self.query_one("#btn-set-thumbnail", Button)
-        thumbnail_input = self.query_one("#thumbnail-url-input", Input)
         export_pdf_btn = self.query_one("#btn-export-pdf", Button)
         export_txt_btn = self.query_one("#btn-export-txt", Button)
 
@@ -281,7 +277,6 @@ ProgressBar {
         # Hide main app screen until a user logs in.
         app_screen.display = False
         set_thumb_btn.display = False
-        thumbnail_input.display = False
 
     def _reset_analysis_selection_ui(self) -> None:
         """Clear analysis selection state and hide the delete/export buttons."""
@@ -309,28 +304,14 @@ ProgressBar {
     def _update_thumbnail_buttons(self, project_id: int | None) -> None:
         """Enable/disable thumbnail actions based on current state."""
         set_btn = self.query_one("#btn-set-thumbnail", Button)
-        url_input = self.query_one("#thumbnail-url-input", Input)
         enabled = (
             self._view_mode == "saved" and self._current_user is not None and project_id is not None
         )
         set_btn.display = enabled
-        url_input.display = enabled
         if enabled:
-            self._set_thumbnail_input_value(project_id)
             self._set_thumbnail_button_label(project_id)
         else:
-            url_input.value = ""
             set_btn.label = "Set Thumbnail"
-
-    def _set_thumbnail_input_value(self, project_id: int | None) -> None:
-        """Populate thumbnail URL input for the selected project."""
-        url_input = self.query_one("#thumbnail-url-input", Input)
-        if project_id is None:
-            url_input.value = ""
-            return
-
-        url = get_project_thumbnail_url(project_id)
-        url_input.value = url or ""
 
     def _set_thumbnail_button_label(self, project_id: int | None) -> None:
         """Toggle the button label based on whether a thumbnail is set."""
@@ -338,19 +319,27 @@ ProgressBar {
         if project_id is None:
             set_btn.label = "Set Thumbnail"
             return
-        set_btn.label = (
-            "Clear Thumbnail" if get_project_thumbnail_url(project_id) else "Set Thumbnail"
-        )
+        set_btn.label = "Clear Thumbnail" if has_project_thumbnail(project_id) else "Set Thumbnail"
 
     def _thumbnail_status_line(self, project_id: int | None) -> str:
         """Return a single-line status about the current thumbnail."""
         if project_id is None:
             return "- Thumbnail: none"
+        return "- Thumbnail: set" if has_project_thumbnail(project_id) else "- Thumbnail: none set"
 
-        url = get_project_thumbnail_url(project_id)
-        if url is None:
-            return "- Thumbnail: none set"
-        return "- Thumbnail: set"
+    def _prompt_for_thumbnail_file(self) -> Path | None:
+        """Prompt the user to select a thumbnail image file."""
+        import easygui
+
+        patterns = [f"*{ext}" for ext in THUMBNAIL_EXTENSIONS]
+        selected = easygui.fileopenbox(
+            msg="Select a thumbnail image",
+            title="Select Thumbnail",
+            filetypes=patterns,
+        )
+        if not selected:
+            return None
+        return Path(selected)
 
     def _show_editor(self) -> None:
         """Show the markdown editor and hide the rendered output."""
@@ -570,7 +559,7 @@ ProgressBar {
 
     @on(Button.Pressed, "#btn-set-thumbnail")
     def handle_set_thumbnail(self) -> None:
-        """Attach or clear a thumbnail URL for the selected saved project."""
+        """Attach or clear a thumbnail image for the selected saved project."""
 
         status = self.query_one("#status", Label)
         if self._view_mode != "saved":
@@ -585,9 +574,8 @@ ProgressBar {
             status.update("Select a saved project first.")
             return
 
-        existing_url = get_project_thumbnail_url(project_id)
-        if existing_url:
-            if clear_project_thumbnail_url(project_id):
+        if has_project_thumbnail(project_id):
+            if clear_project_thumbnail(project_id):
                 status.update("Thumbnail cleared.")
                 if self._saved_active_project_index is not None:
                     self._show_saved_project(self._saved_active_project_index)
@@ -595,19 +583,27 @@ ProgressBar {
                 status.update("No thumbnail to clear or operation failed.")
             return
 
-        url_input = self.query_one("#thumbnail-url-input", Input)
-        thumbnail_url = url_input.value.strip()
-        if not thumbnail_url:
-            status.update("Enter a thumbnail URL first.")
+        selected = self._prompt_for_thumbnail_file()
+        if selected is None:
+            status.update("Thumbnail selection cancelled.")
+            return
+        if not selected.exists() or not selected.is_file():
+            status.update("Invalid thumbnail file.")
             return
 
-        saved = set_project_thumbnail_url(project_id, thumbnail_url)
+        data = selected.read_bytes()
+        saved, error = set_project_thumbnail(
+            project_id,
+            filename=selected.name,
+            content_type=None,
+            data=data,
+        )
         if saved:
             status.update("Thumbnail set.")
             if self._saved_active_project_index is not None:
                 self._show_saved_project(self._saved_active_project_index)
         else:
-            status.update("Failed to set thumbnail.")
+            status.update(error or "Failed to set thumbnail.")
 
     @on(Button.Pressed, "#btn-load-latest")
     def handle_load_latest_saved(self) -> None:
