@@ -201,7 +201,7 @@ def render_saved_list(saved: list[dict[str, Any]]) -> str:
             parts.append(
                 f"- **{p.get('name')}** — `{p.get('rel_path')}` ({p.get('file_count')} files)"
             )
-            
+
             # Display user role if available
             user_role = p.get("user_role")
             user_contrib_pct = p.get("user_contribution_percentage")
@@ -210,7 +210,7 @@ def render_saved_list(saved: list[dict[str, Any]]) -> str:
                 if user_contrib_pct is not None:
                     role_text += f" ({user_contrib_pct:.1f}% contributions)"
                 parts.append(f"  - {role_text}")
-            
+
             if p.get("importance_rank") is not None:
                 parts.append(
                     f"  - Rank: {p.get('importance_rank')} — Score: {p.get('importance_score')}"
