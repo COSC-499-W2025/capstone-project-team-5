@@ -118,32 +118,20 @@ class ConsentTool:
         """
         self.username: str | None = username
         self.title: str = "Consent Form"
-        self.consent_text: str = """Thank you for using Zip2Job.
-Before we begin, we ask your permission to access and analyze files in directories you choose.
-Please review and agree to the following:
+        self.consent_text: str = """Zip2Job Permission
 
-• Access only the directories / repositories you select
-• Read supported files (code, docs, images, video)
-• Extract metadata (timestamps, size, file type) and version history if available
-• Compute metrics (word counts, commit frequency, media dimensions)
-• Group files into projects and generate visualizations
-• Store derived summaries / metadata locally
-• Export summaries (PDF, HTML, Markdown)
-• You may exclude files / folders at any time
-• Raw file contents will not be uploaded or shared
-• You may revoke permission or delete data at any time
+I agree to let Zip2Job:
+• Access and analyze files in my selected directories
+• Extract metadata and generate summaries
+• Store summaries locally and optionally share with external services
 
-⚠️ Risk: file names or metadata may appear in summaries.
-If you decline, core features will not work.
-Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
+⚠️ File names/metadata may appear in summaries.
+You can revoke permission anytime."""
 
-        self.external_services_consent_text: str = """
-To enhance functionality, Zip2Job can integrate with external services.
-Please review and agree to the following:
-• Share derived summaries / metadata with selected services
-• Services may store data according to their policies
-• You may revoke permission or delete data at any time
-Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
+        self.external_services_consent_text: str = """Enable AI features for enhanced analysis?
+
+AI features include automated bullet points, project descriptions, and skill recommendations.
+Requires API keys. You can configure this later in settings."""
 
         # Configuration state matching UserConfig structure
         self.consent_given: bool = False
@@ -160,14 +148,11 @@ Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
             choices: List of button choices for the user.
 
         Returns:
-            True if user agrees, False if user cancels.
+            True if user agrees (selects first choice), False otherwise.
         """
         choice = eg.buttonbox(text, title=title, choices=choices)
-
-        if choice == "No, Cancel":
-            return False
-
-        return choice != "No, Cancel"
+        # First choice is agreement, any other choice or None is decline
+        return choice == choices[0] if choice is not None else False
 
     def generate_consent_form(self) -> bool:
         """Generate and display the main consent form to the user.
@@ -180,21 +165,20 @@ Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
             True if user agrees to main consent, False otherwise.
         """
         main_consent_given = self.get_user_consent(
-            self.consent_text, self.title, ["Yes I agree", "No, Cancel"]
+            self.consent_text, self.title, ["I Agree", "Cancel"]
         )
 
         if main_consent_given:
             self.consent_given = True
-            # Configure file ignore patterns
-            self.default_ignore_patterns = self._configure_ignore_patterns()
-            # If user agrees to main consent, request external services consent
+            # Use sensible defaults for ignore patterns
+            self.default_ignore_patterns = self._get_default_ignore_patterns()
+            # Quick AI feature prompt
             self.get_external_services_consent()
             # Record the collected configuration
             self.record_consent(self._build_config(), username=self.username)
             return True
 
         self.consent_given = False
-        eg.msgbox("You chose to cancel. Exiting the application.", title="Goodbye!")
         return False
 
     def get_external_services_consent(self) -> bool:
@@ -205,41 +189,23 @@ Please choose "Yes I agree" to proceed or "No, Cancel" to exit."""
         """
         consent_given = self.get_user_consent(
             self.external_services_consent_text,
-            "External Services Consent",
-            ["Yes I agree", "No, Cancel"],
+            "AI Features",
+            ["Enable AI", "Skip"],
         )
 
         if consent_given:
             self.use_external_services = True
-            # Allow user to select which external services to enable
-            selected_services = self._select_external_services()
-            if selected_services:
-                # Store services with 'allowed' property
-                self.external_services = {
-                    service: {"allowed": True} for service in selected_services
-                }
-
-                # Check if user wants to use LLM features
-                if self._check_llm_in_services(selected_services):
-                    self._configure_llm_preferences()
-
-                eg.msgbox(
-                    f"Thank you for agreeing. Selected services: {', '.join(selected_services)}",
-                    title="Welcome!",
-                )
-            else:
-                self.external_services = {}
-                eg.msgbox(
-                    "No services selected. Proceeding without external integrations.",
-                    title="Welcome!",
-                )
+            # Auto-configure with Gemini (currently the only supported AI)
+            self.external_services = {
+                "Gemini": {"allowed": True},
+                "llm": {
+                    "allowed": True,
+                    "model_preferences": ["Gemini 2.0 Flash (Google)"],
+                },
+            }
             return True
 
         self.use_external_services = False
-        eg.msgbox(
-            "You chose to cancel external services integration. Proceeding without it.",
-            title="Notice",
-        )
         return False
 
     def _select_external_services(self) -> list[str]:
@@ -405,7 +371,8 @@ You can add custom patterns later."""
         Returns:
             List of default ignore patterns (e.g., .git, node_modules).
         """
-        return [".git", "node_modules", "__pycache__"]
+        # Return comprehensive defaults instead of just minimal ones
+        return self.COMMON_IGNORE_PATTERNS.copy()
 
     def _build_config(self) -> dict[str, Any]:
         """Build a configuration dictionary matching UserConfig.to_dict() format.
