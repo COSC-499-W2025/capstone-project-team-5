@@ -72,18 +72,18 @@ def render_project_markdown(upload: dict[str, Any], proj: dict[str, Any], rank: 
         parts.append(f"\n### Resume Bullet Points ({source} Generation)")
         parts.extend(f"- {b}" for b in bullets)
 
+    # Display user role if detected (regardless of git repo status)
+    user_role = proj.get("user_role")
+    user_contrib_pct = proj.get("user_contribution_percentage")
+    if user_role:
+        parts.append("\n### Your Role")
+        if user_contrib_pct:
+            parts.append(f"**{user_role}** ({user_contrib_pct:.1f}% of contributions)")
+        else:
+            parts.append(f"**{user_role}**")
+
     git_info = proj.get("git") or {}
     if git_info.get("is_repo"):
-        # Display user role if detected
-        user_role = proj.get("user_role")
-        user_contrib_pct = proj.get("user_contribution_percentage")
-        if user_role:
-            parts.append("\n### Your Role")
-            if user_contrib_pct:
-                parts.append(f"**{user_role}** ({user_contrib_pct:.1f}% of contributions)")
-            else:
-                parts.append(f"**{user_role}**")
-
         current = git_info.get("current_author_contribution") or {}
         authors = git_info.get("author_contributions") or []
         if authors:
@@ -201,6 +201,16 @@ def render_saved_list(saved: list[dict[str, Any]]) -> str:
             parts.append(
                 f"- **{p.get('name')}** — `{p.get('rel_path')}` ({p.get('file_count')} files)"
             )
+
+            # Display user role if available
+            user_role = p.get("user_role")
+            user_contrib_pct = p.get("user_contribution_percentage")
+            if user_role:
+                role_text = f"**Role: {user_role}**"
+                if user_contrib_pct is not None:
+                    role_text += f" ({user_contrib_pct:.1f}% contributions)"
+                parts.append(f"  - {role_text}")
+
             if p.get("importance_rank") is not None:
                 parts.append(
                     f"  - Rank: {p.get('importance_rank')} — Score: {p.get('importance_score')}"

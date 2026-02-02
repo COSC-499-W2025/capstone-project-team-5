@@ -78,6 +78,14 @@ Delete a project thumbnail:
 curl -X DELETE http://localhost:8000/api/projects/1/thumbnail
 ```
 
+Update project role:
+
+```bash
+curl -X PATCH http://localhost:8000/api/projects/1 \
+  -H "Content-Type: application/json" \
+  -d '{"user_role":"Lead Developer","user_contribution_percentage":85.5}'
+```
+
 Delete a project:
 
 ```bash

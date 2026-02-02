@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, confloat
 
 
 class ProjectSummary(BaseModel):
@@ -23,6 +23,8 @@ class ProjectSummary(BaseModel):
     thumbnail_url: str | None
     importance_rank: int | None
     importance_score: float | None
+    user_role: str | None
+    user_contribution_percentage: confloat(ge=0, le=100) | None
     created_at: datetime
     updated_at: datetime
 
@@ -47,6 +49,8 @@ class ProjectUpdateRequest(BaseModel):
     rel_path: str | None = None
     importance_rank: int | None = None
     importance_score: float | None = None
+    user_role: str | None = None
+    user_contribution_percentage: confloat(ge=0, le=100) | None = None
     is_showcase: bool | None = None
 
 
@@ -132,7 +136,7 @@ class ProjectAnalysisResult(BaseModel):
     skill_timeline: list[SkillTimelineEntry]
     git: GitSummary
     user_role: str | None
-    user_contribution_percentage: float | None
+    user_contribution_percentage: confloat(ge=0, le=100) | None
 
 
 class ProjectAnalysisSkipped(BaseModel):
