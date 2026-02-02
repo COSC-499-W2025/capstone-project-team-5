@@ -1401,6 +1401,13 @@ ProgressBar {
             )
             parts.append(f"- Files: {project.get('file_count')}")
             parts.append(f"- Upload ID: {project.get('upload_id')}")
+            user_role = project.get("user_role")
+            user_contrib_pct = project.get("user_contribution_percentage")
+            if user_role:
+                role_line = f"- Role: {user_role}"
+                if user_contrib_pct is not None:
+                    role_line += f" ({user_contrib_pct:.1f}% contributions)"
+                parts.append(role_line)
             langs = project.get("languages") or []
             if langs:
                 parts.append(f"- Languages: {', '.join(langs)}")
