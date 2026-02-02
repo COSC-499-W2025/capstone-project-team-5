@@ -39,6 +39,7 @@ def test_upload_projects_returns_metadata() -> None:
     assert data["upload_id"]
     assert len(data["projects"]) == 1
     assert data["projects"][0]["name"] == "myproject"
+    assert data["projects"][0]["is_showcase"] is False
 
 
 def test_list_and_get_project() -> None:
@@ -59,11 +60,15 @@ def test_list_and_get_project() -> None:
     list_response = client.get("/api/projects")
     assert list_response.status_code == 200
     list_payload = list_response.json()
-    assert any(project["id"] == project_id for project in list_payload)
+    # Ensure project is present and has showcase flag with default False.
+    project_row = next(project for project in list_payload if project["id"] == project_id)
+    assert project_row["is_showcase"] is False
 
     detail_response = client.get(f"/api/projects/{project_id}")
     assert detail_response.status_code == 200
-    assert detail_response.json()["id"] == project_id
+    detail_payload = detail_response.json()
+    assert detail_payload["id"] == project_id
+    assert detail_payload["is_showcase"] is False
 
 
 def test_get_project_not_found_returns_404() -> None:
@@ -89,19 +94,25 @@ def test_patch_project_updates_fields() -> None:
 
     patch_response = client.patch(
         f"/api/projects/{project_id}",
-        json={"name": "Updated Project", "importance_rank": 5},
+        json={
+            "name": "Updated Project",
+            "importance_rank": 5,
+            "is_showcase": True,
+        },
     )
     assert patch_response.status_code == 200
     payload = patch_response.json()
     assert payload["id"] == project_id
     assert payload["name"] == "Updated Project"
     assert payload["importance_rank"] == 5
+    assert payload["is_showcase"] is True
 
     detail_response = client.get(f"/api/projects/{project_id}")
     assert detail_response.status_code == 200
     detail_payload = detail_response.json()
     assert detail_payload["name"] == "Updated Project"
     assert detail_payload["importance_rank"] == 5
+    assert detail_payload["is_showcase"] is True
 
 
 def test_patch_project_not_found_returns_404() -> None:

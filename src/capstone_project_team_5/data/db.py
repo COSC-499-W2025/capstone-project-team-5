@@ -17,7 +17,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine
 from sqlalchemy.engine import URL, Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -64,19 +64,6 @@ def _ensure_tables_created() -> None:
         user,
         user_code_analysis,
     )
-
-    # Lightweight migration: add is_showcase column to projects if missing.
-    inspector = inspect(_engine)
-    if inspector.has_table("projects"):
-        column_names = {col["name"] for col in inspector.get_columns("projects")}
-        if "is_showcase" not in column_names:
-            with _engine.connect() as conn:
-                conn.execute(
-                    text("ALTER TABLE projects ADD COLUMN is_showcase BOOLEAN NOT NULL DEFAULT 0")
-                )
-                conn.commit()
-
-    Base.metadata.create_all(bind=_engine)
 
 
 def _get_session_factory() -> sessionmaker[Session]:
