@@ -34,6 +34,8 @@ class Project(Base):
     has_git_repo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     file_count: Mapped[int] = mapped_column(Integer, nullable=False)
     is_collaborative: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_showcase: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    thumbnail_url: Mapped[str | None] = mapped_column(String, nullable=True)
     importance_rank: Mapped[int | None] = mapped_column(Integer, nullable=True)
     importance_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     user_role: Mapped[str | None] = mapped_column(String, nullable=True)

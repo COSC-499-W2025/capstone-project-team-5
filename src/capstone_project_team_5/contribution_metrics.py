@@ -333,6 +333,54 @@ class ContributionMetrics:
         return score, breakdown
 
     @staticmethod
+    def apply_score_factors(
+        breakdown: dict[str, float],
+        factors: dict[str, bool] | None = None,
+    ) -> tuple[float, dict[str, float]]:
+        """Apply on/off factors to the importance score components.
+
+        This helper allows callers (e.g. the TUI) to let users choose
+        which components contribute to the final importance score while
+        keeping the underlying calculation stable.
+
+        Args:
+            breakdown: Original score breakdown from ``calculate_importance_score``.
+            factors: Mapping of factor name to a boolean flag. Supported keys:
+                - ``\"contribution\"``
+                - ``\"diversity\"``
+                - ``\"duration\"``
+                - ``\"file_count\"``
+              When ``None``, all factors are treated as enabled.
+
+        Returns:
+            Tuple of (new_score, new_breakdown).
+        """
+        factors = factors or {}
+
+        def _enabled(name: str) -> bool:
+            return bool(factors.get(name, True))
+
+        contrib_score = float(breakdown.get("contribution_score", 0.0))
+        diversity_score = float(breakdown.get("diversity_bonus", 0.0))
+        duration_score = float(breakdown.get("duration_score", 0.0))
+        file_score = float(breakdown.get("file_score", 0.0))
+
+        new_breakdown = dict(breakdown)
+        new_breakdown["contribution_score"] = contrib_score if _enabled("contribution") else 0.0
+        new_breakdown["diversity_bonus"] = diversity_score if _enabled("diversity") else 0.0
+        new_breakdown["duration_score"] = duration_score if _enabled("duration") else 0.0
+        new_breakdown["file_score"] = file_score if _enabled("file_count") else 0.0
+
+        new_score = (
+            new_breakdown["contribution_score"]
+            + new_breakdown["diversity_bonus"]
+            + new_breakdown["duration_score"]
+            + new_breakdown["file_score"]
+        )
+
+        return new_score, new_breakdown
+
+    @staticmethod
     def format_score_breakdown(score: float, breakdown: dict[str, float]) -> str:
         """
         Format the importance score breakdown for CLI display.
