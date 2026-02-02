@@ -19,6 +19,7 @@ class ProjectSummary(BaseModel):
     has_git_repo: bool
     is_collaborative: bool
     is_showcase: bool
+    has_thumbnail: bool
     thumbnail_url: str | None
     importance_rank: int | None
     importance_score: float | None
@@ -40,9 +41,10 @@ class ProjectUploadResponse(BaseModel):
 class ProjectUpdateRequest(BaseModel):
     """Fields allowed to be updated for a project."""
 
+    model_config = ConfigDict(extra="forbid")
+
     name: str | None = None
     rel_path: str | None = None
-    thumbnail_url: str | None = None
     importance_rank: int | None = None
     importance_score: float | None = None
     is_showcase: bool | None = None
