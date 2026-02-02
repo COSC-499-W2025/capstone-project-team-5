@@ -74,10 +74,14 @@ def test_patch_project_update_role() -> None:
     project_id = _upload_single_project(client, "test_update_role")
 
     # Set initial role
-    client.patch(
+    initial_response = client.patch(
         f"/api/projects/{project_id}",
         json={"user_role": "Contributor", "user_contribution_percentage": 25.0},
     )
+    assert initial_response.status_code == 200
+    initial_payload = initial_response.json()
+    assert initial_payload["user_role"] == "Contributor"
+    assert initial_payload["user_contribution_percentage"] == 25.0
 
     # Update to new role
     response = client.patch(
@@ -96,10 +100,13 @@ def test_patch_project_clear_role() -> None:
     project_id = _upload_single_project(client, "test_clear_role")
 
     # Set a role
-    client.patch(
+    setup_response = client.patch(
         f"/api/projects/{project_id}",
         json={"user_role": "Developer"},
     )
+    assert setup_response.status_code == 200
+    setup_payload = setup_response.json()
+    assert setup_payload["user_role"] == "Developer"
 
     # Clear the role
     response = client.patch(
@@ -118,10 +125,14 @@ def test_list_projects_includes_role() -> None:
     project_id = _upload_single_project(client, "test_summary_role")
 
     # Set a role
-    client.patch(
+    setup_response = client.patch(
         f"/api/projects/{project_id}",
         json={"user_role": "Backend Developer", "user_contribution_percentage": 60.0},
     )
+    assert setup_response.status_code == 200
+    setup_payload = setup_response.json()
+    assert setup_payload["user_role"] == "Backend Developer"
+    assert setup_payload["user_contribution_percentage"] == 60.0
 
     # List all projects
     response = client.get("/api/projects")
