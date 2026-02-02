@@ -65,6 +65,8 @@ def _ensure_tables_created() -> None:
         user_code_analysis,
     )
 
+    Base.metadata.create_all(bind=_engine)
+
 
 def _get_session_factory() -> sessionmaker[Session]:
     global _SessionLocal
