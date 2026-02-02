@@ -33,7 +33,6 @@ The server runs on `http://localhost:8000` by default.
 | GET | `/health` | Returns API status |
 | GET | `/api/projects` | Lists all persisted projects |
 | GET | `/api/projects/{id}` | Returns a single project by ID |
-| GET | `/api/projects/{id}/role` | Returns role information for a project |
 | PATCH | `/api/projects/{id}` | Updates a project by ID |
 | DELETE | `/api/projects/{id}` | Deletes a project by ID |
 | POST | `/api/projects/upload` | Uploads a ZIP and persists detected projects |
@@ -50,12 +49,6 @@ Get a project by ID:
 
 ```bash
 curl http://localhost:8000/api/projects/1
-```
-
-Get role information for a project:
-
-```bash
-curl http://localhost:8000/api/projects/1/role
 ```
 
 Update a project (partial):
