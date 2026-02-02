@@ -20,6 +20,13 @@ from capstone_project_team_5.services.user_profile import (
     update_user_profile,
     upsert_user_profile,
 )
+from capstone_project_team_5.services.work_experience import (
+    create_work_experience,
+    delete_work_experience,
+    get_work_experience,
+    get_work_experiences,
+    update_work_experience,
+)
 
 __all__ = [
     "update_project_ranks",
@@ -36,4 +43,9 @@ __all__ = [
     "get_user_profile",
     "update_user_profile",
     "upsert_user_profile",
+    "create_work_experience",
+    "delete_work_experience",
+    "get_work_experience",
+    "get_work_experiences",
+    "update_work_experience",
 ]
