@@ -56,7 +56,26 @@ Update a project (partial):
 ```bash
 curl -X PATCH http://localhost:8000/api/projects/1 \
   -H "Content-Type: application/json" \
-  -d '{"name":"New name","thumbnail_url":"https://example.com/cover.png"}'
+  -d '{"name":"New name","importance_rank":1}'
+```
+
+Upload a project thumbnail:
+
+```bash
+curl -X PUT http://localhost:8000/api/projects/1/thumbnail \
+  -F "file=@/path/to/thumbnail.png"
+```
+
+Get a project thumbnail:
+
+```bash
+curl http://localhost:8000/api/projects/1/thumbnail --output thumbnail.png
+```
+
+Delete a project thumbnail:
+
+```bash
+curl -X DELETE http://localhost:8000/api/projects/1/thumbnail
 ```
 
 Delete a project:
