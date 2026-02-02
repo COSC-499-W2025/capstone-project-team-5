@@ -1221,6 +1221,9 @@ ProgressBar {
 
         for proj in self._saved_projects:
             label = f"{proj.get('upload_filename')} / {proj.get('name')}"
+            user_role = proj.get("user_role")
+            if user_role:
+                label = f"{label} — {user_role}"
             project_list.append(ListItem(Label(label)))
 
         project_list.index = 0
@@ -1299,6 +1302,13 @@ ProgressBar {
 
         status = self.query_one("#status", Label)
         portfolio_item = None
+        role_line = ""
+        user_role = project.get("user_role")
+        user_contrib_pct = project.get("user_contribution_percentage")
+        if user_role:
+            role_line = f"**Role:** {user_role}"
+            if user_contrib_pct is not None:
+                role_line += f" ({user_contrib_pct:.1f}% contributions)"
 
         if self._current_user and project_id:
             from capstone_project_team_5.services.portfolio import get_portfolio_item
@@ -1326,6 +1336,7 @@ ProgressBar {
                 f"# {title}\n\n"
                 f"**[✏️ User Edited - {updated}]**\n\n"
                 f"*Viewing edited version for analysis: {analysis_lang} @ {analysis_date}*\n\n"
+                f"{role_line}\n\n" if role_line else ""
                 f"{content}"
             )
         else:
@@ -1363,7 +1374,10 @@ ProgressBar {
                         )
             except Exception:
                 summary_text = analysis.get("summary_text") or "(no summary available)"
-                md = f"# Saved Analysis\n\n{summary_text}"
+                md = f"# Saved Analysis\n\n"
+                if role_line:
+                    md += f"{role_line}\n\n"
+                md += summary_text
 
         self._current_markdown = md
         self.query_one("#output", Markdown).update(md)
@@ -1455,6 +1469,13 @@ ProgressBar {
         parts.append("### Summary")
         parts.append(f"- Analysis ID: {analysis_row.id}")
         parts.append(f"- Timestamp: {analysis_row.created_at}")
+        user_role = project_dict.get("user_role")
+        user_contrib_pct = project_dict.get("user_contribution_percentage")
+        if user_role:
+            role_line = f"- Role: {user_role}"
+            if user_contrib_pct is not None:
+                role_line += f" ({user_contrib_pct:.1f}% contributions)"
+            parts.append(role_line)
 
         language = (
             metrics.get("language")
