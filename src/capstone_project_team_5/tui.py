@@ -1332,12 +1332,12 @@ ProgressBar {
             analysis_lang = analysis.get("language", "Unknown")
             analysis_date = analysis.get("created_at", "Unknown")
 
+            role_block = f"{role_line}\n\n" if role_line else ""
             md = (
                 f"# {title}\n\n"
                 f"**[✏️ User Edited - {updated}]**\n\n"
                 f"*Viewing edited version for analysis: {analysis_lang} @ {analysis_date}*\n\n"
-                f"{role_line}\n\n" if role_line else ""
-                f"{content}"
+                f"{role_block}{content}"
             )
         else:
             # Fetch full CodeAnalysis + metrics from the database for this snapshot.
