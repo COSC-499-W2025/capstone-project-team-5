@@ -1374,7 +1374,7 @@ ProgressBar {
                         )
             except Exception:
                 summary_text = analysis.get("summary_text") or "(no summary available)"
-                md = f"# Saved Analysis\n\n"
+                md = "# Saved Analysis\n\n"
                 if role_line:
                     md += f"{role_line}\n\n"
                 md += summary_text
