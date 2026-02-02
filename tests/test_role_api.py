@@ -144,3 +144,67 @@ def test_list_projects_includes_role() -> None:
     assert project is not None
     assert project["user_role"] == "Backend Developer"
     assert project["user_contribution_percentage"] == 60.0
+
+
+def test_patch_project_negative_contribution_percentage() -> None:
+    """Test PATCH rejects negative contribution percentage."""
+    client = TestClient(app)
+    project_id = _upload_single_project(client, "test_negative_pct")
+
+    response = client.patch(
+        f"/api/projects/{project_id}",
+        json={"user_contribution_percentage": -5.0},
+    )
+    assert response.status_code == 422  # Validation error
+
+
+def test_patch_project_contribution_percentage_over_100() -> None:
+    """Test PATCH rejects contribution percentage > 100."""
+    client = TestClient(app)
+    project_id = _upload_single_project(client, "test_over_100_pct")
+
+    response = client.patch(
+        f"/api/projects/{project_id}",
+        json={"user_contribution_percentage": 105.0},
+    )
+    assert response.status_code == 422  # Validation error
+
+
+def test_patch_project_boundary_contribution_0() -> None:
+    """Test PATCH accepts 0% contribution percentage."""
+    client = TestClient(app)
+    project_id = _upload_single_project(client, "test_0_pct")
+
+    response = client.patch(
+        f"/api/projects/{project_id}",
+        json={"user_role": "Observer", "user_contribution_percentage": 0.0},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["user_contribution_percentage"] == 0.0
+
+
+def test_patch_project_boundary_contribution_100() -> None:
+    """Test PATCH accepts 100% contribution percentage."""
+    client = TestClient(app)
+    project_id = _upload_single_project(client, "test_100_pct")
+
+    response = client.patch(
+        f"/api/projects/{project_id}",
+        json={"user_role": "Solo Developer", "user_contribution_percentage": 100.0},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["user_contribution_percentage"] == 100.0
+
+
+def test_patch_user_role_nonexistent_project() -> None:
+    """Test PATCH user role on non-existent project returns 404."""
+    client = TestClient(app)
+    nonexistent_id = 999999
+
+    response = client.patch(
+        f"/api/projects/{nonexistent_id}",
+        json={"user_role": "Developer", "user_contribution_percentage": 50.0},
+    )
+    assert response.status_code == 404
