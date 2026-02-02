@@ -385,7 +385,7 @@ ProgressBar {
             url_input.value = ""
             return
 
-        url = get_project_thumbnail_url(project_id)
+        url = f"/api/projects/{project_id}/thumbnail" if has_project_thumbnail(project_id) else None
         url_input.value = url or ""
 
     def _set_thumbnail_button_label(self, project_id: int | None) -> None:
