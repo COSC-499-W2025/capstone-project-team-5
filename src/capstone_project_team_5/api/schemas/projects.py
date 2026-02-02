@@ -18,6 +18,7 @@ class ProjectSummary(BaseModel):
     file_count: int
     has_git_repo: bool
     is_collaborative: bool
+    is_showcase: bool
     thumbnail_url: str | None
     importance_rank: int | None
     importance_score: float | None
@@ -44,6 +45,7 @@ class ProjectUpdateRequest(BaseModel):
     thumbnail_url: str | None = None
     importance_rank: int | None = None
     importance_score: float | None = None
+    is_showcase: bool | None = None
 
 
 class CollaboratorsRaw(BaseModel):

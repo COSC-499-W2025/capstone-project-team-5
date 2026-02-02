@@ -48,6 +48,20 @@ if TYPE_CHECKING:
 ViewMode = Literal["analysis", "saved"]
 
 
+class EditorTextArea(TextArea):
+    """TextArea subclass that wires Ctrl+S to the app's save_edit action."""
+
+    BINDINGS = [
+        ("ctrl+s", "save_edit", "Save edit"),
+    ]
+
+    def action_save_edit(self) -> None:
+        """Dispatch save_edit to the parent application when editing."""
+        app = self.app
+        if isinstance(app, Zip2JobTUI):
+            app.action_save_edit()
+
+
 class Zip2JobTUI(App[None]):
     """Modern, scrollable TUI for Zip2Job."""
 
@@ -123,6 +137,13 @@ Screen {
     color: $text;
 }
 
+#projects-header,
+#analyses-header {
+    color: blue;
+    margin-top: 1;
+    margin-bottom: 1;
+}
+
 /* Main scroll area */
 #main {
     border: heavy $primary;
@@ -172,6 +193,12 @@ ProgressBar {
         self._saved_projects: list[dict] = []
         self._saved_active_project_index: int | None = None
         self._analysis_selected: bool = False
+        self._score_factors: dict[str, bool] = {
+            "contribution": True,
+            "diversity": True,
+            "duration": True,
+            "file_count": True,
+        }
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -207,6 +234,8 @@ ProgressBar {
                         Button("Retrieve Projects", id="btn-retrieve", variant="default"),
                         Button("Delete Analysis", id="btn-delete-analysis", variant="error"),
                         Button("Set Thumbnail", id="btn-set-thumbnail", variant="default"),
+                        Button("Toggle Showcase", id="btn-toggle-showcase", variant="default"),
+                        Button("Configure Scoring", id="btn-config-scoring", variant="default"),
                         Input(
                             placeholder="Thumbnail URL",
                             id="thumbnail-url-input",
@@ -223,14 +252,16 @@ ProgressBar {
                         Container(
                             # Left: project + analysis lists
                             Container(
+                                Label("Projects", id="projects-header"),
                                 ListView(id="project-list"),
+                                Label("Analyses", id="analyses-header"),
                                 ListView(id="analysis-list"),
                                 id="list-column",
                             ),
                             # Right: detail markdown/editor
                             VerticalScroll(
                                 Markdown("", id="output"),
-                                TextArea(
+                                EditorTextArea(
                                     "",
                                     id="editor",
                                     # Use plain text to avoid missing language errors.
@@ -257,13 +288,17 @@ ProgressBar {
         yield Footer()
 
     def on_mount(self) -> None:
-        editor = self.query_one("#editor", TextArea)
+        editor = self.query_one("#editor", EditorTextArea)
         analysis_list = self.query_one("#analysis-list", ListView)
+        projects_header = self.query_one("#projects-header", Label)
+        analyses_header = self.query_one("#analyses-header", Label)
         username_input = self.query_one("#auth-username", Input)
         password_input = self.query_one("#auth-password", Input)
         submit_btn = self.query_one("#auth-btn-submit", Button)
         app_screen = self.query_one("#app-screen", Container)
         delete_btn = self.query_one("#btn-delete-analysis", Button)
+        showcase_btn = self.query_one("#btn-toggle-showcase", Button)
+        config_scoring_btn = self.query_one("#btn-config-scoring", Button)
         set_thumb_btn = self.query_one("#btn-set-thumbnail", Button)
         thumbnail_input = self.query_one("#thumbnail-url-input", Input)
         export_pdf_btn = self.query_one("#btn-export-pdf", Button)
@@ -271,7 +306,11 @@ ProgressBar {
 
         editor.display = False
         analysis_list.display = False
+        projects_header.display = False
+        analyses_header.display = False
         delete_btn.display = False
+        showcase_btn.display = False
+        config_scoring_btn.display = True
         export_pdf_btn.display = False
         export_txt_btn.display = False
         # Auth inputs are hidden until user chooses login or signup.
@@ -322,6 +361,23 @@ ProgressBar {
             url_input.value = ""
             set_btn.label = "Set Thumbnail"
 
+    def _update_showcase_button(self, project_id: int | None) -> None:
+        """Enable/disable showcase toggle based on current state."""
+        showcase_btn = self.query_one("#btn-toggle-showcase", Button)
+        if self._view_mode != "saved" or self._current_user is None or project_id is None:
+            showcase_btn.display = False
+            showcase_btn.label = "Mark Showcase"
+            return
+
+        project = next(
+            (p for p in self._saved_projects if p.get("id") == project_id),
+            None,
+        )
+        is_showcase = bool(project.get("is_showcase")) if project is not None else False
+
+        showcase_btn.display = True
+        showcase_btn.label = "Unmark Showcase" if is_showcase else "Mark Showcase"
+
     def _set_thumbnail_input_value(self, project_id: int | None) -> None:
         """Populate thumbnail URL input for the selected project."""
         url_input = self.query_one("#thumbnail-url-input", Input)
@@ -355,7 +411,7 @@ ProgressBar {
     def _show_editor(self) -> None:
         """Show the markdown editor and hide the rendered output."""
         output = self.query_one("#output", Markdown)
-        editor = self.query_one("#editor", TextArea)
+        editor = self.query_one("#editor", EditorTextArea)
         editor.display = True
         output.display = False
         editor.focus()
@@ -363,7 +419,7 @@ ProgressBar {
     def _hide_editor(self) -> None:
         """Hide the markdown editor and show the rendered output."""
         output = self.query_one("#output", Markdown)
-        editor = self.query_one("#editor", TextArea)
+        editor = self.query_one("#editor", EditorTextArea)
         editor.display = False
         output.display = True
 
@@ -609,6 +665,51 @@ ProgressBar {
         else:
             status.update("Failed to set thumbnail.")
 
+    @on(Button.Pressed, "#btn-toggle-showcase")
+    def handle_toggle_showcase(self) -> None:
+        """Toggle whether the selected saved project is marked as a showcase."""
+
+        status = self.query_one("#status", Label)
+        if self._view_mode != "saved":
+            status.update("Switch to saved view to change showcase status.")
+            return
+        if self._current_user is None:
+            status.update("Please log in to change showcase status.")
+            return
+
+        project_id = self._current_saved_project_id()
+        if project_id is None:
+            status.update("Select a saved project first.")
+            return
+
+        try:
+            from capstone_project_team_5.data.db import get_session
+            from capstone_project_team_5.data.models import Project as ProjectModel
+
+            with get_session() as session:
+                proj = session.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+                if proj is None:
+                    status.update("Project not found.")
+                    return
+
+                new_value = not bool(getattr(proj, "is_showcase", False))
+                proj.is_showcase = new_value
+                session.flush()
+        except Exception as exc:
+            status.update(f"Failed to update showcase flag: {exc}")
+            return
+
+        for proj in self._saved_projects:
+            if proj.get("id") == project_id:
+                proj["is_showcase"] = new_value
+                break
+
+        self._update_showcase_button(project_id)
+        if self._saved_active_project_index is not None:
+            self._show_saved_project(self._saved_active_project_index)
+
+        status.update("Marked as showcase." if new_value else "Showcase flag cleared.")
+
     @on(Button.Pressed, "#btn-load-latest")
     def handle_load_latest_saved(self) -> None:
         """Load the latest saved analysis for the current user into project view."""
@@ -631,6 +732,8 @@ ProgressBar {
     def _run_analysis(self, zip_path: Path) -> None:
         project_list = self.query_one("#project-list", ListView)
         analysis_list = self.query_one("#analysis-list", ListView)
+        projects_header = self.query_one("#projects-header", Label)
+        analyses_header = self.query_one("#analyses-header", Label)
         output = self.query_one("#output", Markdown)
         progress = self.query_one("#progress", ProgressBar)
         status = self.query_one("#status", Label)
@@ -639,6 +742,9 @@ ProgressBar {
         self._view_mode = "analysis"
         self._analysis_selected = False
         self._update_thumbnail_buttons(None)
+        self._update_showcase_button(None)
+        projects_header.display = False
+        analyses_header.display = False
         analysis_list.display = False
         analysis_list.clear()
         project_list.display = True
@@ -681,6 +787,8 @@ ProgressBar {
         )
 
     def _run_retrieve(self, zip_path: Path) -> None:
+        projects_header = self.query_one("#projects-header", Label)
+        analyses_header = self.query_one("#analyses-header", Label)
         output = self.query_one("#output", Markdown)
         progress = self.query_one("#progress", ProgressBar)
         status = self.query_one("#status", Label)
@@ -689,6 +797,10 @@ ProgressBar {
         progress.update(progress=5)
         status.update("Retrieving projects...")
         self._update_thumbnail_buttons(None)
+        self._update_showcase_button(None)
+        # This is a transient detection view, not the saved projects pane.
+        projects_header.display = False
+        analyses_header.display = False
 
         def work() -> dict:
             result = upload_zip(zip_path)
@@ -708,6 +820,8 @@ ProgressBar {
         """Background worker to query persisted uploads/projects/analyses from the DB."""
         project_list = self.query_one("#project-list", ListView)
         analysis_list = self.query_one("#analysis-list", ListView)
+        projects_header = self.query_one("#projects-header", Label)
+        analyses_header = self.query_one("#analyses-header", Label)
         output = self.query_one("#output", Markdown)
         progress = self.query_one("#progress", ProgressBar)
         status = self.query_one("#status", Label)
@@ -715,6 +829,9 @@ ProgressBar {
         self._view_mode = "saved"
         self._analysis_selected = False
         self._update_thumbnail_buttons(None)
+        self._update_showcase_button(None)
+        projects_header.display = True
+        analyses_header.display = True
         project_list.display = True
         analysis_list.display = True
         project_list.clear()
@@ -862,6 +979,7 @@ ProgressBar {
                             "file_count": p.file_count,
                             "importance_rank": p.importance_rank,
                             "importance_score": p.importance_score,
+                            "is_showcase": bool(getattr(p, "is_showcase", False)),
                             "analyses": analyses_list,
                             "languages": sorted(languages),
                             "tools": sorted(tools),
@@ -884,6 +1002,8 @@ ProgressBar {
     def _run_load_latest_saved(self) -> None:
         """Background worker to load the latest saved upload into project view."""
         project_list = self.query_one("#project-list", ListView)
+        projects_header = self.query_one("#projects-header", Label)
+        analyses_header = self.query_one("#analyses-header", Label)
         output = self.query_one("#output", Markdown)
         progress = self.query_one("#progress", ProgressBar)
         status = self.query_one("#status", Label)
@@ -895,6 +1015,9 @@ ProgressBar {
         status.update("Loading latest saved analysis...")
         self._view_mode = "saved"
         self._update_thumbnail_buttons(None)
+        self._update_showcase_button(None)
+        projects_header.display = True
+        analyses_header.display = True
 
         current_username = self._current_user
 
@@ -993,6 +1116,7 @@ ProgressBar {
 
                     project_dicts.append(
                         {
+                            "id": proj.id,
                             "name": proj.name,
                             "rel_path": proj.rel_path,
                             "language": language,
@@ -1027,6 +1151,7 @@ ProgressBar {
                                 "current_author_contribution": None,
                                 "activity_chart": [],
                             },
+                            "is_showcase": bool(getattr(proj, "is_showcase", False)),
                         }
                     )
 
@@ -1138,7 +1263,22 @@ ProgressBar {
             return
 
         self._upload_summary = upload
-        self._projects = projects
+        self._projects = list(projects)
+
+        # Apply any user-configured score factors to the per-project scores
+        # before ranking and display.
+        if self._score_factors:
+            for proj in self._projects:
+                breakdown = proj.get("score_breakdown")
+                if not isinstance(breakdown, dict):
+                    continue
+                from capstone_project_team_5.contribution_metrics import ContributionMetrics
+
+                new_score, new_breakdown = ContributionMetrics.apply_score_factors(
+                    breakdown, self._score_factors
+                )
+                proj["score"] = new_score
+                proj["score_breakdown"] = new_breakdown
 
         if worker_name == "analysis":
             status.update("Analysis complete.")
@@ -1220,6 +1360,7 @@ ProgressBar {
         self._saved_active_project_index = 0
         self._show_saved_project(0)
         self._update_thumbnail_buttons(self._current_saved_project_id())
+        self._update_showcase_button(self._current_saved_project_id())
         status.update("Loaded saved analyses.")
 
     def _handle_worker_success_retrieve(
@@ -1370,6 +1511,7 @@ ProgressBar {
 
         project = self._saved_projects[index]
         self._update_thumbnail_buttons(project.get("id"))
+        self._update_showcase_button(project.get("id"))
         analysis_list = self.query_one("#analysis-list", ListView)
         output = self.query_one("#output", Markdown)
 
@@ -1405,6 +1547,11 @@ ProgressBar {
             loc = project.get("lines_of_code")
             if loc is not None:
                 parts.append(f"- Lines of code (sum of analyses): {loc}")
+            is_showcase = project.get("is_showcase")
+            if is_showcase is True:
+                parts.append("- Showcase: Yes")
+            elif is_showcase is False:
+                parts.append("- Showcase: No")
             parts.append(self._thumbnail_status_line(project.get("id")))
 
             parts.append("")
@@ -1659,6 +1806,47 @@ ProgressBar {
         self._consent_tool = tool
         status.update("Consent configuration updated.")
 
+    @on(Button.Pressed, "#btn-config-scoring")
+    def handle_config_scoring(self) -> None:
+        """Configure which factors contribute to importance scores."""
+        status = self.query_one("#status", Label)
+
+        try:
+            import easygui
+        except Exception:
+            status.update("Scoring configuration UI not available.")
+            return
+
+        choices = ["Contributions", "Diversity", "Duration", "File Count"]
+        current = {
+            "Contributions": self._score_factors.get("contribution", True),
+            "Diversity": self._score_factors.get("diversity", True),
+            "Duration": self._score_factors.get("duration", True),
+            "File Count": self._score_factors.get("file_count", True),
+        }
+        preselected_indices = [idx for idx, label in enumerate(choices) if current.get(label, True)]
+
+        selected = easygui.multchoicebox(
+            msg="Select factors to include in the importance score:",
+            title="Configure Scoring",
+            choices=choices,
+            preselect=preselected_indices or None,
+        )
+
+        if selected is None:
+            status.update("Scoring configuration cancelled.")
+            return
+
+        selected_set = {s.lower() for s in selected}
+        self._score_factors = {
+            "contribution": "contributions" in selected_set,
+            "diversity": "diversity" in selected_set,
+            "duration": "duration" in selected_set,
+            "file_count": "file count" in selected_set,
+        }
+
+        status.update("Scoring factors updated. Re-run analysis to apply.")
+
     @on(Button.Pressed, "#btn-edit")
     def handle_edit_button(self) -> None:
         # Hide delete button when switching to edit view
@@ -1818,7 +2006,7 @@ ProgressBar {
     def action_toggle_edit(self) -> None:
         """Toggle between view and edit modes."""
         output = self.query_one("#output", Markdown)
-        editor = self.query_one("#editor", TextArea)
+        editor = self.query_one("#editor", EditorTextArea)
         status = self.query_one("#status", Label)
 
         if editor.display:
@@ -1842,7 +2030,7 @@ ProgressBar {
     def action_save_edit(self) -> None:
         """Save edits back into the Markdown view."""
         output = self.query_one("#output", Markdown)
-        editor = self.query_one("#editor", TextArea)
+        editor = self.query_one("#editor", EditorTextArea)
         status = self.query_one("#status", Label)
 
         if not editor.display:
@@ -1871,7 +2059,7 @@ ProgressBar {
     def action_cancel_edit(self) -> None:
         """Cancel edit mode without saving changes."""
         output = self.query_one("#output", Markdown)
-        editor = self.query_one("#editor", TextArea)
+        editor = self.query_one("#editor", EditorTextArea)
         status = self.query_one("#status", Label)
 
         if not editor.display:
@@ -1984,6 +2172,9 @@ ProgressBar {
         self._current_user = None
         self._auth_mode = None
         status = self.query_one("#status", Label)
+        projects_header = self.query_one("#projects-header", Label)
+        analyses_header = self.query_one("#analyses-header", Label)
+        showcase_btn = self.query_one("#btn-toggle-showcase", Button)
         user_label = self.query_one("#user-label", Label)
         auth_screen = self.query_one("#auth-screen", Container)
         app_screen = self.query_one("#app-screen", Container)
@@ -1996,6 +2187,9 @@ ProgressBar {
         output.update("")
         progress.update(progress=0)
         auth_screen.display = True
+        projects_header.display = False
+        analyses_header.display = False
+        showcase_btn.display = False
         app_screen.display = False
         status.update("Logged out. Please log in again.")
         self._update_thumbnail_buttons(None)

@@ -217,6 +217,35 @@ def test_format_score_breakdown():
     assert "File Count:" in formatted
 
 
+def test_apply_score_factors_can_disable_components() -> None:
+    """apply_score_factors should zero-out disabled components and recompute score."""
+    metrics = {"code": 10, "test": 5}
+    duration = timedelta(days=120)
+    file_count = 40
+
+    base_score, breakdown = ContributionMetrics.calculate_importance_score(
+        metrics, duration, file_count
+    )
+
+    factors = {
+        "contribution": False,
+        "diversity": True,
+        "duration": False,
+        "file_count": True,
+    }
+
+    new_score, new_breakdown = ContributionMetrics.apply_score_factors(breakdown, factors)
+
+    # Contribution and duration components should be zeroed.
+    assert new_breakdown["contribution_score"] == 0.0
+    assert new_breakdown["duration_score"] == 0.0
+    # Diversity and file components remain unchanged.
+    assert new_breakdown["diversity_bonus"] == breakdown["diversity_bonus"]
+    assert new_breakdown["file_score"] == breakdown["file_score"]
+    # New score should be lower than the base score.
+    assert new_score < base_score
+
+
 def test_rank_projects_basic():
     """Test basic project ranking."""
     projects = [(1, 100.0), (2, 50.0), (3, 150.0)]

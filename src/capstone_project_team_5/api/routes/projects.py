@@ -38,6 +38,7 @@ def _project_to_summary(project: Project) -> ProjectSummary:
         file_count=project.file_count,
         has_git_repo=project.has_git_repo,
         is_collaborative=project.is_collaborative,
+        is_showcase=bool(getattr(project, "is_showcase", False)),
         thumbnail_url=project.thumbnail_url,
         importance_rank=project.importance_rank,
         importance_score=project.importance_score,
