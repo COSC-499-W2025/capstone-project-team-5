@@ -200,7 +200,7 @@ Requires API keys. You can configure this later in settings."""
                 "Gemini": {"allowed": True},
                 "llm": {
                     "allowed": True,
-                    "model_preferences": ["Gemini 2.0 Flash (Google)"],
+                    "model_preferences": self.AVAILABLE_AI_MODELS[:1],
                 },
             }
             return True
@@ -273,7 +273,7 @@ Note: This requires API keys for the selected AI services."""
         # Only Gemini is currently implemented, so no need for selection
         self.external_services["llm"] = {
             "allowed": True,
-            "model_preferences": ["Gemini 2.0 Flash (Google)"],
+            "model_preferences": self.AVAILABLE_AI_MODELS[:1],
         }
 
         msg = """AI model configured: Gemini 2.0 Flash (Google)

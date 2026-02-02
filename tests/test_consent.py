@@ -44,7 +44,7 @@ def test_get_external_services_consent_with_selections() -> None:
     assert consent_tool.use_external_services is True
     assert consent_tool.external_services == {
         "Gemini": {"allowed": True},
-        "llm": {"allowed": True, "model_preferences": ["Gemini 2.0 Flash (Google)"]},
+        "llm": {"allowed": True, "model_preferences": ["Gemini 2.5 Flash (Google)"]},
     }
 
 
