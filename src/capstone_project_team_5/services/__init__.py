@@ -1,5 +1,12 @@
 """Services"""
 
+from capstone_project_team_5.services.education import (
+    create_education,
+    delete_education,
+    get_education,
+    get_educations,
+    update_education,
+)
 from capstone_project_team_5.services.incremental_upload import (
     extract_and_merge_files,
     find_matching_projects,
@@ -38,6 +45,11 @@ __all__ = [
     "find_matching_projects",
     "get_project_uploads",
     "incremental_upload_zip",
+    "create_education",
+    "delete_education",
+    "get_education",
+    "get_educations",
+    "update_education",
     "create_user_profile",
     "delete_user_profile",
     "get_user_profile",
