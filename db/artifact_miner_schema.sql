@@ -86,3 +86,89 @@ CREATE TABLE IF NOT EXISTS code_analyses (
 
 CREATE INDEX IF NOT EXISTS idx_code_analyses_project ON code_analyses(project_id);
 CREATE INDEX IF NOT EXISTS idx_code_analyses_language ON code_analyses(language);
+
+-- UserProfile table (1:1 with users)
+-- Stores contact and personal information for resume generation
+CREATE TABLE IF NOT EXISTS UserProfile (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL UNIQUE,
+    first_name TEXT,
+    last_name TEXT,
+    email TEXT,
+    phone TEXT,
+    address TEXT,
+    city TEXT,
+    state TEXT,
+    zip_code TEXT,
+    linkedin_url TEXT,
+    github_username TEXT,
+    website TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_userprofile_user ON UserProfile(user_id);
+
+CREATE TRIGGER IF NOT EXISTS UserProfileUpdateTimestamp
+AFTER UPDATE ON UserProfile
+BEGIN
+    UPDATE UserProfile
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = NEW.id;
+END;
+
+-- Education table (1:many with users)
+-- Stores educational history for resume generation
+CREATE TABLE IF NOT EXISTS Education (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    institution TEXT NOT NULL,
+    degree TEXT NOT NULL,
+    field_of_study TEXT,
+    gpa REAL,
+    start_date DATE,
+    end_date DATE,
+    achievements TEXT,  -- JSON array of achievements/honors
+    is_current BOOLEAN DEFAULT 0,
+    rank INTEGER DEFAULT 0 CHECK (rank >= 0),  -- User-defined ordering for resume display
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_education_user ON Education(user_id);
+
+CREATE TRIGGER IF NOT EXISTS EducationUpdateTimestamp
+AFTER UPDATE ON Education
+BEGIN
+    UPDATE Education
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = NEW.id;
+END;
+
+-- WorkExperience table (1:many with users)
+-- Stores work history for resume generation
+CREATE TABLE IF NOT EXISTS WorkExperience (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    company TEXT NOT NULL,
+    title TEXT NOT NULL,
+    location TEXT,
+    start_date DATE,
+    end_date DATE,
+    description TEXT,
+    bullets TEXT,
+    is_current BOOLEAN DEFAULT 0,
+    rank INTEGER DEFAULT 0 CHECK (rank >= 0),  
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_workexperience_user ON WorkExperience(user_id);
+
+CREATE TRIGGER IF NOT EXISTS WorkExperienceUpdateTimestamp
+AFTER UPDATE ON WorkExperience
+BEGIN
+    UPDATE WorkExperience
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = NEW.id;
+END;
