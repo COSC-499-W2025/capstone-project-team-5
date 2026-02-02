@@ -15,6 +15,7 @@ from capstone_project_team_5.data.models.user import User
 from capstone_project_team_5.data.models.user_code_analysis import UserCodeAnalysis
 from capstone_project_team_5.services.user_skill_list import (
     get_chronological_skills,
+    render_skills_as_markdown,
 )
 
 
@@ -155,6 +156,56 @@ def seeded_user_with_skills(tmp_db):
         return user.id
 
 
+@pytest.fixture
+def tool_skill():
+    """A single tool skill."""
+
+    return {
+        "skill_name": "Git",
+        "skill_type": SkillType.TOOL,
+        "first_used": datetime(2025, 3, 15, tzinfo=UTC),
+    }
+
+
+@pytest.fixture
+def practice_skill():
+    """A single practice skill."""
+
+    return {
+        "skill_name": "Unit Testing",
+        "skill_type": SkillType.PRACTICE,
+        "first_used": datetime(2025, 6, 1, tzinfo=UTC),
+    }
+
+
+@pytest.fixture
+def mixed_skills():
+    """Multiple tools and practices at different dates."""
+
+    return [
+        {
+            "skill_name": "Git",
+            "skill_type": SkillType.TOOL,
+            "first_used": datetime(2025, 1, 10, tzinfo=UTC),
+        },
+        {
+            "skill_name": "Python",
+            "skill_type": SkillType.TOOL,
+            "first_used": datetime(2025, 2, 5, tzinfo=UTC),
+        },
+        {
+            "skill_name": "Unit Testing",
+            "skill_type": SkillType.PRACTICE,
+            "first_used": datetime(2025, 3, 1, tzinfo=UTC),
+        },
+        {
+            "skill_name": "CI/CD",
+            "skill_type": SkillType.PRACTICE,
+            "first_used": datetime(2025, 4, 20, tzinfo=UTC),
+        },
+    ]
+
+
 def test_get_chronological_skills_returns_unique_sorted_skills(seeded_user_with_skills):
     """Test that skills are unique and sorted by first usage."""
 
@@ -239,3 +290,90 @@ def test_get_chronological_skills_correct_skill_types(seeded_user_with_skills):
 
         assert git_skill["skill_type"] == SkillType.TOOL
         assert testing_skill["skill_type"] == SkillType.PRACTICE
+
+
+def test_empty_skills_returns_no_skills_message():
+    """Empty list should return the no-skills placeholder."""
+
+    result = render_skills_as_markdown([])
+    assert "No skills detected" in result
+
+
+def test_single_tool_renders_tools_section(tool_skill):
+    """A single tool should appear under the Tools heading with correct date."""
+
+    result = render_skills_as_markdown([tool_skill])
+    assert "## Tools" in result
+    assert "**Git**" in result
+    assert "Mar 2025" in result
+
+
+def test_single_tool_does_not_render_practices_section(tool_skill):
+    """If there are no practices, the Practices heading should not appear."""
+
+    result = render_skills_as_markdown([tool_skill])
+    assert "## Practices" not in result
+
+
+def test_single_practice_renders_practices_section(practice_skill):
+    """A single practice should appear under the Practices heading."""
+
+    result = render_skills_as_markdown([practice_skill])
+    assert "## Practices" in result
+    assert "**Unit Testing**" in result
+    assert "Jun 2025" in result
+
+
+def test_single_practice_does_not_render_tools_section(practice_skill):
+    """If there are no tools, the Tools heading should not appear."""
+
+    result = render_skills_as_markdown([practice_skill])
+    assert "## Tools" not in result
+
+
+def test_mixed_skills_renders_both_sections(mixed_skills):
+    """Both Tools and Practices sections should appear when both types exist."""
+
+    result = render_skills_as_markdown(mixed_skills)
+    assert "## Tools" in result
+    assert "## Practices" in result
+    assert "**Git**" in result
+    assert "**Python**" in result
+    assert "**Unit Testing**" in result
+    assert "**CI/CD**" in result
+
+
+def test_summary_line_plural_tools_and_practices(mixed_skills):
+    """Summary should use plural forms when there are multiple of each type."""
+
+    result = render_skills_as_markdown(mixed_skills)
+    assert "2 tools" in result
+    assert "2 practices" in result
+
+
+def test_summary_line_singular_tool_and_practice(tool_skill, practice_skill):
+    """Summary should use singular forms when there is one of each type."""
+
+    result = render_skills_as_markdown([tool_skill, practice_skill])
+    assert "1 tool," in result
+    assert "1 practice" in result
+
+
+def test_tools_only_summary_singular_practice(mixed_skills):
+    """Summary should use singular 'practice' when count is 0."""
+
+    tools_only = [s for s in mixed_skills if s["skill_type"] == SkillType.TOOL]
+    result = render_skills_as_markdown(tools_only)
+    assert "2 tools" in result
+    assert "0 practice" in result
+    assert "0 practices" not in result
+
+
+def test_practices_only_summary_singular_tool(mixed_skills):
+    """Summary should use singular 'tool' when count is 0."""
+
+    practices_only = [s for s in mixed_skills if s["skill_type"] == SkillType.PRACTICE]
+    result = render_skills_as_markdown(practices_only)
+    assert "0 tool," in result
+    assert "0 tools" not in result
+    assert "2 practices" in result

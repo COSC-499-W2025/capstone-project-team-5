@@ -8,6 +8,7 @@ from typing import Annotated, Any
 from zipfile import BadZipFile, ZipFile
 
 from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import desc
 
 from capstone_project_team_5.api.schemas.projects import (
@@ -22,7 +23,13 @@ from capstone_project_team_5.consent_tool import ConsentTool
 from capstone_project_team_5.data.db import get_session
 from capstone_project_team_5.data.models import Project, UploadRecord
 from capstone_project_team_5.models.upload import DetectedProject, InvalidZipError
-from capstone_project_team_5.services.project_thumbnail import is_valid_thumbnail_url
+from capstone_project_team_5.services.project_thumbnail import (
+    clear_project_thumbnail,
+    get_project_thumbnail_path,
+    get_thumbnail_media_type,
+    has_project_thumbnail,
+    set_project_thumbnail,
+)
 from capstone_project_team_5.services.upload import upload_zip
 from capstone_project_team_5.services.upload_storage import get_upload_zip_path, store_upload_zip
 from capstone_project_team_5.workflows.analysis_pipeline import analyze_projects_structured
@@ -31,6 +38,8 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 
 
 def _project_to_summary(project: Project) -> ProjectSummary:
+    has_thumbnail = has_project_thumbnail(project.id)
+    thumbnail_url = f"/api/projects/{project.id}/thumbnail" if has_thumbnail else None
     return ProjectSummary(
         id=project.id,
         name=project.name,
@@ -38,7 +47,9 @@ def _project_to_summary(project: Project) -> ProjectSummary:
         file_count=project.file_count,
         has_git_repo=project.has_git_repo,
         is_collaborative=project.is_collaborative,
-        thumbnail_url=project.thumbnail_url,
+        is_showcase=bool(getattr(project, "is_showcase", False)),
+        thumbnail_url=thumbnail_url,
+        has_thumbnail=has_thumbnail,
         importance_rank=project.importance_rank,
         importance_score=project.importance_score,
         user_role=project.user_role,
@@ -174,19 +185,97 @@ def update_project(project_id: int, update: ProjectUpdateRequest) -> ProjectSumm
             )
 
         updates = update.model_dump(exclude_unset=True)
-        if "thumbnail_url" in updates:
-            thumbnail_url = updates["thumbnail_url"]
-            if thumbnail_url is not None and not is_valid_thumbnail_url(thumbnail_url):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid thumbnail URL.",
-                )
         for field, value in updates.items():
             setattr(project, field, value)
 
         session.flush()
         session.refresh(project)
         return _project_to_summary(project)
+
+
+@router.put(
+    "/{project_id}/thumbnail",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Upload a project thumbnail",
+    description="Upload an image thumbnail for a project by ID.",
+    responses={
+        400: {"description": "Invalid thumbnail upload"},
+        404: {"description": "Project not found"},
+    },
+)
+async def upload_project_thumbnail(
+    project_id: int,
+    file: Annotated[UploadFile, File(description="Thumbnail image file")],
+) -> Response:
+    with get_session() as session:
+        project = session.query(Project).filter(Project.id == project_id).first()
+        if project is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found.",
+            )
+
+    data = await file.read()
+    saved, error = set_project_thumbnail(
+        project_id,
+        filename=file.filename,
+        content_type=file.content_type,
+        data=data,
+    )
+    if not saved:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error or "Invalid thumbnail upload.",
+        )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get(
+    "/{project_id}/thumbnail",
+    summary="Get a project thumbnail",
+    description="Return the stored thumbnail image for a project.",
+    responses={
+        200: {"description": "Thumbnail image"},
+        404: {"description": "Project or thumbnail not found"},
+    },
+)
+def get_project_thumbnail(project_id: int) -> Response:
+    with get_session() as session:
+        project = session.query(Project).filter(Project.id == project_id).first()
+        if project is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found.",
+            )
+
+    path = get_project_thumbnail_path(project_id)
+    if path is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Thumbnail not found.",
+        )
+    media_type = get_thumbnail_media_type(path) or "application/octet-stream"
+    return FileResponse(path, media_type=media_type)
+
+
+@router.delete(
+    "/{project_id}/thumbnail",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a project thumbnail",
+    description="Remove the stored thumbnail image for a project.",
+    responses={404: {"description": "Project not found"}},
+)
+def delete_project_thumbnail(project_id: int) -> Response:
+    with get_session() as session:
+        project = session.query(Project).filter(Project.id == project_id).first()
+        if project is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found.",
+            )
+
+    clear_project_thumbnail(project_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.delete(

@@ -28,10 +28,9 @@ def temp_db(tmp_path):
 
     engine = create_engine(db_url)
     with engine.begin() as conn:
-        # Create schema: SQLite DBAPI requires single-statement executes,
-        # so split the file by ';' and execute each non-empty statement.
-        for stmt in (s.strip() for s in schema_sql.split(";") if s.strip()):
-            conn.execute(text(stmt))
+        # Create schema using executescript via raw connection to handle
+        # triggers containing semicolons properly.
+        conn.connection.executescript(schema_sql)
 
         # Insert a test project
         res = conn.execute(

@@ -7,6 +7,7 @@ Passwords are stored as salted PBKDF2 hashes, never in plaintext.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -14,6 +15,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from capstone_project_team_5.data.db import Base
 from capstone_project_team_5.data.models.portfolio_item import PortfolioItem
 from capstone_project_team_5.data.models.resume import Resume
+
+if TYPE_CHECKING:
+    from capstone_project_team_5.data.models.education import Education
+    from capstone_project_team_5.data.models.user_profile import UserProfile
+    from capstone_project_team_5.data.models.work_experience import WorkExperience
 
 
 class User(Base):
@@ -39,4 +45,13 @@ class User(Base):
     )
     resumes: Mapped[list[Resume]] = relationship(
         "Resume", back_populates="user", cascade="all, delete-orphan"
+    )
+    profile: Mapped[UserProfile | None] = relationship(
+        "UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+    education_entries: Mapped[list[Education]] = relationship(
+        "Education", back_populates="user", cascade="all, delete-orphan"
+    )
+    work_experiences: Mapped[list[WorkExperience]] = relationship(
+        "WorkExperience", back_populates="user", cascade="all, delete-orphan"
     )

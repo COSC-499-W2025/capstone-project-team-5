@@ -32,71 +32,28 @@ def test_consent_tool_build_config() -> None:
     assert config["default_ignore_patterns"] == [".git", "node_modules"]
 
 
-def test_select_external_services_with_selections() -> None:
-    """Test that _select_external_services returns selected services."""
-    consent_tool = ConsentTool()
-
-    # Mock multchoicebox to return selected services
-    with patch("easygui.multchoicebox", return_value=["GitHub API", "Gemini"]):
-        selected = consent_tool._select_external_services()
-
-    assert selected == ["GitHub API", "Gemini"]
-
-
-def test_select_external_services_with_no_selections() -> None:
-    """Test that _select_external_services returns empty list when user cancels."""
-    consent_tool = ConsentTool()
-
-    # Mock multchoicebox to return None (user cancelled)
-    with patch("easygui.multchoicebox", return_value=None):
-        selected = consent_tool._select_external_services()
-
-    assert selected == []
-
-
 def test_get_external_services_consent_with_selections() -> None:
-    """Test external services consent with user selecting services."""
+    """Test external services consent with user enabling AI."""
     consent_tool = ConsentTool()
 
     # Mock the dialog responses
-    with (
-        patch("easygui.buttonbox", return_value="Yes I agree"),
-        patch("easygui.multchoicebox", return_value=["GitHub API", "LinkedIn API"]),
-        patch("easygui.msgbox"),
-    ):
+    with patch("easygui.buttonbox", return_value="Enable AI"):
         result = consent_tool.get_external_services_consent()
 
     assert result is True
     assert consent_tool.use_external_services is True
     assert consent_tool.external_services == {
-        "GitHub API": {"allowed": True},
-        "LinkedIn API": {"allowed": True},
+        "Gemini": {"allowed": True},
+        "llm": {"allowed": True, "model_preferences": ["Gemini 2.5 Flash (Google)"]},
     }
 
 
-def test_get_external_services_consent_no_selections() -> None:
-    """Test external services consent when user selects no services."""
-    consent_tool = ConsentTool()
-
-    # Mock the dialog responses
-    with (
-        patch("easygui.buttonbox", return_value="Yes I agree"),
-        patch("easygui.multchoicebox", return_value=[]),
-        patch("easygui.msgbox"),
-    ):
-        result = consent_tool.get_external_services_consent()
-
-    assert result is True
-    assert consent_tool.use_external_services is True
-    assert consent_tool.external_services == {}
-
-
 def test_get_external_services_consent_declined() -> None:
-    """Test external services consent when user declines."""
+    """Test external services consent when user skips AI."""
     consent_tool = ConsentTool()
 
     # Mock the dialog responses
-    with patch("easygui.buttonbox", return_value="No, Cancel"), patch("easygui.msgbox"):
+    with patch("easygui.buttonbox", return_value="Skip"):
         result = consent_tool.get_external_services_consent()
 
     assert result is False
