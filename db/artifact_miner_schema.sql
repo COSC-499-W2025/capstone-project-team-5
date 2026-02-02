@@ -109,14 +109,6 @@ CREATE TABLE IF NOT EXISTS UserProfile (
 
 CREATE INDEX IF NOT EXISTS idx_userprofile_user ON UserProfile(user_id);
 
-CREATE TRIGGER IF NOT EXISTS UserProfileUpdateTimestamp
-AFTER UPDATE ON UserProfile
-BEGIN
-    UPDATE UserProfile
-    SET updated_at = CURRENT_TIMESTAMP
-    WHERE id = NEW.id;
-END;
-
 -- Education table (1:many with users)
 -- Stores educational history for resume generation
 CREATE TABLE IF NOT EXISTS Education (
@@ -137,14 +129,6 @@ CREATE TABLE IF NOT EXISTS Education (
 
 CREATE INDEX IF NOT EXISTS idx_education_user ON Education(user_id);
 
-CREATE TRIGGER IF NOT EXISTS EducationUpdateTimestamp
-AFTER UPDATE ON Education
-BEGIN
-    UPDATE Education
-    SET updated_at = CURRENT_TIMESTAMP
-    WHERE id = NEW.id;
-END;
-
 -- WorkExperience table (1:many with users)
 -- Stores work history for resume generation
 CREATE TABLE IF NOT EXISTS WorkExperience (
@@ -164,11 +148,3 @@ CREATE TABLE IF NOT EXISTS WorkExperience (
 );
 
 CREATE INDEX IF NOT EXISTS idx_workexperience_user ON WorkExperience(user_id);
-
-CREATE TRIGGER IF NOT EXISTS WorkExperienceUpdateTimestamp
-AFTER UPDATE ON WorkExperience
-BEGIN
-    UPDATE WorkExperience
-    SET updated_at = CURRENT_TIMESTAMP
-    WHERE id = NEW.id;
-END;
