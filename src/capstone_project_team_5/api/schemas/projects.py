@@ -151,3 +151,12 @@ class ProjectsAnalyzeAllResponse(BaseModel):
 
     analyzed: list[ProjectAnalysisResult]
     skipped: list[ProjectAnalysisSkipped]
+
+
+class ScoreConfig(BaseModel):
+    """Configuration flags for importance score calculation components."""
+
+    contribution: bool = True
+    diversity: bool = True
+    duration: bool = True
+    file_count: bool = True
