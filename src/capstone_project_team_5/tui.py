@@ -862,6 +862,11 @@ ProgressBar {
                             "file_count": p.file_count,
                             "importance_rank": p.importance_rank,
                             "importance_score": p.importance_score,
+                            "user_role": p.user_role,
+                            "user_contribution_percentage": p.user_contribution_percentage,
+                            "has_git_repo": p.has_git_repo,
+                            "is_collaborative": p.is_collaborative,
+                            "thumbnail_url": p.thumbnail_url,
                             "analyses": analyses_list,
                             "languages": sorted(languages),
                             "tools": sorted(tools),
@@ -1027,6 +1032,8 @@ ProgressBar {
                                 "current_author_contribution": None,
                                 "activity_chart": [],
                             },
+                            "user_role": proj.user_role,
+                            "user_contribution_percentage": proj.user_contribution_percentage,
                         }
                     )
 

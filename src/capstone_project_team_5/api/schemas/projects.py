@@ -50,16 +50,6 @@ class ProjectUpdateRequest(BaseModel):
     user_contribution_percentage: float | None = None
 
 
-class ProjectRoleResponse(BaseModel):
-    """Response schema for project role information."""
-
-    project_id: int
-    project_name: str
-    user_role: str | None
-    user_contribution_percentage: float | None
-    is_collaborative: bool
-
-
 class CollaboratorsRaw(BaseModel):
     """Raw collaborator summary."""
 

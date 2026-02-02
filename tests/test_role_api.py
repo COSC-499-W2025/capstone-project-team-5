@@ -1,4 +1,4 @@
-"""Tests for project role API endpoints."""
+"""Tests for project role information in project endpoints."""
 
 from __future__ import annotations
 
@@ -30,25 +30,19 @@ def _upload_single_project(client: TestClient, name: str) -> int:
     return response.json()["projects"][0]["id"]
 
 
-def test_get_project_role_not_found() -> None:
-    """Test GET /api/projects/{id}/role returns 404 for nonexistent project."""
-    client = TestClient(app)
-    response = client.get("/api/projects/99999/role")
-    assert response.status_code == 404
-
-
-def test_get_project_role_no_role_set() -> None:
-    """Test GET /api/projects/{id}/role when no role has been detected or set."""
+def test_get_project_includes_role_fields() -> None:
+    """Test GET /api/projects/{id} includes role and contribution fields."""
     client = TestClient(app)
     project_id = _upload_single_project(client, "test_no_role")
 
-    response = client.get(f"/api/projects/{project_id}/role")
+    response = client.get(f"/api/projects/{project_id}")
     assert response.status_code == 200
     payload = response.json()
-    assert payload["project_id"] == project_id
+    assert payload["id"] == project_id
+    assert "user_role" in payload
+    assert "user_contribution_percentage" in payload
     assert payload["user_role"] is None
     assert payload["user_contribution_percentage"] is None
-    assert "is_collaborative" in payload
 
 
 def test_patch_project_set_role() -> None:
@@ -67,11 +61,11 @@ def test_patch_project_set_role() -> None:
     assert payload["user_contribution_percentage"] == 85.5
 
     # Verify via GET endpoint
-    role_response = client.get(f"/api/projects/{project_id}/role")
-    assert role_response.status_code == 200
-    role_payload = role_response.json()
-    assert role_payload["user_role"] == "Lead Developer"
-    assert role_payload["user_contribution_percentage"] == 85.5
+    get_response = client.get(f"/api/projects/{project_id}")
+    assert get_response.status_code == 200
+    get_payload = get_response.json()
+    assert get_payload["user_role"] == "Lead Developer"
+    assert get_payload["user_contribution_percentage"] == 85.5
 
 
 def test_patch_project_update_role() -> None:
@@ -118,7 +112,7 @@ def test_patch_project_clear_role() -> None:
     assert payload["user_contribution_percentage"] is None
 
 
-def test_project_summary_includes_role() -> None:
+def test_list_projects_includes_role() -> None:
     """Test GET /api/projects returns role fields in project summaries."""
     client = TestClient(app)
     project_id = _upload_single_project(client, "test_summary_role")
@@ -139,54 +133,3 @@ def test_project_summary_includes_role() -> None:
     assert project is not None
     assert project["user_role"] == "Backend Developer"
     assert project["user_contribution_percentage"] == 60.0
-
-
-def test_get_project_by_id_includes_role() -> None:
-    """Test GET /api/projects/{id} returns role fields."""
-    client = TestClient(app)
-    project_id = _upload_single_project(client, "test_get_role")
-
-    # Set a role
-    client.patch(
-        f"/api/projects/{project_id}",
-        json={"user_role": "Full Stack Developer"},
-    )
-
-    # Get project by ID
-    response = client.get(f"/api/projects/{project_id}")
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["user_role"] == "Full Stack Developer"
-    assert payload["user_contribution_percentage"] is None
-
-
-def test_patch_project_partial_role_update() -> None:
-    """Test PATCH can update only role or only percentage."""
-    client = TestClient(app)
-    project_id = _upload_single_project(client, "test_partial_role")
-
-    # Set both fields
-    client.patch(
-        f"/api/projects/{project_id}",
-        json={"user_role": "Developer", "user_contribution_percentage": 50.0},
-    )
-
-    # Update only the role
-    response = client.patch(
-        f"/api/projects/{project_id}",
-        json={"user_role": "Senior Developer"},
-    )
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["user_role"] == "Senior Developer"
-    assert payload["user_contribution_percentage"] == 50.0  # Should remain unchanged
-
-    # Update only the percentage
-    response = client.patch(
-        f"/api/projects/{project_id}",
-        json={"user_contribution_percentage": 75.0},
-    )
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["user_role"] == "Senior Developer"  # Should remain unchanged
-    assert payload["user_contribution_percentage"] == 75.0
