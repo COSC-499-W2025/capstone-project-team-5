@@ -48,7 +48,7 @@ def _project_to_summary(project: Project) -> ProjectSummary:
         has_git_repo=project.has_git_repo,
         is_collaborative=project.is_collaborative,
         is_showcase=bool(getattr(project, "is_showcase", False)),
-        thumbnail_url=project.thumbnail_url,
+        thumbnail_url=thumbnail_url,
         has_thumbnail=has_thumbnail,
         importance_rank=project.importance_rank,
         importance_score=project.importance_score,
