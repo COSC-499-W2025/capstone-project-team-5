@@ -72,18 +72,18 @@ def render_project_markdown(upload: dict[str, Any], proj: dict[str, Any], rank: 
         parts.append(f"\n### Resume Bullet Points ({source} Generation)")
         parts.extend(f"- {b}" for b in bullets)
 
+    # Display user role if detected (regardless of git repo status)
+    user_role = proj.get("user_role")
+    user_contrib_pct = proj.get("user_contribution_percentage")
+    if user_role:
+        parts.append("\n### Your Role")
+        if user_contrib_pct:
+            parts.append(f"**{user_role}** ({user_contrib_pct:.1f}% of contributions)")
+        else:
+            parts.append(f"**{user_role}**")
+
     git_info = proj.get("git") or {}
     if git_info.get("is_repo"):
-        # Display user role if detected
-        user_role = proj.get("user_role")
-        user_contrib_pct = proj.get("user_contribution_percentage")
-        if user_role:
-            parts.append("\n### Your Role")
-            if user_contrib_pct:
-                parts.append(f"**{user_role}** ({user_contrib_pct:.1f}% of contributions)")
-            else:
-                parts.append(f"**{user_role}**")
-
         current = git_info.get("current_author_contribution") or {}
         authors = git_info.get("author_contributions") or []
         if authors:
