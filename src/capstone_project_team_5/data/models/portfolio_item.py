@@ -32,7 +32,6 @@ class PortfolioItem(Base):
         title: Title of the portfolio item.
         content: Text content of the portfolio item.
         is_user_edited: If content has been edited by user or not.
-        is_showcase: Whether this is a featured portfolio item.
         source_analysis_id: Optional reference to CodeAnalysis that generated this.
         created_at: UTC timestamp of when the item was created.
         updated_at: UTC timestamp of when the item was last modified.
@@ -59,7 +58,6 @@ class PortfolioItem(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
     is_user_edited: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    is_showcase: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     source_analysis_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("code_analyses.id", ondelete="SET NULL"), nullable=True

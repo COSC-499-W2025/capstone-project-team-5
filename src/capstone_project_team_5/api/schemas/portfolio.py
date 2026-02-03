@@ -15,7 +15,6 @@ class PortfolioEditRequest(BaseModel):
     markdown: str
     title: str | None = None
     source_analysis_id: int | None = None
-    is_showcase: bool = False
     portfolio_id: int | None = None
 
 
@@ -27,7 +26,6 @@ class PortfolioItemResponse(BaseModel):
     title: str
     markdown: str
     is_user_edited: bool
-    is_showcase: bool
     source_analysis_id: int | None
     portfolio_id: int | None
     created_at: datetime
@@ -39,7 +37,6 @@ class PortfolioCreateRequest(BaseModel):
 
     username: str
     name: str
-    is_showcase: bool = False
 
 
 class PortfolioResponse(BaseModel):
@@ -47,7 +44,6 @@ class PortfolioResponse(BaseModel):
 
     id: int
     name: str
-    is_showcase: bool
     created_at: datetime
     updated_at: datetime
 

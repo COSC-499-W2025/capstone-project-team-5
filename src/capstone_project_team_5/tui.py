@@ -2198,7 +2198,6 @@ ProgressBar {
                     title=title,
                     content=json.dumps({"markdown": self._current_markdown}),
                     is_user_edited=True,
-                    is_showcase=False,
                     source_analysis_id=analysis_id,
                 )
             else:

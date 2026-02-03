@@ -68,7 +68,6 @@ def test_save_new_portfolio_item(seeded_user_project):
         title="My Portfolio Item",
         content="Some content",
         is_user_edited=True,
-        is_showcase=False,
     )
 
     assert result is True
@@ -78,7 +77,6 @@ def test_save_new_portfolio_item(seeded_user_project):
     assert item["title"] == "My Portfolio Item"
     assert item["content"] == "Some content"
     assert item["is_user_edited"] is True
-    assert item["is_showcase"] is False
 
 
 def test_update_existing_portfolio_item(seeded_user_project):
@@ -90,7 +88,6 @@ def test_update_existing_portfolio_item(seeded_user_project):
         title="Original Title",
         content="Some content",
         is_user_edited=True,
-        is_showcase=False,
     )
 
     result = save_portfolio_item(
@@ -99,7 +96,6 @@ def test_update_existing_portfolio_item(seeded_user_project):
         title="Updated Title",
         content="Updated content",
         is_user_edited=False,
-        is_showcase=True,
     )
 
     assert result is True
@@ -108,7 +104,6 @@ def test_update_existing_portfolio_item(seeded_user_project):
     assert item["title"] == "Updated Title"
     assert item["content"] == "Updated content"
     assert item["is_user_edited"] is False
-    assert item["is_showcase"] is True
     assert item["updated_at"] is not None
 
 

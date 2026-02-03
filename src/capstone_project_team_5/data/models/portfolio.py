@@ -1,8 +1,7 @@
 """ORM model representing a logical portfolio grouping of portfolio items.
 
 This table groups :class:`PortfolioItem` rows under a named portfolio for a
-given user. A portfolio can be marked as a showcase collection via the
-``is_showcase`` flag.
+given user.
 """
 
 from __future__ import annotations
@@ -10,7 +9,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from capstone_project_team_5.data.db import Base
@@ -32,7 +31,6 @@ class Portfolio(Base):
         nullable=False,
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
-    is_showcase: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -44,7 +44,7 @@ def _extract_markdown(content: str) -> str:
     summary="Create a portfolio",
     description=(
         "Create a named portfolio for a user. A portfolio is a logical grouping of "
-        "portfolio items and can be marked as a showcase collection."
+        "portfolio items for a user."
     ),
 )
 def create_portfolio(request: PortfolioCreateRequest) -> PortfolioResponse:
@@ -60,7 +60,6 @@ def create_portfolio(request: PortfolioCreateRequest) -> PortfolioResponse:
         portfolio = Portfolio(
             user_id=user.id,
             name=request.name,
-            is_showcase=request.is_showcase,
         )
         session.add(portfolio)
         session.flush()
@@ -69,7 +68,6 @@ def create_portfolio(request: PortfolioCreateRequest) -> PortfolioResponse:
         return PortfolioResponse(
             id=portfolio.id,
             name=portfolio.name,
-            is_showcase=bool(portfolio.is_showcase),
             created_at=portfolio.created_at,
             updated_at=portfolio.updated_at,
         )
@@ -97,7 +95,6 @@ def list_portfolios(username: str) -> list[PortfolioResponse]:
             PortfolioResponse(
                 id=p.id,
                 name=p.name,
-                is_showcase=bool(p.is_showcase),
                 created_at=p.created_at,
                 updated_at=p.updated_at,
             )
@@ -224,7 +221,6 @@ def list_portfolio_items(portfolio_id: int) -> list[PortfolioItemResponse]:
                     title=item.title,
                     markdown=markdown,
                     is_user_edited=bool(item.is_user_edited),
-                    is_showcase=bool(item.is_showcase),
                     source_analysis_id=getattr(item, "source_analysis_id", None),
                     portfolio_id=getattr(item, "portfolio_id", None),
                     created_at=item.created_at,
@@ -307,7 +303,6 @@ def upsert_portfolio_item(request: PortfolioEditRequest) -> PortfolioItemRespons
                 title=request.title or project.name,
                 content=encoded_content,
                 is_user_edited=True,
-                is_showcase=request.is_showcase,
                 source_analysis_id=request.source_analysis_id,
             )
             session.add(item)
@@ -316,7 +311,6 @@ def upsert_portfolio_item(request: PortfolioEditRequest) -> PortfolioItemRespons
             item.content = encoded_content
             item.portfolio_id = request.portfolio_id
             item.is_user_edited = True
-            item.is_showcase = request.is_showcase
             item.source_analysis_id = request.source_analysis_id
 
         session.flush()
@@ -329,7 +323,6 @@ def upsert_portfolio_item(request: PortfolioEditRequest) -> PortfolioItemRespons
             title=item.title,
             markdown=markdown,
             is_user_edited=bool(item.is_user_edited),
-            is_showcase=bool(item.is_showcase),
             source_analysis_id=getattr(item, "source_analysis_id", None),
             portfolio_id=getattr(item, "portfolio_id", None),
             created_at=item.created_at,

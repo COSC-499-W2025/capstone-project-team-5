@@ -53,7 +53,6 @@ def test_portfolio_edit_endpoint_creates_and_updates_item() -> None:
         json={
             "username": username,
             "name": "Editing Portfolio",
-            "is_showcase": False,
         },
     )
     assert portfolio_resp.status_code == 200
@@ -142,13 +141,11 @@ def test_create_and_list_portfolios() -> None:
         json={
             "username": username,
             "name": "My Showcase Portfolio",
-            "is_showcase": True,
         },
     )
     assert create_resp.status_code == 200
     created = create_resp.json()
     assert created["name"] == "My Showcase Portfolio"
-    assert created["is_showcase"] is True
     portfolio_id = created["id"]
 
     # Listing again should include the created portfolio.
@@ -158,7 +155,6 @@ def test_create_and_list_portfolios() -> None:
     matching = [p for p in portfolios if p["id"] == portfolio_id]
     assert matching
     assert matching[0]["name"] == "My Showcase Portfolio"
-    assert matching[0]["is_showcase"] is True
 
     # Ensure it's persisted in the DB.
     with get_session() as session:
@@ -179,7 +175,6 @@ def test_delete_portfolio() -> None:
         json={
             "username": username,
             "name": "Temporary Portfolio",
-            "is_showcase": False,
         },
     )
     assert create_resp.status_code == 200
