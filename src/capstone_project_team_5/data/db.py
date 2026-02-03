@@ -57,6 +57,7 @@ def _ensure_tables_created() -> None:
     from capstone_project_team_5.data.models import (  # noqa: F401
         code_analysis,
         consent_record,
+        portfolio,
         portfolio_item,
         project,
         resume,

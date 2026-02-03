@@ -17,6 +17,7 @@ from capstone_project_team_5.data.db import Base
 
 if TYPE_CHECKING:
     from capstone_project_team_5.data.models import User
+    from capstone_project_team_5.data.models.portfolio import Portfolio
     from capstone_project_team_5.data.models.project import Project
 
 
@@ -26,6 +27,7 @@ class PortfolioItem(Base):
     Attributes:
         id: Auto-incrementing primary key.
         project_id: Foreign key to the associated project (nullable, SET NULL on delete).
+        portfolio_id: Optional foreign key to a logical portfolio grouping.
         user_id: Foreign key to the user who owns this portfolio item.
         title: Title of the portfolio item.
         content: Text content of the portfolio item.
@@ -43,6 +45,11 @@ class PortfolioItem(Base):
     project_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("projects.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    portfolio_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("portfolios.id", ondelete="SET NULL"),
         nullable=True,
     )
     user_id: Mapped[int] = mapped_column(
@@ -69,4 +76,5 @@ class PortfolioItem(Base):
     )
 
     project: Mapped[Project | None] = relationship("Project", back_populates="portfolio_items")
+    portfolio: Mapped[Portfolio | None] = relationship("Portfolio", back_populates="items")
     user: Mapped[User] = relationship("User", back_populates="portfolio_items")
