@@ -231,7 +231,7 @@ ProgressBar {
                 # Middle region: sidebar + main scroll area
                 Container(
                     # Sidebar
-                    Container(
+                    VerticalScroll(
                         Static("Zip2Job\nAnalyzer", id="title"),
                         Label("Hi, -", id="user-label"),
                         Button("Log Out", id="btn-logout", variant="default"),
