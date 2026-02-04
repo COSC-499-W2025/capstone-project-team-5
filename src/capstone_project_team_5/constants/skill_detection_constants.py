@@ -2,10 +2,10 @@
 Constants for skill detection in project directories.
 """
 
-from enum import Enum
+from enum import StrEnum
 
 
-class SkillType(str, Enum):
+class SkillType(StrEnum):
     """Enum for skill types used in ProjectSkill table."""
 
     TOOL = "tool"

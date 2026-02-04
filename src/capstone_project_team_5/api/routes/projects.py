@@ -18,6 +18,7 @@ from capstone_project_team_5.api.schemas.projects import (
     ProjectSummary,
     ProjectUpdateRequest,
     ProjectUploadResponse,
+    ScoreConfig,
 )
 from capstone_project_team_5.consent_tool import ConsentTool
 from capstone_project_team_5.data.db import get_session
@@ -35,6 +36,9 @@ from capstone_project_team_5.services.upload_storage import get_upload_zip_path,
 from capstone_project_team_5.workflows.analysis_pipeline import analyze_projects_structured
 
 router = APIRouter(prefix="/projects", tags=["projects"])
+
+
+_score_config: ScoreConfig = ScoreConfig()
 
 
 def _project_to_summary(project: Project) -> ProjectSummary:
@@ -524,3 +528,32 @@ def analyze_all_projects(use_ai: bool = False) -> ProjectsAnalyzeAllResponse:
         session.flush()
 
     return ProjectsAnalyzeAllResponse(analyzed=analyzed, skipped=skipped)
+
+
+@router.get(
+    "/config/score",
+    response_model=ScoreConfig,
+    summary="Get score configuration",
+    description="Return the current importance score factor configuration.",
+)
+def get_score_config() -> ScoreConfig:
+    """Return the in-memory score configuration used by some clients."""
+
+    return _score_config
+
+
+@router.put(
+    "/config/score",
+    response_model=ScoreConfig,
+    summary="Update score configuration",
+    description=(
+        "Update the in-memory importance score factor configuration. "
+        "This endpoint does not retroactively change stored scores."
+    ),
+)
+def update_score_config(config: ScoreConfig) -> ScoreConfig:
+    """Update and return the score factor configuration."""
+
+    global _score_config
+    _score_config = config
+    return _score_config
