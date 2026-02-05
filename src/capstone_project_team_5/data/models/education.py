@@ -73,3 +73,10 @@ class Education(Base):
         if value < 0:
             raise ValueError("Rank must be non-negative")
         return value
+
+    @validates("gpa")
+    def validate_gpa(self, key: str, value: float | None) -> float | None:
+        """Validate GPA is in valid range (0.0 to 5.0)."""
+        if value is not None and (value < 0.0 or value > 5.0):
+            raise ValueError("GPA must be between 0.0 and 5.0")
+        return value
