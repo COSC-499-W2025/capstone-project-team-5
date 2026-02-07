@@ -255,6 +255,7 @@ class TestFormatRoleSummary:
             confidence="High",
             total_commits=50,
             total_contributors=1,
+            justification="Sole author with 50 commits",
         )
 
         summary = format_role_summary(role)
@@ -272,6 +273,7 @@ class TestFormatRoleSummary:
             confidence="High",
             total_commits=100,
             total_contributors=3,
+            justification="100 commits representing 70.5% of contributions with 2 other contributors",
         )
 
         summary = format_role_summary(role)
@@ -290,6 +292,7 @@ class TestFormatRoleSummary:
             confidence="Medium",
             total_commits=10,
             total_contributors=5,
+            justification="10 commits representing 15.0% of contributions with 4 other contributors",
         )
 
         summary = format_role_summary(role)
@@ -304,3 +307,78 @@ class TestFormatRoleSummary:
 
         assert "Unknown" in summary
         assert "insufficient data" in summary.lower()
+
+
+class TestRoleJustification:
+    """Test suite for role justification generation."""
+
+    def test_solo_developer_justification(self) -> None:
+        """Test justification for solo developer."""
+        contributions = [
+            AuthorContribution(author="Alice", commits=50, added=1000, deleted=200),
+        ]
+
+        role = detect_user_role(
+            project_path=Path("/fake/path"),
+            current_user="Alice",
+            author_contributions=contributions,
+            collaborator_count=1,
+        )
+
+        assert role is not None
+        assert role.justification == "Sole author with 50 commits"
+
+    def test_solo_developer_single_commit(self) -> None:
+        """Test justification for solo developer with one commit uses singular."""
+        contributions = [
+            AuthorContribution(author="Bob", commits=1, added=10, deleted=2),
+        ]
+
+        role = detect_user_role(
+            project_path=Path("/fake/path"),
+            current_user="Bob",
+            author_contributions=contributions,
+            collaborator_count=1,
+        )
+
+        assert role is not None
+        assert role.justification == "Sole author with 1 commit"
+
+    def test_collaborative_justification_two_contributors(self) -> None:
+        """Test justification for collaborative project with 2 contributors."""
+        contributions = [
+            AuthorContribution(author="Alice", commits=70, added=7000, deleted=700),
+            AuthorContribution(author="Bob", commits=30, added=3000, deleted=300),
+        ]
+
+        role = detect_user_role(
+            project_path=Path("/fake/path"),
+            current_user="Alice",
+            author_contributions=contributions,
+            collaborator_count=2,
+        )
+
+        assert role is not None
+        assert "70 commits" in role.justification
+        assert "70.0%" in role.justification
+        assert "1 other contributor" in role.justification
+
+    def test_collaborative_justification_multiple_contributors(self) -> None:
+        """Test justification for collaborative project with multiple contributors."""
+        contributions = [
+            AuthorContribution(author="Alice", commits=50, added=5000, deleted=500),
+            AuthorContribution(author="Bob", commits=30, added=3000, deleted=300),
+            AuthorContribution(author="Charlie", commits=20, added=2000, deleted=200),
+        ]
+
+        role = detect_user_role(
+            project_path=Path("/fake/path"),
+            current_user="Alice",
+            author_contributions=contributions,
+            collaborator_count=3,
+        )
+
+        assert role is not None
+        assert "50 commits" in role.justification
+        assert "50.0%" in role.justification
+        assert "2 other contributors" in role.justification

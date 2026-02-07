@@ -79,6 +79,7 @@ class ProjectAnalysis:
     # User role information (detected from Git contributions)
     user_role: str | None = None
     user_contribution_percentage: float | None = None
+    role_justification: str | None = None
 
 
 def analyze_project(project_path: Path, consent_tool: ConsentTool | None = None) -> ProjectAnalysis:

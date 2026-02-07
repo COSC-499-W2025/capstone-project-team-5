@@ -58,6 +58,7 @@ def _project_to_summary(project: Project) -> ProjectSummary:
         importance_score=project.importance_score,
         user_role=project.user_role,
         user_contribution_percentage=project.user_contribution_percentage,
+        role_justification=project.role_justification,
         created_at=project.created_at,
         updated_at=project.updated_at,
     )

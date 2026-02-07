@@ -23,6 +23,7 @@ class UserRole:
         confidence: Confidence level in role detection ("High", "Medium", "Low")
         total_commits: Total commits by user
         total_contributors: Total number of contributors
+        justification: Human-readable explanation of role assignment
     """
 
     role: str
@@ -31,6 +32,7 @@ class UserRole:
     confidence: str
     total_commits: int
     total_contributors: int
+    justification: str
 
 
 def detect_user_role(
@@ -87,6 +89,11 @@ def detect_user_role(
         contribution_pct, is_collaborative, collaborator_count, user_contrib.commits
     )
 
+    # Generate human-readable justification
+    justification = _generate_justification(
+        role, contribution_pct, user_contrib.commits, collaborator_count, is_collaborative
+    )
+
     return UserRole(
         role=role,
         contribution_percentage=round(contribution_pct, 1),
@@ -94,6 +101,7 @@ def detect_user_role(
         confidence=confidence,
         total_commits=user_contrib.commits,
         total_contributors=collaborator_count,
+        justification=justification,
     )
 
 
@@ -139,6 +147,41 @@ def _classify_role(
     # Minor contributor - small involvement
     confidence = "Low"
     return "Minor Contributor", confidence
+
+
+def _generate_justification(
+    role: str,
+    contribution_pct: float,
+    user_commits: int,
+    collaborator_count: int,
+    is_collaborative: bool,
+) -> str:
+    """Generate human-readable justification for role assignment.
+
+    Args:
+        role: Assigned role
+        contribution_pct: User's contribution percentage
+        user_commits: Number of commits by user
+        collaborator_count: Total number of contributors
+        is_collaborative: Whether project has multiple contributors
+
+    Returns:
+        Human-readable justification string
+    """
+    commit_str = "commit" if user_commits == 1 else "commits"
+
+    if not is_collaborative:
+        return f"Sole author with {user_commits} {commit_str}"
+
+    if collaborator_count == 2:
+        collab_str = "1 other contributor"
+    else:
+        collab_str = f"{collaborator_count - 1} other contributors"
+
+    return (
+        f"{user_commits} {commit_str} representing {contribution_pct:.1f}% "
+        f"of contributions with {collab_str}"
+    )
 
 
 def format_role_summary(role_info: UserRole | None) -> str:

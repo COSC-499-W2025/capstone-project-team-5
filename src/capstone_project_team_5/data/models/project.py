@@ -40,6 +40,7 @@ class Project(Base):
     importance_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     user_role: Mapped[str | None] = mapped_column(String, nullable=True)
     user_contribution_percentage: Mapped[float | None] = mapped_column(Float, nullable=True)
+    role_justification: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )

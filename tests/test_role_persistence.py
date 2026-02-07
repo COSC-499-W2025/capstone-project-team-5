@@ -179,3 +179,68 @@ def test_all_role_classifications_can_be_persisted(
             assert project is not None
             assert project.user_role == role
             assert project.user_contribution_percentage == percentage
+
+
+def test_role_justification_persisted_to_database(
+    temp_user: str, temp_project: tuple[str, str]
+) -> None:
+    """Test that role justification is saved to the Project table."""
+    project_name, project_rel_path = temp_project
+
+    # Create analysis with role justification
+    analysis = ProjectAnalysis(
+        project_path=Path("."),
+        language="Python",
+        user_role="Lead Developer",
+        user_contribution_percentage=75.5,
+        role_justification="87 commits representing 75.5% of contributions with 2 other contributors",
+    )
+
+    # Save to database
+    save_code_analysis_to_db(project_name, project_rel_path, analysis, username=temp_user)
+
+    # Verify role justification was saved
+    with get_session() as session:
+        project = (
+            session.query(Project)
+            .filter(Project.name == project_name, Project.rel_path == project_rel_path)
+            .first()
+        )
+
+        assert project is not None
+        assert project.user_role == "Lead Developer"
+        assert project.user_contribution_percentage == 75.5
+        assert (
+            project.role_justification
+            == "87 commits representing 75.5% of contributions with 2 other contributors"
+        )
+
+
+def test_role_justification_none_when_not_provided(
+    temp_user: str, temp_project: tuple[str, str]
+) -> None:
+    """Test that role_justification remains None when not included in analysis."""
+    project_name, project_rel_path = temp_project
+
+    # Create analysis without role justification
+    analysis = ProjectAnalysis(
+        project_path=Path("."),
+        language="Python",
+        user_role="Contributor",
+        user_contribution_percentage=25.0,
+        role_justification=None,
+    )
+
+    # Save to database
+    save_code_analysis_to_db(project_name, project_rel_path, analysis, username=temp_user)
+
+    # Verify role justification remains None
+    with get_session() as session:
+        project = (
+            session.query(Project)
+            .filter(Project.name == project_name, Project.rel_path == project_rel_path)
+            .first()
+        )
+
+        assert project is not None
+        assert project.role_justification is None
