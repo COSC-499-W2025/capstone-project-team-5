@@ -138,9 +138,9 @@ def materialize_project_tree(project_rel_path: str, upload_ids: list[int], dest_
         for file_path, meta in files.items():
             if project_rel_path:
                 prefix = f"{project_rel_path}/"
-                if not (file_path == project_rel_path or file_path.startswith(prefix)):
+                if not file_path.startswith(prefix):
                     continue
-                relative = file_path[len(prefix) :] if file_path.startswith(prefix) else ""
+                relative = file_path[len(prefix) :]
                 if not relative:
                     continue
             else:
