@@ -143,7 +143,7 @@ def test_gpa_validation(test_user):
     assert create_education(test_user, {"institution": "MIT", "degree": "BS", "gpa": -0.5}) is None
     assert create_education(test_user, {"institution": "MIT", "degree": "BS", "gpa": 5.5}) is None
 
-    # Valid GPA accepted (standard 4.0, weighted 5.0, zero edge case)
+    # Valid GPA accepted
     result = create_education(test_user, {"institution": "MIT", "degree": "BS", "gpa": 3.75})
     assert result["gpa"] == 3.75
 
