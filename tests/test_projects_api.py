@@ -223,7 +223,7 @@ def test_thumbnail_delete_removes() -> None:
     assert detail_payload["thumbnail_url"] is None
 
 
-def test_upload_appends_to_existing_project_by_name() -> None:
+def test_upload_appends_to_existing_project_by_name(api_db: None) -> None:
     client = TestClient(app)
     zip_bytes = _create_zip_bytes([("proj/main.py", b"print('v1')\n")])
     upload_response = client.post(
@@ -313,7 +313,7 @@ def test_dedupes_identical_file_content_across_uploads(api_db: None, tmp_path: P
     assert len(object_files) == 1
 
 
-def test_analysis_skips_when_fingerprint_unchanged() -> None:
+def test_analysis_skips_when_fingerprint_unchanged(api_db: None) -> None:
     client = TestClient(app)
     zip_bytes = _create_zip_bytes([("proj/main.py", b"print('v1')\n")])
     upload_response = client.post(
@@ -410,7 +410,7 @@ def test_analyze_project_updates_importance_score() -> None:
     assert detail_response.json()["importance_score"] is not None
 
 
-def test_analyze_all_updates_all_projects() -> None:
+def test_analyze_all_updates_all_projects(api_db: None) -> None:
     client = TestClient(app)
     zip_bytes = _create_zip_bytes(
         [
