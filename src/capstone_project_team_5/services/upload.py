@@ -285,21 +285,20 @@ def _discover_projects(names: list[str], ignore_patterns: set[str]) -> list[Dete
     return discovered
 
 
-def upload_zip(zip_path: Path | str) -> ZipUploadResult:
-    """Process a zip file, extract its structure, and persist metadata.
+def inspect_zip(zip_path: Path | str) -> tuple[ZipUploadResult, dict[str, bool]]:
+    """Inspect a zip file and return its structured metadata.
 
     Args:
         zip_path: Path to the zip file.
 
     Returns:
-        ZipUploadResult containing metadata and tree structure.
+        Tuple of:
+            - ZipUploadResult containing metadata and tree structure.
+            - Dict mapping project rel_path -> is_collaborative.
 
     Raises:
         InvalidZipError: If the file is not a valid zip archive.
     """
-    from capstone_project_team_5.data.db import get_session
-    from capstone_project_team_5.data.models import Project, UploadRecord
-
     path = Path(zip_path)
     _ensure_zip_file(path)
 
@@ -341,6 +340,25 @@ def upload_zip(zip_path: Path | str) -> ZipUploadResult:
         tree=tree,
         projects=projects,
     )
+    return result, collab_flags
+
+
+def upload_zip(zip_path: Path | str) -> ZipUploadResult:
+    """Process a zip file, extract its structure, and persist metadata.
+
+    Args:
+        zip_path: Path to the zip file.
+
+    Returns:
+        ZipUploadResult containing metadata and tree structure.
+
+    Raises:
+        InvalidZipError: If the file is not a valid zip archive.
+    """
+    from capstone_project_team_5.data.db import get_session
+    from capstone_project_team_5.data.models import Project, UploadRecord
+
+    result, collab_flags = inspect_zip(zip_path)
 
     with get_session() as session:
         upload_record = UploadRecord(
@@ -351,7 +369,7 @@ def upload_zip(zip_path: Path | str) -> ZipUploadResult:
         session.add(upload_record)
         session.flush()
 
-        for project in projects:
+        for project in result.projects:
             session.add(
                 Project(
                     upload_id=upload_record.id,
