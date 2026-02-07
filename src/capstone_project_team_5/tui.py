@@ -1033,6 +1033,7 @@ ProgressBar {
                             "importance_score": p.importance_score,
                             "user_role": p.user_role,
                             "user_contribution_percentage": p.user_contribution_percentage,
+                            "role_justification": p.role_justification,
                             "has_git_repo": p.has_git_repo,
                             "is_collaborative": p.is_collaborative,
                             "is_showcase": bool(getattr(p, "is_showcase", False)),
@@ -1209,6 +1210,7 @@ ProgressBar {
                             },
                             "user_role": proj.user_role,
                             "user_contribution_percentage": proj.user_contribution_percentage,
+                            "role_justification": proj.role_justification,
                             "is_showcase": bool(getattr(proj, "is_showcase", False)),
                         }
                     )
@@ -1496,10 +1498,13 @@ ProgressBar {
         portfolio_item = None
         role_line = ""
         user_role = project.get("user_role")
+        role_justification = project.get("role_justification")
         user_contrib_pct = project.get("user_contribution_percentage")
         if user_role:
             role_line = f"**Role:** {user_role}"
-            if user_contrib_pct is not None:
+            if role_justification:
+                role_line += f" ({role_justification})"
+            elif user_contrib_pct is not None:
                 role_line += f" ({user_contrib_pct:.1f}% contributions)"
 
         if self._current_user and project_id:
