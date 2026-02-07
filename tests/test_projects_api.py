@@ -308,7 +308,7 @@ def test_dedupes_identical_file_content_across_uploads(api_db: None, tmp_path: P
     content_hash = hashlib.sha256(content).hexdigest()
     object_path = get_objects_root() / content_hash[:2] / content_hash
     assert object_path.exists(), "Content store should hold one object for this content (dedupe)"
-    objects_root = tmp_path / "artifacts" / "objects"
+    objects_root = get_objects_root()
     object_files = [p for p in objects_root.rglob("*") if p.is_file()]
     assert len(object_files) == 1
 
