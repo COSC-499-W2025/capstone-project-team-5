@@ -304,18 +304,15 @@ def inspect_zip(zip_path: Path | str) -> tuple[ZipUploadResult, dict[str, bool]]
 
     ignore_patterns = _get_ignore_patterns()
 
-    with ZipFile(path) as archive:
-        names = archive.namelist()
-
-    tree = _build_tree(names, ignore_patterns)
-    file_count = _count_files(tree)
-    projects = _discover_projects(names, ignore_patterns)
-
     # Determine collaboration flags using the extracted archive contents.
     collab_flags: dict[str, bool] = {}
     with TemporaryDirectory() as temp_dir_str:
         extract_root = Path(temp_dir_str)
         with ZipFile(path) as archive:
+            names = archive.namelist()
+            tree = _build_tree(names, ignore_patterns)
+            file_count = _count_files(tree)
+            projects = _discover_projects(names, ignore_patterns)
             archive.extractall(extract_root)
 
         for project in projects:
