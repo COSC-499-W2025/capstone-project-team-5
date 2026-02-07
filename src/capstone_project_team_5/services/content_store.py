@@ -205,8 +205,13 @@ def materialize_project_tree(project_rel_path: str, upload_ids: list[int], dest_
     return target_root
 
 
-def compute_project_fingerprint(project_rel_path: str, upload_ids: list[int]) -> str:
-    """Compute a stable fingerprint for merged project content."""
+def _merge_project_files(
+    project_rel_path: str, upload_ids: list[int]
+) -> dict[str, tuple[str, int]]:
+    """Merge project files from multiple upload manifests.
+
+    Returns a dictionary mapping normalized file paths to (content_hash, size) tuples.
+    """
     project_rel_path = project_rel_path.strip("/")
     merged: dict[str, tuple[str, int]] = {}
     for upload_id in upload_ids:
@@ -228,7 +233,12 @@ def compute_project_fingerprint(project_rel_path: str, upload_ids: list[int]) ->
             content_hash = str(meta.get("hash", ""))
             size = int(meta.get("size", 0))
             merged[safe_path] = (content_hash, size)
+    return merged
 
+
+def compute_project_fingerprint(project_rel_path: str, upload_ids: list[int]) -> str:
+    """Compute a stable fingerprint for merged project content."""
+    merged = _merge_project_files(project_rel_path, upload_ids)
     entries = sorted((path, data[0], data[1]) for path, data in merged.items())
     hasher = hashlib.sha256()
     for path, content_hash, size in entries:
@@ -243,27 +253,7 @@ def compute_project_fingerprint(project_rel_path: str, upload_ids: list[int]) ->
 
 def compute_project_file_count(project_rel_path: str, upload_ids: list[int]) -> int:
     """Compute file count for the merged project view."""
-    project_rel_path = project_rel_path.strip("/")
-    merged: dict[str, tuple[str, int]] = {}
-    for upload_id in upload_ids:
-        manifest = load_manifest(upload_id)
-        if not manifest:
-            continue
-        files: dict[str, dict[str, Any]] = manifest.get("files", {})
-        for file_path, meta in files.items():
-            if project_rel_path:
-                prefix = f"{project_rel_path}/"
-                if not file_path.startswith(prefix):
-                    continue
-                relative = file_path[len(prefix) :]
-            else:
-                relative = file_path
-            safe_path = _normalize_zip_path(relative)
-            if safe_path is None:
-                continue
-            content_hash = str(meta.get("hash", ""))
-            size = int(meta.get("size", 0))
-            merged[safe_path] = (content_hash, size)
+    merged = _merge_project_files(project_rel_path, upload_ids)
     return len(merged)
 
 
