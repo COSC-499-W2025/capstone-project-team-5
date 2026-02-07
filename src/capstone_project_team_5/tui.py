@@ -1614,10 +1614,13 @@ ProgressBar {
             parts.append(f"- Files: {project.get('file_count')}")
             parts.append(f"- Upload ID: {project.get('upload_id')}")
             user_role = project.get("user_role")
+            role_justification = project.get("role_justification")
             user_contrib_pct = project.get("user_contribution_percentage")
             if user_role:
                 role_line = f"- Role: {user_role}"
-                if user_contrib_pct is not None:
+                if role_justification:
+                    role_line += f" ({role_justification})"
+                elif user_contrib_pct is not None:
                     role_line += f" ({user_contrib_pct:.1f}% contributions)"
                 parts.append(role_line)
             langs = project.get("languages") or []
@@ -1673,10 +1676,13 @@ ProgressBar {
         parts.append(f"- Analysis ID: {analysis_row.id}")
         parts.append(f"- Timestamp: {analysis_row.created_at}")
         user_role = project_dict.get("user_role")
+        role_justification = project_dict.get("role_justification")
         user_contrib_pct = project_dict.get("user_contribution_percentage")
         if user_role:
             role_line = f"- Role: {user_role}"
-            if user_contrib_pct is not None:
+            if role_justification:
+                role_line += f" ({role_justification})"
+            elif user_contrib_pct is not None:
                 role_line += f" ({user_contrib_pct:.1f}% contributions)"
             parts.append(role_line)
 
