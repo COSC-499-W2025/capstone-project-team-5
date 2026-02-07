@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, BinaryIO
 from zipfile import BadZipFile, ZipFile
 
 from capstone_project_team_5.models.upload import InvalidZipError
@@ -15,6 +17,7 @@ from capstone_project_team_5.models.upload import InvalidZipError
 _OBJECTS_DIR_NAME = "objects"
 _MANIFESTS_DIR_NAME = "manifests"
 _ANALYSIS_CACHE_DIR_NAME = "analysis_cache"
+_STREAM_CHUNK_SIZE = 1024 * 1024
 
 
 def get_artifact_store_root() -> Path:
@@ -52,10 +55,25 @@ def _normalize_zip_path(name: str) -> str | None:
     return "/".join(part for part in parts if part)
 
 
-def _sha256_bytes(data: bytes) -> str:
+def _hash_stream(source: BinaryIO) -> tuple[str, int]:
     hasher = hashlib.sha256()
-    hasher.update(data)
-    return hasher.hexdigest()
+    size = 0
+    for chunk in iter(lambda: source.read(_STREAM_CHUNK_SIZE), b""):
+        hasher.update(chunk)
+        size += len(chunk)
+    return hasher.hexdigest(), size
+
+
+def _write_stream_and_hash(source: BinaryIO, destination: BinaryIO) -> tuple[str, int]:
+    hasher = hashlib.sha256()
+    size = 0
+    for chunk in iter(lambda: source.read(_STREAM_CHUNK_SIZE), b""):
+        destination.write(chunk)
+        hasher.update(chunk)
+        size += len(chunk)
+    destination.flush()
+    os.fsync(destination.fileno())
+    return hasher.hexdigest(), size
 
 
 def _object_path(content_hash: str) -> Path:
@@ -88,18 +106,40 @@ def ingest_zip(zip_path: Path | str, upload_id: int) -> dict[str, Any]:
                 if normalized is None:
                     continue
                 with archive.open(info) as source:
-                    data = source.read()
-                content_hash = _sha256_bytes(data)
+                    content_hash, size = _hash_stream(source)
                 object_path = _object_path(content_hash)
                 if not object_path.exists():
                     object_path.parent.mkdir(parents=True, exist_ok=True)
-                    temp_path = object_path.with_suffix(".tmp")
-                    temp_path.write_bytes(data)
-                    temp_path.replace(object_path)
+                    temp_path: Path | None = None
+                    try:
+                        with tempfile.NamedTemporaryFile(
+                            mode="wb",
+                            dir=object_path.parent,
+                            suffix=".tmp",
+                            delete=False,
+                        ) as temp_file:
+                            temp_path = Path(temp_file.name)
+                            with archive.open(info) as source:
+                                final_hash, final_size = _write_stream_and_hash(source, temp_file)
+                        if final_hash != content_hash:
+                            raise RuntimeError(
+                                "Content hash mismatch while streaming archive entry."
+                            )
+                        if object_path.exists():
+                            temp_path.unlink(missing_ok=True)
+                        else:
+                            os.replace(temp_path, object_path)
+                        size = final_size
+                        content_hash = final_hash
+                    except Exception:
+                        if temp_path is not None:
+                            with contextlib.suppress(FileNotFoundError):
+                                temp_path.unlink()
+                        raise
 
                 manifest["files"][normalized] = {
                     "hash": content_hash,
-                    "size": len(data),
+                    "size": size,
                 }
     except BadZipFile as exc:
         raise InvalidZipError(f"{path.name} is not a valid ZIP archive") from exc
