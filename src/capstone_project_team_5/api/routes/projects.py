@@ -590,8 +590,8 @@ def analyze_all_projects(use_ai: bool = False, force: bool = False) -> ProjectsA
                 project.importance_score = response.importance_score
                 project.user_role = response.user_role
                 project.user_contribution_percentage = response.user_contribution_percentage
-                analyzed.append(response)
                 write_analysis_cache(project.id, fingerprint, response.model_dump())
+                analyzed.append(response)
             except HTTPException as exc:
                 reason = str(exc.detail) if exc.detail else "Project analysis failed."
                 skipped.append(ProjectAnalysisSkipped(project_id=project.id, reason=reason))
@@ -602,7 +602,6 @@ def analyze_all_projects(use_ai: bool = False, force: bool = False) -> ProjectsA
                         reason=f"Project analysis failed: {exc!s}",
                     )
                 )
-
         session.flush()
 
     return ProjectsAnalyzeAllResponse(analyzed=analyzed, skipped=skipped)
