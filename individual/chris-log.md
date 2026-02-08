@@ -304,7 +304,7 @@ This week we focused on code contributions and planning for the upcoming in clas
 
 <details>
   <summary><h3></h3></summary>
-
+<img alt="Screenshot 2026-02-08 110056" src="https://github.com/user-attachments/assets/c1136da8-8bc0-4bc2-af91-4d768635938a" />
 
 
 Over the past two weeks, we conducted in-class demos with other teams and used feedback to identify and fix minor bugs in our system. My primary focus was enhancing Requirement 24 (role detection) by expanding the user logic. I implemented a role taxonomy using constants to categorize different software development roles, built a role justification system that explains why specific roles are assigned to users, integrated role information into our database retrieval functions, and added TUI functionality to display detected roles and their explanations in the analysis view. Next week I plan to continue enhancing R24, by implementing specialized role detection that goes beyond contribution percentages to identify Project Creators (first commits and intiialization files), Tech Leads (infrastructure and config focus), Maintainers (sustained activity patterns), and Documentation Leads (high proportion of doc changes). This will involve creating file pattern analysis and implementing detection logic to provide more nuanced role assignments.
