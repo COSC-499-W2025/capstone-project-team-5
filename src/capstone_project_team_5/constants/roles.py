@@ -12,23 +12,23 @@ from enum import Enum
 
 class ProjectRole(str, Enum):
     """Enumeration of all possible project roles.
-    
+
     Roles are ordered by typical contribution level (highest to lowest).
     """
 
     # Primary ownership roles
     SOLO_DEVELOPER = "Solo Developer"
     PROJECT_CREATOR = "Project Creator"
-    
+
     # Leadership roles
     LEAD_DEVELOPER = "Lead Developer"
     TECH_LEAD = "Tech Lead"
     MAINTAINER = "Maintainer"
-    
+
     # Active contribution roles
     CORE_CONTRIBUTOR = "Core Contributor"
     MAJOR_CONTRIBUTOR = "Major Contributor"
-    
+
     # Supporting roles
     CONTRIBUTOR = "Contributor"
     MINOR_CONTRIBUTOR = "Minor Contributor"
@@ -95,10 +95,10 @@ ROLE_METADATA: dict[ProjectRole, RoleMetadata] = {
 
 def get_role_description(role: str | ProjectRole) -> str:
     """Get the description for a given role.
-    
+
     Args:
         role: Role name or ProjectRole enum
-        
+
     Returns:
         Description string for the role, or default description if not found
     """
@@ -107,17 +107,17 @@ def get_role_description(role: str | ProjectRole) -> str:
             role = ProjectRole(role)
         except ValueError:
             return "Unknown role"
-    
+
     metadata = ROLE_METADATA.get(role)
     return metadata.description if metadata else "Unknown role"
 
 
 def get_role_priority(role: str | ProjectRole) -> int:
     """Get the display priority for a given role.
-    
+
     Args:
         role: Role name or ProjectRole enum
-        
+
     Returns:
         Display priority (lower = higher priority)
     """
@@ -126,6 +126,6 @@ def get_role_priority(role: str | ProjectRole) -> int:
             role = ProjectRole(role)
         except ValueError:
             return 99
-    
+
     metadata = ROLE_METADATA.get(role)
     return metadata.display_priority if metadata else 99
