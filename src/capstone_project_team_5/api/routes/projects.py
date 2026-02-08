@@ -140,6 +140,7 @@ def _analysis_to_response(project_id: int, analysis: dict[str, Any]) -> ProjectA
         git=analysis["git"],
         user_role=analysis.get("user_role"),
         user_contribution_percentage=analysis.get("user_contribution_percentage"),
+        role_justification=analysis.get("role_justification"),
     )
 
 
