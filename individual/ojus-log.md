@@ -4,6 +4,8 @@
 
 ### This Week - 4,5
 
+<img width="700" height="350" alt="image" src="https://github.com/user-attachments/assets/1c440737-39f8-4b7a-b01f-d97871ddb5e6" />
+
 
 #### What Went Well
 - Completed Peer testing effectively, gathered feedback, discussed issues with team, implemented/backlogged fixes.
