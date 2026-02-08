@@ -126,3 +126,13 @@ This week time was spent meeting with team members in class on monday discussing
 | Aggregated Skills | Done | Service completed, will add to TUI after peer testing. |    
 
 ![screenshot](Week9_checklist.png)
+
+## Term 2 - Weeks #4-5 (January 26 - February 8)
+
+Over the course of these two weeks time was spent peer testing during week 4 alongside weekly contributions. This week was spent implementing peer testing feedback along with continuing to meet requirements for milestone #2. Project chronology was added to the projects table as well as rendered in the TUI alongside other project attributes. In addition the user can make changes to these dates. The plan for next week is to check off any milestone #2 requirements not done. PR: link https://github.com/COSC-499-W2025/capstone-project-team-5/pull/300. 
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| Project Chronology | Done | Completed in whole. |    
+
+![screenshot](Week9_checklist.png)
