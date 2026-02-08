@@ -155,7 +155,8 @@ def test_all_role_classifications_can_be_persisted(
     roles = [
         ("Solo Developer", 100.0),
         ("Lead Developer", 75.0),
-        ("Major Contributor", 45.0),
+        ("Core Contributor", 50.0),
+        ("Major Contributor", 30.0),
         ("Contributor", 20.0),
         ("Minor Contributor", 5.0),
     ]

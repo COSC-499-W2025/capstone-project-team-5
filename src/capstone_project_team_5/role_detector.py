@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from capstone_project_team_5.constants.roles import ProjectRole
 from capstone_project_team_5.utils.git import AuthorContribution
 
 
@@ -127,26 +128,31 @@ def _classify_role(
     # Solo developer - 100% contribution or only contributor
     if not is_collaborative or contribution_pct >= 99.0:
         confidence = "High" if user_commits >= 5 else "Medium"
-        return "Solo Developer", confidence
+        return ProjectRole.SOLO_DEVELOPER.value, confidence
 
-    # Lead developer - dominant contributor in team project
+    # Lead developer - dominant contributor in team project (60-98%)
     if contribution_pct >= 60.0:
         confidence = "High" if user_commits >= 10 else "Medium"
-        return "Lead Developer", confidence
+        return ProjectRole.LEAD_DEVELOPER.value, confidence
 
-    # Major contributor - significant but not lead
-    if contribution_pct >= 30.0:
+    # Core contributor - substantial ongoing involvement (40-59%)
+    if contribution_pct >= 40.0:
+        confidence = "High" if user_commits >= 8 else "Medium"
+        return ProjectRole.CORE_CONTRIBUTOR.value, confidence
+
+    # Major contributor - significant but not core (25-39%)
+    if contribution_pct >= 25.0:
         confidence = "High" if user_commits >= 5 else "Medium"
-        return "Major Contributor", confidence
+        return ProjectRole.MAJOR_CONTRIBUTOR.value, confidence
 
-    # Contributor - moderate involvement
+    # Contributor - moderate involvement (10-24%)
     if contribution_pct >= 10.0:
         confidence = "Medium" if user_commits >= 3 else "Low"
-        return "Contributor", confidence
+        return ProjectRole.CONTRIBUTOR.value, confidence
 
-    # Minor contributor - small involvement
+    # Minor contributor - small involvement (<10%)
     confidence = "Low"
-    return "Minor Contributor", confidence
+    return ProjectRole.MINOR_CONTRIBUTOR.value, confidence
 
 
 def _generate_justification(
@@ -194,23 +200,13 @@ def format_role_summary(role_info: UserRole | None) -> str:
         Human-readable role summary string
     """
     if not role_info:
-        return "👤 Role: Unknown (insufficient data)"
-
-    emoji_map = {
-        "Solo Developer": "👨‍💻",
-        "Lead Developer": "🎯",
-        "Major Contributor": "🔧",
-        "Contributor": "🤝",
-        "Minor Contributor": "✨",
-    }
-
-    emoji = emoji_map.get(role_info.role, "👤")
+        return "Role: Unknown (insufficient data)"
 
     if role_info.is_collaborative:
         return (
-            f"{emoji} Role: {role_info.role} "
+            f"Role: {role_info.role} "
             f"({role_info.contribution_percentage:.1f}% of contributions, "
             f"{role_info.total_commits} commits)"
         )
     else:
-        return f"{emoji} Role: {role_info.role} ({role_info.total_commits} commits)"
+        return f"Role: {role_info.role} ({role_info.total_commits} commits)"
