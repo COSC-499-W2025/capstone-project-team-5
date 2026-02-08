@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from zipfile import BadZipFile, ZipFile
@@ -314,6 +315,8 @@ def upload_zip(zip_path: Path | str) -> ZipUploadResult:
 
     # Determine collaboration flags using the extracted archive contents.
     collab_flags: dict[str, bool] = {}
+    project_dates: dict[str, tuple[date | None, date | None]] = {}
+
     with TemporaryDirectory() as temp_dir_str:
         extract_root = Path(temp_dir_str)
         with ZipFile(path) as archive:
@@ -331,8 +334,18 @@ def upload_zip(zip_path: Path | str) -> ZipUploadResult:
                     collab_flags[project.rel_path] = CollabDetector.is_collaborative(project_root)
                 except Exception:
                     collab_flags[project.rel_path] = False
+
+                try:
+                    from capstone_project_team_5.contribution_metrics import ContributionMetrics
+
+                    project_dates[project.rel_path] = ContributionMetrics.get_project_dates(
+                        project_root
+                    )
+                except Exception:
+                    project_dates[project.rel_path] = (None, None)
             else:
                 collab_flags[project.rel_path] = False
+                project_dates[project.rel_path] = (None, None)
 
     result = ZipUploadResult(
         filename=path.name,
@@ -352,6 +365,8 @@ def upload_zip(zip_path: Path | str) -> ZipUploadResult:
         session.flush()
 
         for project in projects:
+            start_date, end_date = project_dates.get(project.rel_path, (None, None))
+
             session.add(
                 Project(
                     upload_id=upload_record.id,
@@ -360,6 +375,8 @@ def upload_zip(zip_path: Path | str) -> ZipUploadResult:
                     has_git_repo=project.has_git_repo,
                     file_count=project.file_count,
                     is_collaborative=collab_flags.get(project.rel_path, False),
+                    start_date=start_date,
+                    end_date=end_date,
                 )
             )
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import suppress
+from datetime import date
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
@@ -241,6 +242,7 @@ ProgressBar {
                         Button("Delete Analysis", id="btn-delete-analysis", variant="error"),
                         Button("Set Thumbnail", id="btn-set-thumbnail", variant="default"),
                         Button("Toggle Showcase", id="btn-toggle-showcase", variant="default"),
+                        Button("Update Dates", id="btn-update-dates", variant="default"),
                         Button("Configure Scoring", id="btn-config-scoring", variant="default"),
                         Input(
                             placeholder="Thumbnail URL",
@@ -308,6 +310,7 @@ ProgressBar {
         set_thumb_btn = self.query_one("#btn-set-thumbnail", Button)
         export_pdf_btn = self.query_one("#btn-export-pdf", Button)
         export_txt_btn = self.query_one("#btn-export-txt", Button)
+        update_dates_btn = self.query_one("#btn-update-dates", Button)
 
         editor.display = False
         analysis_list.display = False
@@ -318,6 +321,7 @@ ProgressBar {
         config_scoring_btn.display = True
         export_pdf_btn.display = False
         export_txt_btn.display = False
+        update_dates_btn.display = False
         # Auth inputs are hidden until user chooses login or signup.
         username_input.display = False
         password_input.display = False
@@ -415,6 +419,125 @@ ProgressBar {
         if not selected:
             return None
         return Path(selected)
+
+    def _update_dates_button(self, project_id: int | None) -> None:
+        """
+        Enables or disables the Update Dates button
+        based on current state.
+
+        :param project_id: Project ID of current project or None.
+        :type project_id: int | None
+        """
+
+        update_btn = self.query_one("#btn-update-dates", Button)
+        enabled = (
+            self._view_mode == "saved" and self._current_user is not None and project_id is not None
+        )
+        update_btn.display = enabled
+
+    def _prompt_for_dates(self, current_start: date | None, current_end: date | None) -> tuple:
+        """
+        Prompts the user to enter two valid dates (start, end).
+        Validates that the dates are valid, if so they are returned.
+
+        :param current_start: Current start date or None.
+        :type current_start: date | None
+        :param current_end: Current end date or None.
+        :type current_end: date | None
+        :return: Tuple of start, end dates.
+        :rtype: tuple
+        """
+
+        from datetime import datetime
+
+        import easygui
+
+        start_str = current_start.strftime("%Y-%m-%d") if current_start else ""
+        end_str = current_end.strftime("%Y-%m-%d") if current_end else ""
+
+        msg = "Enter project dates in YYYY-MM-DD format.\nLeave blank to clear a date."
+        title = "Update Project Chronology"
+        field_names = ["Start Date:", "End Date:"]
+        field_values = [start_str, end_str]
+
+        result = easygui.multenterbox(msg, title, field_names, field_values)
+
+        if result is None:
+            return None
+
+        start_input, end_input = result
+
+        start_date = None
+        end_date = None
+
+        if start_input.strip():
+            try:
+                start_date = datetime.strptime(start_input.strip(), "%Y-%m-%d").date()
+            except ValueError:
+                easygui.msgbox("Invalid start date format. Use YYYY-MM-DD.", "Error")
+                return None
+
+        if end_input.strip():
+            try:
+                end_date = datetime.strptime(end_input.strip(), "%Y-%m-%d").date()
+            except ValueError:
+                easygui.msgbox("Invalid end date format. Use YYYY-MM-DD.", "Error")
+                return None
+
+        if start_date and end_date and start_date > end_date:
+            easygui.msgbox("Start date cannot be after end date.", "Validation Error")
+            return None
+
+        return (start_date, end_date)
+
+    def _format_duration_from_dates(self, start_date: date | None, end_date: date | None) -> str:
+        """
+        Formats duration for display based on start and
+        end dates.
+
+        :param start_date: Start date.
+        :type start_date: date | None
+        :param end_date: End date.
+        :type end_date: date | None
+        :return: Formatted string representing duration.
+        :rtype: str
+        """
+
+        if not start_date and not end_date:
+            return "Duration not set"
+
+        if start_date and not end_date:
+            return f"Started {start_date.strftime('%b %Y')} (ongoing)"
+
+        if not start_date and end_date:
+            return f"Completed {end_date.strftime('%b %Y')}"
+
+        from datetime import timedelta
+
+        delta: timedelta = end_date - start_date
+
+        months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+
+        if months < 1:
+            days = delta.days
+            if days == 0:
+                return f"{start_date.strftime('%b %Y')}"
+            elif days < 7:
+                return f"{days} day{'s' if days != 1 else ''} ({start_date.strftime('%b %Y')})"
+            else:
+                weeks = days // 7
+                return f"{weeks} week{'s' if weeks != 1 else ''} ({start_date.strftime('%b %Y')})"
+        elif months < 12:
+            month_word = f"{months} month{'s' if months != 1 else ''}"
+            date_range = f"{start_date.strftime('%b %Y')} - {end_date.strftime('%b %Y')}"
+            return f"{month_word} ({date_range})"
+        else:
+            years = months // 12
+            remaining_months = months % 12
+            duration_str = f"{years} year{'s' if years != 1 else ''}"
+            if remaining_months > 0:
+                duration_str += f", {remaining_months} month{'s' if remaining_months != 1 else ''}"
+            return f"{duration_str} ({start_date.strftime('%b %Y')} - {end_date.strftime('%b %Y')})"
 
     def _show_editor(self) -> None:
         """Show the markdown editor and hide the rendered output."""
@@ -795,6 +918,7 @@ ProgressBar {
         self._analysis_selected = False
         self._update_thumbnail_buttons(None)
         self._update_showcase_button(None)
+        self._update_dates_button(None)
         projects_header.display = False
         analyses_header.display = False
         analysis_list.display = False
@@ -882,6 +1006,7 @@ ProgressBar {
         self._analysis_selected = False
         self._update_thumbnail_buttons(None)
         self._update_showcase_button(None)
+        self._update_dates_button(None)
         projects_header.display = True
         analyses_header.display = True
         project_list.display = True
@@ -1037,6 +1162,8 @@ ProgressBar {
                             "is_collaborative": p.is_collaborative,
                             "is_showcase": bool(getattr(p, "is_showcase", False)),
                             "analyses": analyses_list,
+                            "start_date": p.start_date,
+                            "end_date": p.end_date,
                             "languages": sorted(languages),
                             "tools": sorted(tools),
                             "practices": sorted(practices),
@@ -1422,6 +1549,7 @@ ProgressBar {
         self._show_saved_project(0)
         self._update_thumbnail_buttons(self._current_saved_project_id())
         self._update_showcase_button(self._current_saved_project_id())
+        self._update_dates_button(self._current_saved_project_id())
         status.update("Loaded saved analyses.")
 
     def _handle_worker_success_retrieve(
@@ -1454,6 +1582,7 @@ ProgressBar {
             self._saved_active_project_index = event.index
             self._update_thumbnail_buttons(self._current_saved_project_id())
             self._show_saved_project(event.index)
+            self._update_dates_button(self._current_saved_project_id())
         else:
             self._show_project_detail(event.index)
 
@@ -1615,6 +1744,10 @@ ProgressBar {
                 if user_contrib_pct is not None:
                     role_line += f" ({user_contrib_pct:.1f}% contributions)"
                 parts.append(role_line)
+            start_date = project.get("start_date")
+            end_date = project.get("end_date")
+            duration = self._format_duration_from_dates(start_date, end_date)
+            parts.append(f"- Duration: {duration}")
             langs = project.get("languages") or []
             if langs:
                 parts.append(f"- Languages: {', '.join(langs)}")
@@ -1667,6 +1800,11 @@ ProgressBar {
         parts.append("### Summary")
         parts.append(f"- Analysis ID: {analysis_row.id}")
         parts.append(f"- Timestamp: {analysis_row.created_at}")
+        start_date = project_dict.get("start_date")
+        end_date = project_dict.get("end_date")
+        if start_date or end_date:
+            duration = self._format_duration_from_dates(start_date, end_date)
+            parts.append(f"- Duration: {duration}")
         user_role = project_dict.get("user_role")
         user_contrib_pct = project_dict.get("user_contribution_percentage")
         if user_role:
@@ -1932,6 +2070,64 @@ ProgressBar {
         }
 
         status.update("Scoring factors updated. Re-run analysis to apply.")
+
+    @on(Button.Pressed, "#btn-update-dates")
+    def handle_update_dates(self) -> None:
+        """Update start and end dates for the selected saved project."""
+
+        status = self.query_one("#status", Label)
+
+        if self._view_mode != "saved":
+            status.update("Switch to saved view to update dates.")
+            return
+
+        if self._current_user is None:
+            status.update("Please log in to update dates.")
+            return
+
+        project_id = self._current_saved_project_id()
+        if project_id is None:
+            status.update("Select a saved project first.")
+            return
+
+        try:
+            from capstone_project_team_5.data.db import get_session
+            from capstone_project_team_5.data.models import Project as ProjectModel
+
+            with get_session() as session:
+                proj = session.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+                if proj is None:
+                    status.update("Project not found.")
+                    return
+
+                current_start = proj.start_date
+                current_end = proj.end_date
+
+                result = self._prompt_for_dates(current_start, current_end)
+
+                if result is None:
+                    status.update("Date update cancelled.")
+                    return
+
+                start_date, end_date = result
+
+                proj.start_date = start_date
+                proj.end_date = end_date
+                session.flush()
+
+                status.update("Project dates updated.")
+
+                for p in self._saved_projects:
+                    if p.get("id") == project_id:
+                        p["start_date"] = start_date
+                        p["end_date"] = end_date
+                        break
+
+                if self._saved_active_project_index is not None:
+                    self._show_saved_project(self._saved_active_project_index)
+
+        except Exception as exc:
+            status.update(f"Failed to update dates: {exc}")
 
     @on(Button.Pressed, "#btn-edit")
     def handle_edit_button(self) -> None:
@@ -2279,6 +2475,7 @@ ProgressBar {
         app_screen.display = False
         status.update("Logged out. Please log in again.")
         self._update_thumbnail_buttons(None)
+        self._update_dates_button(None)
 
     @on(Button.Pressed, "#btn-exit")
     def exit_app(self) -> None:
