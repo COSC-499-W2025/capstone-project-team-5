@@ -194,7 +194,9 @@ def test_role_justification_persisted_to_database(
         language="Python",
         user_role="Lead Developer",
         user_contribution_percentage=75.5,
-        role_justification="87 commits representing 75.5% of contributions with 2 other contributors",
+        role_justification=(
+            "87 commits representing 75.5% of contributions with 2 other contributors"
+        ),
     )
 
     # Save to database

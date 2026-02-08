@@ -7,10 +7,10 @@ along with their associated metadata (emoji, description, priority).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class ProjectRole(str, Enum):
+class ProjectRole(StrEnum):
     """Enumeration of all possible project roles.
 
     Roles are ordered by typical contribution level (highest to lowest).

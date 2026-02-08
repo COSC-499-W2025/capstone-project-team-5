@@ -311,7 +311,9 @@ class TestFormatRoleSummary:
             confidence="High",
             total_commits=100,
             total_contributors=3,
-            justification="100 commits representing 70.5% of contributions with 2 other contributors",
+            justification=(
+                "100 commits representing 70.5% of contributions with 2 other contributors"
+            ),
         )
 
         summary = format_role_summary(role)
@@ -329,7 +331,9 @@ class TestFormatRoleSummary:
             confidence="Medium",
             total_commits=10,
             total_contributors=5,
-            justification="10 commits representing 15.0% of contributions with 4 other contributors",
+            justification=(
+                "10 commits representing 15.0% of contributions with 4 other contributors"
+            ),
         )
 
         summary = format_role_summary(role)
@@ -347,7 +351,9 @@ class TestFormatRoleSummary:
             confidence="High",
             total_commits=45,
             total_contributors=3,
-            justification="45 commits representing 45.0% of contributions with 2 other contributors",
+            justification=(
+                "45 commits representing 45.0% of contributions with 2 other contributors"
+            ),
         )
 
         summary = format_role_summary(role)
