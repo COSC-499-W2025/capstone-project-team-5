@@ -2,26 +2,29 @@
 
 **GitHub:** [@ojusharma](https://github.com/ojusharma)
 
-### This Week - 3
-
-<img width="600" height="400" alt="image" src="https://github.com/user-attachments/assets/cb533892-3c37-4b5e-9512-4a331534fc77" />
+### This Week - 4,5
 
 
 #### What Went Well
-- Successfully completed and merged [PR #257](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/257) : Export Saved Analysis as PDF/TXT
-- Reviewed and approved [PR #256](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/256): feat: add endpoint for portfolio edit by Ribhav. Added suggested improvements (persisting sessions)
-- Reviewed and approved [PR #251](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/251) : feat(api): add project analysis endpoints with ZIP storage by Ronit
-- Reviewed and approved Individual logs
-- Prepared for Peer Testing
+- Completed Peer testing effectively, gathered feedback, discussed issues with team, implemented/backlogged fixes.
+- Created and merged:
+  - [PR #295 - Implement Scroll on Side Panel](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/295): Changed the left panel container to VerticalScroll for better UX and to support future expansion of functionality.
+  - [PR #276 - Add UserProfile, WorkExperience & Education Tables to Schema](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/276): Added database models and schema (UserProfile, Education, WorkExperience tables) for storing user profile information to support the resume generator feature.
+  - [PR #292 - Resume Generator: Education CRUD](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/292): Implemented a complete Education CRUD service with validation for fields, dates, GPA range, and cross-user access prevention as part of the resume generation feature.
+  - [PR #291 - Resume Generator: Work Exp CRUD](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/291): Added full CRUD operations for managing user work experience entries (list, retrieve, add, modify, delete) to support resume generation.
+  - [PR #290 - Resume Generator: Add User Info CRUD](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/290): Introduced a UserProfileService with CRUD operations for managing user contact and personal information to support TUI and REST API resume generation endpoints.
+- Reviewed and approved:
+  - [PR #283 - feat: add /config/score endpoint](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/283): Suggested a future topic of converstation for the team - implementing thread-safe lagic if wanna move towards concurrency at some point.
+  - Reviewed and approved Individual logs
   
 #### What Didn't Go Well
-- Had to attend check-in online due to a (horribly inconvenient) infection
+- All good
 
 #### Planning for Next Week
-- Work with team to cover any missed/incomplete requirements (from my end, I will bring up the diff checker tool and how we can integrate it)
+- Adding REST endpoints for the Education, Work Exp and User Info
+- Start creating the actual resume generator tool
 - Continue reviewing teammates' PRs to support code collaboration
-- Enhance the PDF/TXT analysis export to support better styling
-- Do Peer Testing
+- Review more PRs :)
   
 </details>
 
