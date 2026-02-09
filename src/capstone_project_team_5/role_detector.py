@@ -92,7 +92,7 @@ def detect_user_role(
 
     # Generate human-readable justification
     justification = _generate_justification(
-        role, contribution_pct, user_contrib.commits, collaborator_count, is_collaborative
+        contribution_pct, user_contrib.commits, collaborator_count, is_collaborative
     )
 
     return UserRole(
@@ -164,7 +164,6 @@ def _generate_justification(
     """Generate human-readable justification for role assignment.
 
     Args:
-        role: Assigned role
         contribution_pct: User's contribution percentage
         user_commits: Number of commits by user
         collaborator_count: Total number of contributors
