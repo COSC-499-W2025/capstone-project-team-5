@@ -29,6 +29,9 @@ _Last Updated:_ February 8, 2026
 | Reviewed [PR #292](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/292) (education CRUD) | ✅ Done | Suggested ORM-level GPA validation; noted boundary tests missing despite comments claiming coverage |
 | Reviewed [PR #293](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/293) (portfolio endpoints) | ✅ Done | Found `is_showcase` present in response schema but missing from endpoint implementation |
 | Reviewed [PR #275](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/275) (configuration + UX fixes) | ✅ Done | Reported CTRL+S save keybind only fixed for project editing but still broken for analysis editing; suggested improved test assertion |
+| Reviewed [PR #272](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/272) (consent tool refinements) | ✅ Done | Reported inconsistencies |
+| Reviewed [PR #257](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/257) (export analysis as PDF/TXT) | ✅ Done | Suggested refactor |
+| Reviewed [PR #256](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/256) (portfolio edit endpoint) | ✅ Done | |
 
 ### To-Dos for Next Cycle
 | Task | Status | Notes |
