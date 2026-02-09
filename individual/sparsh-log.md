@@ -6,16 +6,47 @@
 
 
 # TERM2 Logs - Sparsh Khanna
+---
+## Week 4-5 | January 26- February 8, 2026
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+<img width="2940" height="1912" alt="image" src="https://github.com/user-attachments/assets/50bcf387-42fd-443d-a74f-21b0ca672d42" />
+</details>
+### Tasks worked on
+
+- Consent Api endpoints Introduction [PR#303](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/303)
+- Wrote UTs to ensure code correctness and good coverage.
+- Reviewed Teammates code
+
+
+### Personal Contributions
+
+- Project Re Ranking Logic Introduction 
+In this pull request I added a new batch reranking API endpoint for projects, allowing users to update the importance ranks of multiple projects in a single operation. It includes input validation, updates to the API schema, and comprehensive tests to ensure correct behavior and error handling.
+
+### Tests Added
+- [PR#303](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/303)
+- tests/test_project_rerank.py
+
+### PRs Reviewed
+- [PR#292](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/292)
+- [PR#291](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/291)
+- [PR#283](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/283)
+- [PR#276](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/276)
+- [PR#271](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/271)
+
+### Additional Details
+
+This week's contributions were focused on adding project features . M2 work seems to be coming to an end so might start work on M3.
 
 ---
-## Week 3 | January  18-25, 2025
+## Week 3 | January  18-25, 2026
 
 <details>
   <summary><h3>Evaluation</h3></summary>
 
 <img width="1139" height="636" alt="image" src="https://github.com/user-attachments/assets/d02cfd18-9d55-4ff4-92ee-132abdfdf5cb" />
-
-
 
 
 </details>
