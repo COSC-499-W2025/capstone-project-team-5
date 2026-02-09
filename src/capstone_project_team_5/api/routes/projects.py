@@ -15,6 +15,8 @@ from sqlalchemy.orm import Session
 from capstone_project_team_5.api.schemas.projects import (
     ProjectAnalysisResult,
     ProjectAnalysisSkipped,
+    ProjectReRankRequest,
+    ProjectReRankResponse,
     ProjectsAnalyzeAllResponse,
     ProjectSummary,
     ProjectUpdateRequest,
@@ -636,3 +638,99 @@ def update_score_config(config: ScoreConfig) -> ScoreConfig:
     global _score_config
     _score_config = config
     return _score_config
+
+
+@router.post(
+    "/rerank",
+    response_model=ProjectReRankResponse,
+    summary="Batch update project importance ranks",
+    description=(
+        "Update importance ranks for multiple projects in a single operation. "
+        "This allows users to customize the display order of their projects. "
+        "Ranks should be unique positive integers."
+    ),
+    responses={
+        400: {
+            "description": "Invalid rank values (duplicates, negatives, or non-existent projects)"
+        },
+    },
+)
+def rerank_projects(request: ProjectReRankRequest) -> ProjectReRankResponse:
+    """Batch update importance ranks for projects.
+
+    Validates that:
+    - All projects exist
+    - Ranks are positive integers
+    - No duplicate ranks in the request
+
+    Args:
+        request: List of project_id and importance_rank pairs
+
+    Returns:
+        ProjectReRankResponse with updated project count and summaries
+
+    Raises:
+        HTTPException 400: If validation fails
+        HTTPException 404: If any project is not found
+    """
+    if not request.rankings:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Rankings list cannot be empty",
+        )
+
+    # Validate unique ranks
+    ranks = [r.importance_rank for r in request.rankings]
+    if len(ranks) != len(set(ranks)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Duplicate ranks are not allowed",
+        )
+
+    # Validate positive ranks
+    if any(r < 1 for r in ranks):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="All ranks must be positive integers (>= 1)",
+        )
+
+    # Validate unique project IDs
+    project_ids = [r.project_id for r in request.rankings]
+    if len(project_ids) != len(set(project_ids)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Duplicate project IDs are not allowed",
+        )
+
+    with get_session() as session:
+        # Validate all projects exist
+        projects = session.query(Project).filter(Project.id.in_(project_ids)).all()
+        if len(projects) != len(project_ids):
+            found_ids = {p.id for p in projects}
+            missing_ids = set(project_ids) - found_ids
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Projects not found: {sorted(missing_ids)}",
+            )
+
+        # Build project lookup map to avoid N queries in the loop
+        project_map = {p.id: p for p in projects}
+
+        # Update ranks
+        updated_projects = []
+        for rank_update in request.rankings:
+            project = project_map.get(rank_update.project_id)
+            if project:
+                project.importance_rank = rank_update.importance_rank
+                updated_projects.append(project)
+
+        session.flush()
+
+        # Refresh and return
+        for project in updated_projects:
+            session.refresh(project)
+
+        return ProjectReRankResponse(
+            updated=len(updated_projects),
+            projects=[_project_to_summary(p) for p in updated_projects],
+        )

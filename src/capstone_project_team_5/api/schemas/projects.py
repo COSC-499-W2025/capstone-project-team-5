@@ -163,3 +163,25 @@ class ScoreConfig(BaseModel):
     diversity: bool = True
     duration: bool = True
     file_count: bool = True
+
+
+class ProjectRankUpdate(BaseModel):
+    """Single project rank update in a batch reranking operation."""
+
+    project_id: int
+    importance_rank: int
+
+
+class ProjectReRankRequest(BaseModel):
+    """Request schema for batch updating project importance ranks."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    rankings: list[ProjectRankUpdate]
+
+
+class ProjectReRankResponse(BaseModel):
+    """Response schema for batch reranking operation."""
+
+    updated: int
+    projects: list[ProjectSummary]
