@@ -2,7 +2,49 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-_Last Updated:_ January 25, 2026
+_Last Updated:_ February 8, 2026
+
+---
+
+## Week 5 | January 26-February 8, 2026
+
+*Note: Weeks 4 and 5 are combined into a single entry.*
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+    <img width="1092" height="636" alt="image" src="https://github.com/user-attachments/assets/7073e90a-eecb-46e0-80c9-3328c7a8c8a5" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| **Coding Tasks** | | |
+| Replaced project thumbnail URL with image upload | ✅ Done | Replaced external `thumbnail_url` with disk-based image storage, added `PUT/GET/DELETE /api/projects/{id}/thumbnail` endpoints, updated TUI with file picker ([PR #271](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/271)) |
+| Implemented incremental uploads, content dedup, and fingerprint cache | ✅ Done | Re-uploaded ZIPs append to existing projects, content-addressed storage with SHA-256, merged analysis builds combined project tree from all uploads, fingerprint cache skips re-analysis when file set unchanged ([PR #297](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/297)) |
+| **Testing/Debugging Tasks** | | |
+| Added tests for thumbnail upload endpoints | ✅ Done | Covers upload, retrieval, deletion, and validation checks |
+| Added tests for incremental upload and dedup | ✅ Done | Covers incremental append, 409 on ambiguous name, dedup of identical content, fingerprint-based analysis skip |
+| **Reviewing/Collaboration Tasks** | | |
+| Reviewed [PR #273](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/273) (user role API) | ✅ Done | Flagged missing assertions in test setup; suggested edge case tests for input validation |
+| Reviewed [PR #292](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/292) (education CRUD) | ✅ Done | Suggested ORM-level GPA validation; noted boundary tests missing despite comments claiming coverage |
+| Reviewed [PR #293](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/293) (portfolio endpoints) | ✅ Done | Found `is_showcase` present in response schema but missing from endpoint implementation |
+| Reviewed [PR #275](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/275) (configuration + UX fixes) | ✅ Done | Reported CTRL+S save keybind only fixed for project editing but still broken for analysis editing; suggested improved test assertion |
+| Reviewed [PR #272](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/272) (consent tool refinements) | ✅ Done | Reported inconsistencies |
+| Reviewed [PR #257](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/257) (export analysis as PDF/TXT) | ✅ Done | Suggested refactor |
+| Reviewed [PR #256](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/256) (portfolio edit endpoint) | ✅ Done | |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Work on resume export | ❌ Not Started | TBD with team |
+| Continue code reviews | | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Expand remaining API endpoints | ✅ Done | Implemented thumbnail image upload endpoints (PR #271) and incremental upload/dedup (PR #297) |
+| Work on resume generation | ❌ Not Started | Deferred |
+| Continue code reviews | ✅ Done | Ongoing task |
 
 ---
 
