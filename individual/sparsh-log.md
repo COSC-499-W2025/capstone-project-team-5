@@ -7,7 +7,7 @@
 
 # TERM2 Logs - Sparsh Khanna
 ---
-## Week 5 | 1- February 8, 2026
+## Week 4-5 | January 26- February 8, 2026
 
 <details>
   <summary><h3>Evaluation</h3></summary>
