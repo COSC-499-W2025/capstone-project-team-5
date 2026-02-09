@@ -369,3 +369,34 @@ def test_analyze_project_ai_falls_back_to_local(monkeypatch: pytest.MonkeyPatch)
     assert analyze_response.status_code == 200
     payload = analyze_response.json()
     assert payload["resume_bullet_source"] == "Local"
+
+
+def test_score_config_endpoints_round_trip() -> None:
+    client = TestClient(app)
+
+    # Default config should have all factors enabled.
+    get_resp = client.get("/api/projects/config/score")
+    assert get_resp.status_code == 200
+    default_cfg = get_resp.json()
+    assert default_cfg == {
+        "contribution": True,
+        "diversity": True,
+        "duration": True,
+        "file_count": True,
+    }
+
+    # Update config to disable duration and file_count.
+    new_cfg = {
+        "contribution": True,
+        "diversity": False,
+        "duration": False,
+        "file_count": True,
+    }
+    put_resp = client.put("/api/projects/config/score", json=new_cfg)
+    assert put_resp.status_code == 200
+    assert put_resp.json() == new_cfg
+
+    # Subsequent GET should reflect the updated configuration.
+    get_resp2 = client.get("/api/projects/config/score")
+    assert get_resp2.status_code == 200
+    assert get_resp2.json() == new_cfg
