@@ -634,10 +634,13 @@ def rerank_projects(request: ProjectReRankRequest) -> ProjectReRankResponse:
                 detail=f"Projects not found: {sorted(missing_ids)}",
             )
 
+        # Build project lookup map to avoid N queries in the loop
+        project_map = {p.id: p for p in projects}
+
         # Update ranks
         updated_projects = []
         for rank_update in request.rankings:
-            project = session.query(Project).filter(Project.id == rank_update.project_id).first()
+            project = project_map.get(rank_update.project_id)
             if project:
                 project.importance_rank = rank_update.importance_rank
                 updated_projects.append(project)
