@@ -17,6 +17,7 @@ from capstone_project_team_5.data.db import Base
 
 if TYPE_CHECKING:
     from capstone_project_team_5.data.models import User
+    from capstone_project_team_5.data.models.portfolio import Portfolio
     from capstone_project_team_5.data.models.project import Project
 
 
@@ -26,11 +27,11 @@ class PortfolioItem(Base):
     Attributes:
         id: Auto-incrementing primary key.
         project_id: Foreign key to the associated project (nullable, SET NULL on delete).
+        portfolio_id: Optional foreign key to a logical portfolio grouping.
         user_id: Foreign key to the user who owns this portfolio item.
         title: Title of the portfolio item.
         content: Text content of the portfolio item.
         is_user_edited: If content has been edited by user or not.
-        is_showcase: Whether this is a featured portfolio item.
         source_analysis_id: Optional reference to CodeAnalysis that generated this.
         created_at: UTC timestamp of when the item was created.
         updated_at: UTC timestamp of when the item was last modified.
@@ -45,6 +46,11 @@ class PortfolioItem(Base):
         ForeignKey("projects.id", ondelete="SET NULL"),
         nullable=True,
     )
+    portfolio_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("portfolios.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
@@ -52,7 +58,6 @@ class PortfolioItem(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
     is_user_edited: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    is_showcase: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     source_analysis_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("code_analyses.id", ondelete="SET NULL"), nullable=True
@@ -69,4 +74,5 @@ class PortfolioItem(Base):
     )
 
     project: Mapped[Project | None] = relationship("Project", back_populates="portfolio_items")
+    portfolio: Mapped[Portfolio | None] = relationship("Portfolio", back_populates="items")
     user: Mapped[User] = relationship("User", back_populates="portfolio_items")

@@ -10,7 +10,6 @@ def save_portfolio_item(
     title: str,
     content: str,
     is_user_edited: bool = False,
-    is_showcase: bool = False,
     source_analysis_id: int | None = None,
 ) -> bool:
     """Save or update a portfolio item for a user's project.
@@ -21,7 +20,6 @@ def save_portfolio_item(
         title: Title of the portfolio item
         content: Markdown content of the portfolio item
         is_user_edited: Whether this content has been edited by the user
-        is_showcase: Whether this is a featured portfolio project
         source_analysis_id: Optional ID of the source CodeAnalysis
 
     Returns:
@@ -45,7 +43,6 @@ def save_portfolio_item(
                 existing.title = title
                 existing.content = content
                 existing.is_user_edited = is_user_edited
-                existing.is_showcase = is_showcase
                 existing.source_analysis_id = source_analysis_id
                 existing.updated_at = datetime.now(UTC)
             else:
@@ -55,7 +52,6 @@ def save_portfolio_item(
                     title=title,
                     content=content,
                     is_user_edited=is_user_edited,
-                    is_showcase=is_showcase,
                     source_analysis_id=source_analysis_id,
                 )
                 session.add(new_item)
@@ -96,7 +92,6 @@ def get_portfolio_item(username: str, project_id: int) -> dict | None:
                     "title": item.title,
                     "content": item.content,
                     "is_user_edited": item.is_user_edited,
-                    "is_showcase": item.is_showcase,
                     "source_analysis_id": item.source_analysis_id,
                     "created_at": item.created_at,
                     "updated_at": item.updated_at,

@@ -58,6 +58,7 @@ def _ensure_tables_created() -> None:
         artifact_source,
         code_analysis,
         consent_record,
+        portfolio,
         portfolio_item,
         project,
         resume,

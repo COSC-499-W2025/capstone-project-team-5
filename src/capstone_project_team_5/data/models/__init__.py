@@ -12,6 +12,7 @@ This package provides SQLAlchemy ORM models representing database tables:
 - UserProfile: User contact and personal information
 - Education: User educational history
 - WorkExperience: User work history
+- Portfolio: Collection of portfolio items for a user
 
 All models inherit from the shared Base declarative class defined in data.db.
 """
@@ -21,6 +22,7 @@ from capstone_project_team_5.data.models.artifact_source import ArtifactSource
 from capstone_project_team_5.data.models.code_analysis import CodeAnalysis
 from capstone_project_team_5.data.models.consent_record import ConsentRecord
 from capstone_project_team_5.data.models.education import Education
+from capstone_project_team_5.data.models.portfolio import Portfolio
 from capstone_project_team_5.data.models.portfolio_item import PortfolioItem
 from capstone_project_team_5.data.models.project import Project
 from capstone_project_team_5.data.models.skill import ProjectSkill, Skill
@@ -36,6 +38,7 @@ __all__ = [
     "CodeAnalysis",
     "ConsentRecord",
     "Education",
+    "Portfolio",
     "PortfolioItem",
     "Project",
     "ProjectSkill",
