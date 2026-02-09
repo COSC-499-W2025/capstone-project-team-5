@@ -12,6 +12,7 @@ This package provides SQLAlchemy ORM models representing database tables:
 - UserProfile: User contact and personal information
 - Education: User educational history
 - WorkExperience: User work history
+- Portfolio: Collection of portfolio items for a user
 
 All models inherit from the shared Base declarative class defined in data.db.
 """

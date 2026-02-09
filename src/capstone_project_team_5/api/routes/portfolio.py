@@ -163,7 +163,6 @@ def add_project_to_portfolio(
                 title=project.name,
                 content=encoded_content,
                 is_user_edited=False,
-                is_showcase=False,
                 source_analysis_id=request.source_analysis_id,
             )
             session.add(item)
@@ -178,7 +177,6 @@ def add_project_to_portfolio(
             title=item.title,
             markdown=markdown,
             is_user_edited=bool(item.is_user_edited),
-            is_showcase=bool(item.is_showcase),
             source_analysis_id=getattr(item, "source_analysis_id", None),
             portfolio_id=getattr(item, "portfolio_id", None),
             created_at=item.created_at,
