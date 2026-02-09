@@ -370,7 +370,7 @@ async def upload_project_zip(
                 f.write(chunk)
 
         try:
-            result, collab_flags = inspect_zip(temp_path)
+            result, collab_flags, _project_dates = inspect_zip(temp_path)
         except InvalidZipError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

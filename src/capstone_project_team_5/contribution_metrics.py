@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from capstone_project_team_5.constants.contribution_metrics_constants import (
@@ -113,6 +113,22 @@ class ContributionMetrics:
         return ContributionMetrics._get_non_git_project_duration(root=root)
 
     @staticmethod
+    def get_project_dates(root: Path) -> tuple[date | None, date | None]:
+        """
+        Returns git based start and end dates.
+
+        Returns:
+            Tuple of (start_date, end_date) as date objects, or (None, None) if unavailable.
+        """
+
+        start_dt, end_dt = ContributionMetrics._get_git_project_duration(root, dates=True)
+
+        if start_dt is None or end_dt is None:
+            return None, None
+
+        return start_dt.date(), end_dt.date()
+
+    @staticmethod
     def get_project_contribution_metrics(root: Path) -> tuple[dict[str, int], str]:
         """
         Returns contribution metrics (e.g., code vs test vs design vs document)
@@ -138,7 +154,7 @@ class ContributionMetrics:
         return metrics, source
 
     @staticmethod
-    def _get_git_project_duration(root: Path) -> tuple[timedelta, str]:
+    def _get_git_project_duration(root: Path, dates: bool = False) -> tuple:
         """
         Returns the duration between the initial and
         most recent commit for the given Git project,
@@ -146,18 +162,25 @@ class ContributionMetrics:
 
         Args:
             root: Project root directory.
+            dates: If true returns start and end date tuple.
 
         Returns:
-            Tuple: Project duration and formatted string.
+            Tuple: Project duration and formatted string, OR
+                (start_datetime, end_datetime) if dates=True
         """
 
         try:
             commit_dates = list_commit_dates(root, rev_range="--all")
         except RuntimeError:
+            if dates:
+                return None, None
             return timedelta(0), "Failed running command."
 
         start_time = min(commit_dates)
         end_time = max(commit_dates)
+
+        if dates:
+            return start_time, end_time
 
         return ContributionMetrics._format_project_duration(
             start_time=start_time, end_time=end_time
