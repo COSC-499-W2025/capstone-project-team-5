@@ -3,6 +3,7 @@
 
 # Zip2Job upload storage
 .zip2job_uploads/
+.zip2job_artifacts/
 
 ### JupyterNotebooks ###
 # gitignore template for Jupyter Notebooks
