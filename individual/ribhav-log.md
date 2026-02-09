@@ -3,6 +3,45 @@
 **GitHub:** [@ribhavsharma](https://github.com/ribhavsharma)
 ---
 
+## **Term 2 – Week 4-5 | February 2–13, 2026**
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+  <img width="1617" height="902" alt="image" src="https://github.com/user-attachments/assets/c3a5d5da-15d5-462c-82dc-5e1036c810d0" />
+
+
+<!-- Add evaluation image here -->
+
+</details>
+
+## **Task Progress this week**  
+Continued building out backend infrastructure and API endpoints for portfolio management and configuration. Focused on completing CRUD operations and enhancing the scoring system. Also spent time reviewing peer contributions and supporting ongoing development.
+
+### **Coding Tasks**
+- Opened **PR [#283 – Add `/config/score` endpoint](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/283)**, implementing the scoring configuration API.
+- Opened **PR [#275 – Added configuration + PT1 minor UX fixes](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/275)**, addressing configuration management and peer testing feedback.
+- Opened **PR [#293 – Add `/portfolio` endpoints (CRUD)](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/293)**, completing the full set of portfolio management endpoints.
+
+### **Testing / Debugging**
+- Verified endpoint functionality across all new portfolio and configuration endpoints.
+- Tested configuration changes to ensure they correctly affect scoring behavior.
+
+### **Reviewing / Collaboration**
+- Reviewed **PR [#303 – Project Rerank](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/303)** by sparsh, providing feedback on ranking implementation.
+- Reviewed **PR [#295 – Implement Scroll on Side Panel](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/295)** by ojus, ensuring UI consistency.
+- Reviewed **PR [#276 – Add UserProfile, WorkExperience & Education Tables to Schema](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/276)** by ojus, validating data model design.
+- Reviewed **PR [#290 – Resume Generator: Add User Info CRUD](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/290)** by ojus, checking service layer implementation.
+- Reviewed **PR [#273 – User Role API](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/273)** by chris, ensuring alignment with authentication patterns.
+
+### **Issues / Blockers**
+- No major issues or blockers this week.
+
+### **Next Week's Plans**
+- Continue supporting Milestone 2 feature development.
+- Possibly get started on Milestone 3 development (UI)
+- Review additional PRs as they come in.
+- Start work on remaining backend features.
 
 ## **Term 2 – Week 3 | January 19–23, 2026**
 
