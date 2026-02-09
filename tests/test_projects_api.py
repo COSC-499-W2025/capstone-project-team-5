@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import hashlib
 import io
+from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 from fastapi.testclient import TestClient
 
 from capstone_project_team_5.api.main import app
+from capstone_project_team_5.data.db import get_session
+from capstone_project_team_5.data.models import ArtifactSource, CodeAnalysis, Project, UploadRecord
+from capstone_project_team_5.services.content_store import get_manifests_root, get_objects_root
 from capstone_project_team_5.services.upload_storage import get_upload_zip_path
 
 
@@ -218,6 +223,138 @@ def test_thumbnail_delete_removes() -> None:
     assert detail_payload["thumbnail_url"] is None
 
 
+def test_upload_appends_to_existing_project_by_name(api_db: None) -> None:
+    client = TestClient(app)
+    zip_bytes = _create_zip_bytes([("proj/main.py", b"print('v1')\n")])
+    upload_response = client.post(
+        "/api/projects/upload",
+        files={"file": ("initial.zip", zip_bytes, "application/zip")},
+    )
+    assert upload_response.status_code == 201
+    project_id = upload_response.json()["projects"][0]["id"]
+
+    zip_bytes2 = _create_zip_bytes([("proj/utils.py", b"print('v2')\n")])
+    upload_response2 = client.post(
+        "/api/projects/upload",
+        files={"file": ("second.zip", zip_bytes2, "application/zip")},
+    )
+    assert upload_response2.status_code == 201
+    returned_ids = {project["id"] for project in upload_response2.json()["projects"]}
+    assert project_id in returned_ids
+
+    with get_session() as session:
+        projects = session.query(Project).filter(Project.name == "proj").all()
+        assert len(projects) == 1
+        sources = session.query(ArtifactSource).filter(ArtifactSource.project_id == project_id)
+        assert sources.count() == 1
+
+
+def test_upload_returns_409_on_ambiguous_project_name() -> None:
+    client = TestClient(app)
+    with get_session() as session:
+        upload1 = UploadRecord(filename="a.zip", size_bytes=1, file_count=1)
+        upload2 = UploadRecord(filename="b.zip", size_bytes=1, file_count=1)
+        session.add_all([upload1, upload2])
+        session.flush()
+        session.add_all(
+            [
+                Project(
+                    upload_id=upload1.id,
+                    name="ambig",
+                    rel_path="ambig",
+                    has_git_repo=False,
+                    file_count=1,
+                    is_collaborative=False,
+                ),
+                Project(
+                    upload_id=upload2.id,
+                    name="ambig",
+                    rel_path="ambig",
+                    has_git_repo=False,
+                    file_count=1,
+                    is_collaborative=False,
+                ),
+            ]
+        )
+        session.flush()
+
+    zip_bytes = _create_zip_bytes([("ambig/main.py", b"print('x')\n")])
+    response = client.post(
+        "/api/projects/upload",
+        files={"file": ("ambig.zip", zip_bytes, "application/zip")},
+    )
+    assert response.status_code == 409
+    payload = response.json()
+    assert payload["detail"]["candidates"]["ambig"]
+
+
+def test_dedupes_identical_file_content_across_uploads(api_db: None, tmp_path: Path) -> None:
+    client = TestClient(app)
+    content = b"print('same')\n"
+    zip_bytes = _create_zip_bytes([("proj/main.py", content)])
+    response = client.post(
+        "/api/projects/upload",
+        files={"file": ("first.zip", zip_bytes, "application/zip")},
+    )
+    assert response.status_code == 201
+
+    zip_bytes2 = _create_zip_bytes([("proj/other.py", content)])
+    response2 = client.post(
+        "/api/projects/upload",
+        files={"file": ("second.zip", zip_bytes2, "application/zip")},
+    )
+    assert response2.status_code == 201
+
+    content_hash = hashlib.sha256(content).hexdigest()
+    object_path = get_objects_root() / content_hash[:2] / content_hash
+    assert object_path.exists(), "Content store should hold one object for this content (dedupe)"
+    objects_root = get_objects_root()
+    object_files = [p for p in objects_root.rglob("*") if p.is_file()]
+    assert len(object_files) == 1
+
+
+def test_analysis_skips_when_fingerprint_unchanged(api_db: None) -> None:
+    client = TestClient(app)
+    zip_bytes = _create_zip_bytes([("proj/main.py", b"print('v1')\n")])
+    upload_response = client.post(
+        "/api/projects/upload",
+        files={"file": ("initial.zip", zip_bytes, "application/zip")},
+    )
+    assert upload_response.status_code == 201
+    project_id = upload_response.json()["projects"][0]["id"]
+
+    analyze_response = client.post(f"/api/projects/{project_id}/analyze")
+    assert analyze_response.status_code == 200
+    with get_session() as session:
+        first_count = (
+            session.query(CodeAnalysis).filter(CodeAnalysis.project_id == project_id).count()
+        )
+    assert first_count == 1
+
+    analyze_response2 = client.post(f"/api/projects/{project_id}/analyze")
+    assert analyze_response2.status_code == 200
+    with get_session() as session:
+        second_count = (
+            session.query(CodeAnalysis).filter(CodeAnalysis.project_id == project_id).count()
+        )
+    assert second_count == 1
+
+    zip_bytes2 = _create_zip_bytes([("proj/extra.py", b"print('v2')\n")])
+    upload_response2 = client.post(
+        "/api/projects/upload",
+        files={"file": ("second.zip", zip_bytes2, "application/zip")},
+    )
+    assert upload_response2.status_code == 201
+
+    analyze_response3 = client.post(f"/api/projects/{project_id}/analyze")
+    assert analyze_response3.status_code == 200
+    with get_session() as session:
+        third_count = (
+            session.query(CodeAnalysis).filter(CodeAnalysis.project_id == project_id).count()
+        )
+    assert third_count == 2
+
+
 def test_delete_project_removes_record() -> None:
     client = TestClient(app)
     zip_bytes = _create_zip_bytes(
@@ -273,7 +410,7 @@ def test_analyze_project_updates_importance_score() -> None:
     assert detail_response.json()["importance_score"] is not None
 
 
-def test_analyze_all_updates_all_projects() -> None:
+def test_analyze_all_updates_all_projects(api_db: None) -> None:
     client = TestClient(app)
     zip_bytes = _create_zip_bytes(
         [
@@ -310,7 +447,7 @@ def test_analyze_all_updates_all_projects() -> None:
             assert project["importance_score"] is not None
 
 
-def test_analyze_all_reports_missing_zip() -> None:
+def test_analyze_all_reports_missing_zip(api_db: None) -> None:
     client = TestClient(app)
     zip_bytes = _create_zip_bytes(
         [
@@ -331,20 +468,20 @@ def test_analyze_all_reports_missing_zip() -> None:
     zip_path = get_upload_zip_path(upload_id, filename)
     if zip_path.exists():
         zip_path.unlink()
+    manifest_path = get_manifests_root() / f"{upload_id}.json"
+    if manifest_path.exists():
+        manifest_path.unlink()
 
     analyze_response = client.post("/api/projects/analyze")
     assert analyze_response.status_code == 200
     payload = analyze_response.json()
 
-    # Check that our project is skipped (not analyzed)
     analyzed_ids = {item["id"] for item in payload["analyzed"]}
     assert project_id not in analyzed_ids, f"Project {project_id} should be skipped, not analyzed"
 
-    # Check that our project is in the skipped list
     skipped_ids = {item["project_id"] for item in payload["skipped"]}
     assert project_id in skipped_ids, f"Project {project_id} should be in skipped list"
 
-    # Verify the skip reason
     skipped_project = next(item for item in payload["skipped"] if item["project_id"] == project_id)
     assert "Stored upload archive not found" in skipped_project["reason"]
 

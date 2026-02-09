@@ -74,10 +74,13 @@ def render_project_markdown(upload: dict[str, Any], proj: dict[str, Any], rank: 
 
     # Display user role if detected (regardless of git repo status)
     user_role = proj.get("user_role")
+    role_justification = proj.get("role_justification")
     user_contrib_pct = proj.get("user_contribution_percentage")
     if user_role:
         parts.append("\n### Your Role")
-        if user_contrib_pct:
+        if role_justification:
+            parts.append(f"**{user_role}** ({role_justification})")
+        elif user_contrib_pct:
             parts.append(f"**{user_role}** ({user_contrib_pct:.1f}% of contributions)")
         else:
             parts.append(f"**{user_role}**")
@@ -204,10 +207,13 @@ def render_saved_list(saved: list[dict[str, Any]]) -> str:
 
             # Display user role if available
             user_role = p.get("user_role")
+            role_justification = p.get("role_justification")
             user_contrib_pct = p.get("user_contribution_percentage")
             if user_role:
                 role_text = f"**Role: {user_role}**"
-                if user_contrib_pct is not None:
+                if role_justification:
+                    role_text += f" ({role_justification})"
+                elif user_contrib_pct is not None:
                     role_text += f" ({user_contrib_pct:.1f}% contributions)"
                 parts.append(f"  - {role_text}")
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from capstone_project_team_5.constants.roles import ProjectRole
 from capstone_project_team_5.utils.git import AuthorContribution
 
 
@@ -23,6 +24,7 @@ class UserRole:
         confidence: Confidence level in role detection ("High", "Medium", "Low")
         total_commits: Total commits by user
         total_contributors: Total number of contributors
+        justification: Human-readable explanation of role assignment
     """
 
     role: str
@@ -31,6 +33,7 @@ class UserRole:
     confidence: str
     total_commits: int
     total_contributors: int
+    justification: str
 
 
 def detect_user_role(
@@ -87,6 +90,11 @@ def detect_user_role(
         contribution_pct, is_collaborative, collaborator_count, user_contrib.commits
     )
 
+    # Generate human-readable justification
+    justification = _generate_justification(
+        contribution_pct, user_contrib.commits, collaborator_count, is_collaborative
+    )
+
     return UserRole(
         role=role,
         contribution_percentage=round(contribution_pct, 1),
@@ -94,6 +102,7 @@ def detect_user_role(
         confidence=confidence,
         total_commits=user_contrib.commits,
         total_contributors=collaborator_count,
+        justification=justification,
     )
 
 
@@ -119,26 +128,64 @@ def _classify_role(
     # Solo developer - 100% contribution or only contributor
     if not is_collaborative or contribution_pct >= 99.0:
         confidence = "High" if user_commits >= 5 else "Medium"
-        return "Solo Developer", confidence
+        return ProjectRole.SOLO_DEVELOPER.value, confidence
 
-    # Lead developer - dominant contributor in team project
+    # Lead developer - dominant contributor in team project (60-98%)
     if contribution_pct >= 60.0:
         confidence = "High" if user_commits >= 10 else "Medium"
-        return "Lead Developer", confidence
+        return ProjectRole.LEAD_DEVELOPER.value, confidence
 
-    # Major contributor - significant but not lead
-    if contribution_pct >= 30.0:
+    # Core contributor - substantial ongoing involvement (40-59%)
+    if contribution_pct >= 40.0:
+        confidence = "High" if user_commits >= 8 else "Medium"
+        return ProjectRole.CORE_CONTRIBUTOR.value, confidence
+
+    # Major contributor - significant but not core (25-39%)
+    if contribution_pct >= 25.0:
         confidence = "High" if user_commits >= 5 else "Medium"
-        return "Major Contributor", confidence
+        return ProjectRole.MAJOR_CONTRIBUTOR.value, confidence
 
-    # Contributor - moderate involvement
+    # Contributor - moderate involvement (10-24%)
     if contribution_pct >= 10.0:
         confidence = "Medium" if user_commits >= 3 else "Low"
-        return "Contributor", confidence
+        return ProjectRole.CONTRIBUTOR.value, confidence
 
-    # Minor contributor - small involvement
+    # Minor contributor - small involvement (<10%)
     confidence = "Low"
-    return "Minor Contributor", confidence
+    return ProjectRole.MINOR_CONTRIBUTOR.value, confidence
+
+
+def _generate_justification(
+    contribution_pct: float,
+    user_commits: int,
+    collaborator_count: int,
+    is_collaborative: bool,
+) -> str:
+    """Generate human-readable justification for role assignment.
+
+    Args:
+        contribution_pct: User's contribution percentage
+        user_commits: Number of commits by user
+        collaborator_count: Total number of contributors
+        is_collaborative: Whether project has multiple contributors
+
+    Returns:
+        Human-readable justification string
+    """
+    commit_str = "commit" if user_commits == 1 else "commits"
+
+    if not is_collaborative:
+        return f"Sole author with {user_commits} {commit_str}"
+
+    if collaborator_count == 2:
+        collab_str = "1 other contributor"
+    else:
+        collab_str = f"{collaborator_count - 1} other contributors"
+
+    return (
+        f"{user_commits} {commit_str} representing {contribution_pct:.1f}% "
+        f"of contributions with {collab_str}"
+    )
 
 
 def format_role_summary(role_info: UserRole | None) -> str:
@@ -151,23 +198,13 @@ def format_role_summary(role_info: UserRole | None) -> str:
         Human-readable role summary string
     """
     if not role_info:
-        return "👤 Role: Unknown (insufficient data)"
-
-    emoji_map = {
-        "Solo Developer": "👨‍💻",
-        "Lead Developer": "🎯",
-        "Major Contributor": "🔧",
-        "Contributor": "🤝",
-        "Minor Contributor": "✨",
-    }
-
-    emoji = emoji_map.get(role_info.role, "👤")
+        return "Role: Unknown (insufficient data)"
 
     if role_info.is_collaborative:
         return (
-            f"{emoji} Role: {role_info.role} "
+            f"Role: {role_info.role} "
             f"({role_info.contribution_percentage:.1f}% of contributions, "
             f"{role_info.total_commits} commits)"
         )
     else:
-        return f"{emoji} Role: {role_info.role} ({role_info.total_commits} commits)"
+        return f"Role: {role_info.role} ({role_info.total_commits} commits)"

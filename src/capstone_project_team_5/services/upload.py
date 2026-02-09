@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from zipfile import BadZipFile, ZipFile
@@ -286,32 +286,27 @@ def _discover_projects(names: list[str], ignore_patterns: set[str]) -> list[Dete
     return discovered
 
 
-def upload_zip(zip_path: Path | str) -> ZipUploadResult:
-    """Process a zip file, extract its structure, and persist metadata.
+def inspect_zip(
+    zip_path: Path | str,
+) -> tuple[ZipUploadResult, dict[str, bool], dict[str, tuple[date | None, date | None]]]:
+    """Inspect a zip file and return its structured metadata.
 
     Args:
         zip_path: Path to the zip file.
 
     Returns:
-        ZipUploadResult containing metadata and tree structure.
+        Tuple of:
+            - ZipUploadResult containing metadata and tree structure.
+            - Dict mapping project rel_path -> is_collaborative.
+            - Dict mapping project rel_path -> (start_date, end_date).
 
     Raises:
         InvalidZipError: If the file is not a valid zip archive.
     """
-    from capstone_project_team_5.data.db import get_session
-    from capstone_project_team_5.data.models import Project, UploadRecord
-
     path = Path(zip_path)
     _ensure_zip_file(path)
 
     ignore_patterns = _get_ignore_patterns()
-
-    with ZipFile(path) as archive:
-        names = archive.namelist()
-
-    tree = _build_tree(names, ignore_patterns)
-    file_count = _count_files(tree)
-    projects = _discover_projects(names, ignore_patterns)
 
     # Determine collaboration flags using the extracted archive contents.
     collab_flags: dict[str, bool] = {}
@@ -320,6 +315,10 @@ def upload_zip(zip_path: Path | str) -> ZipUploadResult:
     with TemporaryDirectory() as temp_dir_str:
         extract_root = Path(temp_dir_str)
         with ZipFile(path) as archive:
+            names = archive.namelist()
+            tree = _build_tree(names, ignore_patterns)
+            file_count = _count_files(tree)
+            projects = _discover_projects(names, ignore_patterns)
             archive.extractall(extract_root)
 
         for project in projects:
@@ -354,6 +353,25 @@ def upload_zip(zip_path: Path | str) -> ZipUploadResult:
         tree=tree,
         projects=projects,
     )
+    return result, collab_flags, project_dates
+
+
+def upload_zip(zip_path: Path | str) -> ZipUploadResult:
+    """Process a zip file, extract its structure, and persist metadata.
+
+    Args:
+        zip_path: Path to the zip file.
+
+    Returns:
+        ZipUploadResult containing metadata and tree structure.
+
+    Raises:
+        InvalidZipError: If the file is not a valid zip archive.
+    """
+    from capstone_project_team_5.data.db import get_session
+    from capstone_project_team_5.data.models import Project, UploadRecord
+
+    result, collab_flags, project_dates = inspect_zip(zip_path)
 
     with get_session() as session:
         upload_record = UploadRecord(
@@ -364,9 +382,13 @@ def upload_zip(zip_path: Path | str) -> ZipUploadResult:
         session.add(upload_record)
         session.flush()
 
-        for project in projects:
+        for project in result.projects:
             start_date, end_date = project_dates.get(project.rel_path, (None, None))
-
+            # Convert date to datetime for database storage
+            start_datetime = (
+                datetime.combine(start_date, datetime.min.time()) if start_date else None
+            )
+            end_datetime = datetime.combine(end_date, datetime.min.time()) if end_date else None
             session.add(
                 Project(
                     upload_id=upload_record.id,
@@ -375,8 +397,8 @@ def upload_zip(zip_path: Path | str) -> ZipUploadResult:
                     has_git_repo=project.has_git_repo,
                     file_count=project.file_count,
                     is_collaborative=collab_flags.get(project.rel_path, False),
-                    start_date=start_date,
-                    end_date=end_date,
+                    start_date=start_datetime,
+                    end_date=end_datetime,
                 )
             )
 

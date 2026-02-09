@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Annotated, Any
-from zipfile import BadZipFile, ZipFile
 
 from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import desc
+from sqlalchemy.orm import Session
 
 from capstone_project_team_5.api.schemas.projects import (
     ProjectAnalysisResult,
@@ -22,8 +23,18 @@ from capstone_project_team_5.api.schemas.projects import (
 )
 from capstone_project_team_5.consent_tool import ConsentTool
 from capstone_project_team_5.data.db import get_session
-from capstone_project_team_5.data.models import Project, UploadRecord
+from capstone_project_team_5.data.models import ArtifactSource, Project, UploadRecord
 from capstone_project_team_5.models.upload import DetectedProject, InvalidZipError
+from capstone_project_team_5.services.content_store import (
+    compute_project_file_count,
+    compute_project_fingerprint,
+    ingest_zip,
+    load_analysis_cache,
+    load_manifest,
+    materialize_project_tree,
+    write_analysis_cache,
+)
+from capstone_project_team_5.services.incremental_upload import find_matching_projects
 from capstone_project_team_5.services.project_thumbnail import (
     clear_project_thumbnail,
     get_project_thumbnail_path,
@@ -31,7 +42,7 @@ from capstone_project_team_5.services.project_thumbnail import (
     has_project_thumbnail,
     set_project_thumbnail,
 )
-from capstone_project_team_5.services.upload import upload_zip
+from capstone_project_team_5.services.upload import inspect_zip
 from capstone_project_team_5.services.upload_storage import get_upload_zip_path, store_upload_zip
 from capstone_project_team_5.workflows.analysis_pipeline import analyze_projects_structured
 
@@ -58,27 +69,10 @@ def _project_to_summary(project: Project) -> ProjectSummary:
         importance_score=project.importance_score,
         user_role=project.user_role,
         user_contribution_percentage=project.user_contribution_percentage,
+        role_justification=project.role_justification,
         created_at=project.created_at,
         updated_at=project.updated_at,
     )
-
-
-def _get_latest_upload_record(
-    filename: str,
-    size_bytes: int,
-    file_count: int,
-) -> UploadRecord | None:
-    with get_session() as session:
-        return (
-            session.query(UploadRecord)
-            .filter(
-                UploadRecord.filename == filename,
-                UploadRecord.size_bytes == size_bytes,
-                UploadRecord.file_count == file_count,
-            )
-            .order_by(desc(UploadRecord.created_at))
-            .first()
-        )
 
 
 def _build_consent_tool(use_ai: bool) -> ConsentTool:
@@ -89,28 +83,72 @@ def _build_consent_tool(use_ai: bool) -> ConsentTool:
     return tool
 
 
-def _build_detected_projects(projects: list[Project]) -> list[DetectedProject]:
-    return [
+def _get_ordered_uploads(session: Session, upload_ids: list[int]) -> list[UploadRecord]:
+    if not upload_ids:
+        return []
+    return (
+        session.query(UploadRecord)
+        .filter(UploadRecord.id.in_(upload_ids))
+        .order_by(UploadRecord.created_at.asc())
+        .all()
+    )
+
+
+def _get_project_upload_ids(session: Session, project: Project) -> list[int]:
+    upload_ids = {project.upload_id}
+    for artifact in project.artifact_sources:
+        upload_ids.add(artifact.upload_id)
+    uploads = _get_ordered_uploads(session, list(upload_ids))
+    return [upload.id for upload in uploads]
+
+
+def _ensure_manifests(session: Session, upload_ids: list[int]) -> None:
+    uploads = _get_ordered_uploads(session, upload_ids)
+    for upload in uploads:
+        if load_manifest(upload.id) is not None:
+            continue
+        zip_path = get_upload_zip_path(upload.id, upload.filename)
+        if not zip_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Stored upload archive not found.",
+            )
+        try:
+            ingest_zip(zip_path, upload.id)
+        except InvalidZipError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Stored upload archive is invalid.",
+            ) from exc
+
+
+def _analyze_project_from_store(
+    project: Project, upload_ids: list[int], use_ai: bool
+) -> tuple[ProjectAnalysisResult, str]:
+    consent_tool = _build_consent_tool(use_ai)
+    file_count = compute_project_file_count(project.rel_path, upload_ids)
+    detected = [
         DetectedProject(
             name=project.name,
             rel_path=project.rel_path,
             has_git_repo=project.has_git_repo,
-            file_count=project.file_count,
+            file_count=file_count,
         )
-        for project in projects
     ]
-
-
-def _analyze_projects_from_zip(
-    zip_path: Path, projects: list[Project], use_ai: bool
-) -> list[dict[str, Any]]:
-    consent_tool = _build_consent_tool(use_ai)
     with TemporaryDirectory() as temp_dir:
         extract_root = Path(temp_dir)
-        with ZipFile(zip_path) as archive:
-            archive.extractall(extract_root)
-        detected = _build_detected_projects(projects)
-        return analyze_projects_structured(extract_root, detected, consent_tool)
+        materialize_project_tree(project.rel_path, upload_ids, extract_root)
+        results = analyze_projects_structured(extract_root, detected, consent_tool)
+    analysis_map = {(item["name"], item["rel_path"]): item for item in results}
+    analysis = analysis_map.get((project.name, project.rel_path))
+    if analysis is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Project analysis failed.",
+        )
+    response = _analysis_to_response(project.id, analysis)
+    fingerprint = compute_project_fingerprint(project.rel_path, upload_ids)
+    return response, fingerprint
 
 
 def _analysis_to_response(project_id: int, analysis: dict[str, Any]) -> ProjectAnalysisResult:
@@ -139,6 +177,7 @@ def _analysis_to_response(project_id: int, analysis: dict[str, Any]) -> ProjectA
         git=analysis["git"],
         user_role=analysis.get("user_role"),
         user_contribution_percentage=analysis.get("user_contribution_percentage"),
+        role_justification=analysis.get("role_justification"),
     )
 
 
@@ -331,38 +370,107 @@ async def upload_project_zip(
                 f.write(chunk)
 
         try:
-            result = upload_zip(temp_path)
+            result, collab_flags, _project_dates = inspect_zip(temp_path)
         except InvalidZipError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(exc),
             ) from exc
 
-        upload_record = _get_latest_upload_record(
-            filename=result.filename,
-            size_bytes=result.size_bytes,
-            file_count=result.file_count,
-        )
-        if upload_record is None:
+        detected_names = [project.name for project in result.projects]
+        matches = find_matching_projects(detected_names) if detected_names else {}
+        ambiguous = {
+            name: ids for name, ids in matches.items() if len(ids) > 1 and name in detected_names
+        }
+        if ambiguous:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Upload record not found after processing.",
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "message": "Multiple existing projects match uploaded project names.",
+                    "candidates": ambiguous,
+                },
             )
-        try:
-            store_upload_zip(upload_record.id, upload_record.filename, temp_path)
-        except OSError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to store upload archive.",
-            ) from exc
 
         with get_session() as session:
-            projects = (
-                session.query(Project)
-                .filter(Project.upload_id == upload_record.id)
-                .order_by(Project.id)
-                .all()
+            upload_record = UploadRecord(
+                filename=result.filename,
+                size_bytes=result.size_bytes,
+                file_count=result.file_count,
             )
+            session.add(upload_record)
+            session.flush()
+
+            try:
+                store_upload_zip(upload_record.id, upload_record.filename, temp_path)
+            except OSError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to store upload archive.",
+                ) from exc
+
+            try:
+                ingest_zip(temp_path, upload_record.id)
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to store upload artifacts.",
+                ) from exc
+
+            existing_match_ids = [
+                ids[0] for name, ids in matches.items() if len(ids) == 1 and name in detected_names
+            ]
+            existing_projects: dict[int, Project] = {}
+            if existing_match_ids:
+                for project in (
+                    session.query(Project).filter(Project.id.in_(existing_match_ids)).all()
+                ):
+                    existing_projects[project.id] = project
+
+            updated_projects: list[Project] = []
+            new_projects: list[Project] = []
+            for detected_project in result.projects:
+                match_ids = matches.get(detected_project.name, [])
+                if len(match_ids) == 1:
+                    existing = existing_projects.get(match_ids[0])
+                    if existing is None:
+                        match_ids = []
+
+                if not match_ids:
+                    new_project = Project(
+                        upload_id=upload_record.id,
+                        name=detected_project.name,
+                        rel_path=detected_project.rel_path,
+                        has_git_repo=detected_project.has_git_repo,
+                        file_count=detected_project.file_count,
+                        is_collaborative=collab_flags.get(detected_project.rel_path, False),
+                    )
+                    session.add(new_project)
+                    new_projects.append(new_project)
+                    continue
+
+                existing = existing_projects[match_ids[0]]
+                existing.file_count += detected_project.file_count
+                session.add(
+                    ArtifactSource(
+                        project_id=existing.id,
+                        upload_id=upload_record.id,
+                        artifact_count=detected_project.file_count,
+                    )
+                )
+                upload_ids = {existing.upload_id, upload_record.id}
+                upload_ids.update(source.upload_id for source in existing.artifact_sources)
+                ordered_upload_ids = [
+                    upload.id for upload in _get_ordered_uploads(session, list(upload_ids))
+                ]
+                _ensure_manifests(session, ordered_upload_ids)
+                existing.file_count = compute_project_file_count(
+                    existing.rel_path, ordered_upload_ids
+                )
+                existing.updated_at = datetime.now(UTC)
+                updated_projects.append(existing)
+
+            session.flush()
+            projects = sorted(new_projects + updated_projects, key=lambda project: project.id)
 
         return ProjectUploadResponse(
             upload_id=upload_record.id,
@@ -385,7 +493,9 @@ async def upload_project_zip(
         409: {"description": "Stored upload archive not found"},
     },
 )
-def analyze_project(project_id: int, use_ai: bool = False) -> ProjectAnalysisResult:
+def analyze_project(
+    project_id: int, use_ai: bool = False, force: bool = False
+) -> ProjectAnalysisResult:
     with get_session() as session:
         project = session.query(Project).filter(Project.id == project_id).first()
         if project is None:
@@ -399,41 +509,29 @@ def analyze_project(project_id: int, use_ai: bool = False) -> ProjectAnalysisRes
                 detail="Project does not have a relative path to analyze.",
             )
 
-        upload = session.query(UploadRecord).filter(UploadRecord.id == project.upload_id).first()
-        if upload is None:
+        upload_ids = _get_project_upload_ids(session, project)
+        if not upload_ids:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Upload record not found.",
             )
 
-        zip_path = get_upload_zip_path(upload.id, upload.filename)
-        if not zip_path.exists():
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Stored upload archive not found.",
-            )
+        _ensure_manifests(session, upload_ids)
 
-        try:
-            results = _analyze_projects_from_zip(zip_path, [project], use_ai)
-        except BadZipFile as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Stored upload archive is invalid.",
-            ) from exc
+        fingerprint = compute_project_fingerprint(project.rel_path, upload_ids)
+        cached = load_analysis_cache(project.id)
+        if not force and cached and cached.get("fingerprint") == fingerprint:
+            payload = cached.get("payload")
+            if isinstance(payload, dict):
+                return ProjectAnalysisResult(**payload)
 
-        analysis_map = {(item["name"], item["rel_path"]): item for item in results}
-        analysis = analysis_map.get((project.name, project.rel_path))
-        if analysis is None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Project analysis failed.",
-            )
-
-        project.importance_score = float(analysis.get("score", 0.0))
-        project.user_role = analysis.get("user_role")
-        project.user_contribution_percentage = analysis.get("user_contribution_percentage")
+        response, fingerprint = _analyze_project_from_store(project, upload_ids, use_ai)
+        project.importance_score = response.importance_score
+        project.user_role = response.user_role
+        project.user_contribution_percentage = response.user_contribution_percentage
         session.flush()
-        return _analysis_to_response(project.id, analysis)
+        write_analysis_cache(project.id, fingerprint, response.model_dump())
+        return response
 
 
 @router.post(
@@ -442,7 +540,7 @@ def analyze_project(project_id: int, use_ai: bool = False) -> ProjectAnalysisRes
     summary="Analyze all projects",
     description="Analyze all persisted projects and update their importance scores.",
 )
-def analyze_all_projects(use_ai: bool = False) -> ProjectsAnalyzeAllResponse:
+def analyze_all_projects(use_ai: bool = False, force: bool = False) -> ProjectsAnalyzeAllResponse:
     analyzed: list[ProjectAnalysisResult] = []
     skipped: list[ProjectAnalysisSkipped] = []
 
@@ -451,7 +549,6 @@ def analyze_all_projects(use_ai: bool = False) -> ProjectsAnalyzeAllResponse:
         if not projects:
             return ProjectsAnalyzeAllResponse(analyzed=[], skipped=[])
 
-        projects_by_upload: dict[int, list[Project]] = {}
         for project in projects:
             if not project.rel_path.strip():
                 skipped.append(
@@ -461,70 +558,52 @@ def analyze_all_projects(use_ai: bool = False) -> ProjectsAnalyzeAllResponse:
                     )
                 )
                 continue
-            projects_by_upload.setdefault(project.upload_id, []).append(project)
 
-        if not projects_by_upload:
-            return ProjectsAnalyzeAllResponse(analyzed=[], skipped=skipped)
-
-        uploads = (
-            session.query(UploadRecord)
-            .filter(UploadRecord.id.in_(list(projects_by_upload.keys())))
-            .all()
-        )
-        upload_map = {upload.id: upload for upload in uploads}
-
-        for upload_id, upload_projects in projects_by_upload.items():
-            upload = upload_map.get(upload_id)
-            if upload is None:
-                for project in upload_projects:
-                    skipped.append(
-                        ProjectAnalysisSkipped(
-                            project_id=project.id,
-                            reason="Upload record not found.",
-                        )
+            upload_ids = _get_project_upload_ids(session, project)
+            if not upload_ids:
+                skipped.append(
+                    ProjectAnalysisSkipped(
+                        project_id=project.id,
+                        reason="Upload record not found.",
                     )
-                continue
-
-            zip_path = get_upload_zip_path(upload.id, upload.filename)
-            if not zip_path.exists():
-                for project in upload_projects:
-                    skipped.append(
-                        ProjectAnalysisSkipped(
-                            project_id=project.id,
-                            reason="Stored upload archive not found.",
-                        )
-                    )
+                )
                 continue
 
             try:
-                results = _analyze_projects_from_zip(zip_path, upload_projects, use_ai)
-            except BadZipFile:
-                for project in upload_projects:
-                    skipped.append(
-                        ProjectAnalysisSkipped(
-                            project_id=project.id,
-                            reason="Stored upload archive is invalid.",
-                        )
-                    )
+                _ensure_manifests(session, upload_ids)
+            except HTTPException as exc:
+                reason = str(exc.detail) if exc.detail else "Project analysis failed."
+                skipped.append(ProjectAnalysisSkipped(project_id=project.id, reason=reason))
                 continue
 
-            analysis_map = {(item["name"], item["rel_path"]): item for item in results}
-            for project in upload_projects:
-                analysis = analysis_map.get((project.name, project.rel_path))
-                if analysis is None:
-                    skipped.append(
-                        ProjectAnalysisSkipped(
-                            project_id=project.id,
-                            reason="Project analysis failed.",
-                        )
+            fingerprint = compute_project_fingerprint(project.rel_path, upload_ids)
+            cached = load_analysis_cache(project.id)
+            if not force and cached and cached.get("fingerprint") == fingerprint:
+                skipped.append(
+                    ProjectAnalysisSkipped(
+                        project_id=project.id,
+                        reason="Merged content fingerprint unchanged.",
                     )
-                    continue
+                )
+                continue
 
-                project.importance_score = float(analysis.get("score", 0.0))
-                project.user_role = analysis.get("user_role")
-                project.user_contribution_percentage = analysis.get("user_contribution_percentage")
-                analyzed.append(_analysis_to_response(project.id, analysis))
-
+            try:
+                response, fingerprint = _analyze_project_from_store(project, upload_ids, use_ai)
+                project.importance_score = response.importance_score
+                project.user_role = response.user_role
+                project.user_contribution_percentage = response.user_contribution_percentage
+                write_analysis_cache(project.id, fingerprint, response.model_dump())
+                analyzed.append(response)
+            except HTTPException as exc:
+                reason = str(exc.detail) if exc.detail else "Project analysis failed."
+                skipped.append(ProjectAnalysisSkipped(project_id=project.id, reason=reason))
+            except Exception as exc:
+                skipped.append(
+                    ProjectAnalysisSkipped(
+                        project_id=project.id,
+                        reason=f"Project analysis failed: {exc!s}",
+                    )
+                )
         session.flush()
 
     return ProjectsAnalyzeAllResponse(analyzed=analyzed, skipped=skipped)

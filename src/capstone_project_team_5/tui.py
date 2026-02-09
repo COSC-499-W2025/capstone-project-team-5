@@ -1158,6 +1158,7 @@ ProgressBar {
                             "importance_score": p.importance_score,
                             "user_role": p.user_role,
                             "user_contribution_percentage": p.user_contribution_percentage,
+                            "role_justification": p.role_justification,
                             "has_git_repo": p.has_git_repo,
                             "is_collaborative": p.is_collaborative,
                             "is_showcase": bool(getattr(p, "is_showcase", False)),
@@ -1336,6 +1337,7 @@ ProgressBar {
                             },
                             "user_role": proj.user_role,
                             "user_contribution_percentage": proj.user_contribution_percentage,
+                            "role_justification": proj.role_justification,
                             "is_showcase": bool(getattr(proj, "is_showcase", False)),
                         }
                     )
@@ -1625,10 +1627,13 @@ ProgressBar {
         portfolio_item = None
         role_line = ""
         user_role = project.get("user_role")
+        role_justification = project.get("role_justification")
         user_contrib_pct = project.get("user_contribution_percentage")
         if user_role:
             role_line = f"**Role:** {user_role}"
-            if user_contrib_pct is not None:
+            if role_justification:
+                role_line += f" ({role_justification})"
+            elif user_contrib_pct is not None:
                 role_line += f" ({user_contrib_pct:.1f}% contributions)"
 
         if self._current_user and project_id:
@@ -1738,10 +1743,13 @@ ProgressBar {
             parts.append(f"- Files: {project.get('file_count')}")
             parts.append(f"- Upload ID: {project.get('upload_id')}")
             user_role = project.get("user_role")
+            role_justification = project.get("role_justification")
             user_contrib_pct = project.get("user_contribution_percentage")
             if user_role:
                 role_line = f"- Role: {user_role}"
-                if user_contrib_pct is not None:
+                if role_justification:
+                    role_line += f" ({role_justification})"
+                elif user_contrib_pct is not None:
                     role_line += f" ({user_contrib_pct:.1f}% contributions)"
                 parts.append(role_line)
             start_date = project.get("start_date")
@@ -1806,10 +1814,13 @@ ProgressBar {
             duration = self._format_duration_from_dates(start_date, end_date)
             parts.append(f"- Duration: {duration}")
         user_role = project_dict.get("user_role")
+        role_justification = project_dict.get("role_justification")
         user_contrib_pct = project_dict.get("user_contribution_percentage")
         if user_role:
             role_line = f"- Role: {user_role}"
-            if user_contrib_pct is not None:
+            if role_justification:
+                role_line += f" ({role_justification})"
+            elif user_contrib_pct is not None:
                 role_line += f" ({user_contrib_pct:.1f}% contributions)"
             parts.append(role_line)
 
