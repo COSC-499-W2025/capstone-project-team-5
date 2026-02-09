@@ -214,6 +214,7 @@ def analyze_projects_structured(
             if user_role_info:
                 analysis.user_role = user_role_info.role
                 analysis.user_contribution_percentage = user_role_info.contribution_percentage
+                analysis.role_justification = user_role_info.justification
 
             for ac in contributions:
                 git_author_contribs.append(
@@ -287,6 +288,7 @@ def analyze_projects_structured(
                 },
                 "user_role": analysis.user_role,
                 "user_contribution_percentage": analysis.user_contribution_percentage,
+                "role_justification": analysis.role_justification,
             }
         )
 

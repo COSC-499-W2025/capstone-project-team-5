@@ -25,6 +25,7 @@ class ProjectSummary(BaseModel):
     importance_score: float | None
     user_role: str | None
     user_contribution_percentage: confloat(ge=0, le=100) | None
+    role_justification: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -51,6 +52,7 @@ class ProjectUpdateRequest(BaseModel):
     importance_score: float | None = None
     user_role: str | None = None
     user_contribution_percentage: confloat(ge=0, le=100) | None = None
+    role_justification: str | None = None
     is_showcase: bool | None = None
 
 
@@ -137,6 +139,7 @@ class ProjectAnalysisResult(BaseModel):
     git: GitSummary
     user_role: str | None
     user_contribution_percentage: confloat(ge=0, le=100) | None
+    role_justification: str | None
 
 
 class ProjectAnalysisSkipped(BaseModel):

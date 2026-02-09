@@ -91,8 +91,27 @@ class TestDetectUserRole:
         assert role.role == "Lead Developer"
         assert role.contribution_percentage == 60.0
 
-    def test_major_contributor_40_percent(self) -> None:
-        """Test major contributor with 40% contribution."""
+    def test_core_contributor_50_percent(self) -> None:
+        """Test core contributor with 50% contribution."""
+        contributions = [
+            AuthorContribution(author="Alice", commits=50, added=5000, deleted=500),
+            AuthorContribution(author="Bob", commits=50, added=5000, deleted=500),
+        ]
+
+        role = detect_user_role(
+            project_path=Path("/fake/path"),
+            current_user="Bob",
+            author_contributions=contributions,
+            collaborator_count=2,
+        )
+
+        assert role is not None
+        assert role.role == "Core Contributor"
+        assert 48.0 <= role.contribution_percentage <= 52.0
+        assert role.confidence == "High"
+
+    def test_core_contributor_40_percent(self) -> None:
+        """Test core contributor with 40% contribution."""
         contributions = [
             AuthorContribution(author="Alice", commits=50, added=5000, deleted=500),
             AuthorContribution(author="Bob", commits=40, added=4000, deleted=400),
@@ -107,8 +126,28 @@ class TestDetectUserRole:
         )
 
         assert role is not None
-        assert role.role == "Major Contributor"
+        assert role.role == "Core Contributor"
         assert 38.0 <= role.contribution_percentage <= 42.0
+        assert role.confidence == "High"
+
+    def test_major_contributor_30_percent(self) -> None:
+        """Test major contributor with 30% contribution."""
+        contributions = [
+            AuthorContribution(author="Alice", commits=60, added=6000, deleted=600),
+            AuthorContribution(author="Bob", commits=30, added=3000, deleted=300),
+            AuthorContribution(author="Charlie", commits=10, added=1000, deleted=100),
+        ]
+
+        role = detect_user_role(
+            project_path=Path("/fake/path"),
+            current_user="Bob",
+            author_contributions=contributions,
+            collaborator_count=3,
+        )
+
+        assert role is not None
+        assert role.role == "Major Contributor"
+        assert 28.0 <= role.contribution_percentage <= 32.0
         assert role.confidence == "High"
 
     def test_contributor_20_percent(self) -> None:
@@ -255,13 +294,13 @@ class TestFormatRoleSummary:
             confidence="High",
             total_commits=50,
             total_contributors=1,
+            justification="Sole author with 50 commits",
         )
 
         summary = format_role_summary(role)
 
         assert "Solo Developer" in summary
         assert "50 commits" in summary
-        assert "👨‍💻" in summary
 
     def test_format_lead_developer(self) -> None:
         """Test formatting lead developer role."""
@@ -272,6 +311,9 @@ class TestFormatRoleSummary:
             confidence="High",
             total_commits=100,
             total_contributors=3,
+            justification=(
+                "100 commits representing 70.5% of contributions with 2 other contributors"
+            ),
         )
 
         summary = format_role_summary(role)
@@ -279,7 +321,6 @@ class TestFormatRoleSummary:
         assert "Lead Developer" in summary
         assert "70.5%" in summary
         assert "100 commits" in summary
-        assert "🎯" in summary
 
     def test_format_contributor(self) -> None:
         """Test formatting contributor role."""
@@ -290,6 +331,9 @@ class TestFormatRoleSummary:
             confidence="Medium",
             total_commits=10,
             total_contributors=5,
+            justification=(
+                "10 commits representing 15.0% of contributions with 4 other contributors"
+            ),
         )
 
         summary = format_role_summary(role)
@@ -298,9 +342,104 @@ class TestFormatRoleSummary:
         assert "15.0%" in summary
         assert "10 commits" in summary
 
+    def test_format_core_contributor(self) -> None:
+        """Test formatting core contributor role."""
+        role = UserRole(
+            role="Core Contributor",
+            contribution_percentage=45.0,
+            is_collaborative=True,
+            confidence="High",
+            total_commits=45,
+            total_contributors=3,
+            justification=(
+                "45 commits representing 45.0% of contributions with 2 other contributors"
+            ),
+        )
+
+        summary = format_role_summary(role)
+
+        assert "Core Contributor" in summary
+        assert "45.0%" in summary
+        assert "45 commits" in summary
+
     def test_format_none_returns_unknown(self) -> None:
         """Test formatting None returns unknown message."""
         summary = format_role_summary(None)
 
         assert "Unknown" in summary
         assert "insufficient data" in summary.lower()
+
+
+class TestRoleJustification:
+    """Test suite for role justification generation."""
+
+    def test_solo_developer_justification(self) -> None:
+        """Test justification for solo developer."""
+        contributions = [
+            AuthorContribution(author="Alice", commits=50, added=1000, deleted=200),
+        ]
+
+        role = detect_user_role(
+            project_path=Path("/fake/path"),
+            current_user="Alice",
+            author_contributions=contributions,
+            collaborator_count=1,
+        )
+
+        assert role is not None
+        assert role.justification == "Sole author with 50 commits"
+
+    def test_solo_developer_single_commit(self) -> None:
+        """Test justification for solo developer with one commit uses singular."""
+        contributions = [
+            AuthorContribution(author="Bob", commits=1, added=10, deleted=2),
+        ]
+
+        role = detect_user_role(
+            project_path=Path("/fake/path"),
+            current_user="Bob",
+            author_contributions=contributions,
+            collaborator_count=1,
+        )
+
+        assert role is not None
+        assert role.justification == "Sole author with 1 commit"
+
+    def test_collaborative_justification_two_contributors(self) -> None:
+        """Test justification for collaborative project with 2 contributors."""
+        contributions = [
+            AuthorContribution(author="Alice", commits=70, added=7000, deleted=700),
+            AuthorContribution(author="Bob", commits=30, added=3000, deleted=300),
+        ]
+
+        role = detect_user_role(
+            project_path=Path("/fake/path"),
+            current_user="Alice",
+            author_contributions=contributions,
+            collaborator_count=2,
+        )
+
+        assert role is not None
+        assert "70 commits" in role.justification
+        assert "70.0%" in role.justification
+        assert "1 other contributor" in role.justification
+
+    def test_collaborative_justification_multiple_contributors(self) -> None:
+        """Test justification for collaborative project with multiple contributors."""
+        contributions = [
+            AuthorContribution(author="Alice", commits=50, added=5000, deleted=500),
+            AuthorContribution(author="Bob", commits=30, added=3000, deleted=300),
+            AuthorContribution(author="Charlie", commits=20, added=2000, deleted=200),
+        ]
+
+        role = detect_user_role(
+            project_path=Path("/fake/path"),
+            current_user="Alice",
+            author_contributions=contributions,
+            collaborator_count=3,
+        )
+
+        assert role is not None
+        assert "50 commits" in role.justification
+        assert "50.0%" in role.justification
+        assert "2 other contributors" in role.justification

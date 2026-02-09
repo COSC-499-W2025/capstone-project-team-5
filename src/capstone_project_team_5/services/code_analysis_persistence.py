@@ -74,6 +74,8 @@ def save_code_analysis_to_db(
                 project.user_role = analysis.user_role
             if analysis.user_contribution_percentage is not None:
                 project.user_contribution_percentage = analysis.user_contribution_percentage
+            if analysis.role_justification is not None:
+                project.role_justification = analysis.role_justification
 
             # Prepare metrics and summary based on language
             metrics_json, summary_text = _prepare_language_specific_data(analysis)
