@@ -1,6 +1,46 @@
 # Team Weekly Logs
 
 <details>
+  <summary><h3>T2 Week 4,5 | January 26 - Feb 8 </h3></summary>
+
+  ### Burnup Chart
+<img width="1093" height="553" alt="image" src="https://github.com/user-attachments/assets/67b33e7b-1187-40bc-bf42-00fb3e0060a7" />
+
+
+  ### Past Work
+- [PR #270 - Aggregated skills display.](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/270): Displays aggregated user skills on the TUI for improved visibility of skill data across projects.
+- [PR #271 - feat: Replace project thumbnail URL with image upload](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/271): Replaced project thumbnail URL input with direct image upload functionality for a more seamless user experience.
+- [PR #272 - Consent tool refinements](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/272): Refined the consent tool with UX and functionality improvements for better data consent management.
+- [PR #273 - User role api](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/273): Added user role API endpoints with bug fixes and enhancements for role-based access control.
+- [PR #275 - feat: added configuration + PT1 minor ux fixes](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/275): Added configuration support and minor UX fixes for Part 1 of the application.
+- [PR #276 - Add UserProfile, WorkExperience & Education Tables to Schema](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/276): Added new database schema tables for UserProfile, WorkExperience, and Education to support resume generation features.
+- [PR #283 - feat: add `/config/score` endpoint](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/283): Added a new `/config/score` API endpoint for scoring configuration management.
+- [PR #290 - Resume Generator: Add User Info CRUD](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/290): Introduced a UserProfileService with full CRUD operations for managing user contact and personal information for resume generation.
+- [PR #291 - Resume Generator: Work Exp CRUD](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/291): Implemented CRUD services for work experience data as the foundation for resume generation.
+- [PR #292 - Resume Generator: Education CRUD](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/292): Implemented a complete Education CRUD service with comprehensive validation logic for managing user educational history.
+- [PR #293 - feat: add `/portfolio` endpoints (crud)](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/293): Introduced first-class portfolio endpoints allowing users to create named portfolios, attach projects, and edit narratives.
+- [PR #295 - Implement Scroll on Side Panel](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/295): Changed the left panel container to VerticalScroll for better UX and to support future expansion of functionality.
+- [PR #297 - feat(api: incremental uploads, content dedupe, fingerprint cache](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/297): Added API support for incremental uploads, content-based file deduplication, merged analysis, and fingerprint caching for performance.
+- [PR #298 - Expand r24](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/298): Enhanced the user role detection system with role justification explanations and a refined role taxonomy with more granular classification.
+- [PR #300 - Project chronology tracking.](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/300): Introduced start/end date chronology tracking for projects with TUI rendering and editing support.
+- [PR #303 - FEAT:Project rerank](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/303): Added a new batch reranking API endpoint (`/api/projects/rerank`) for updating importance ranks of multiple projects in a single operation.
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Complete PR testing| ✅ Done | Successful completion of session |
+  | Discuss Peer feedback | ✅ Done | Created issues based on peer feedback (w ronit) |
+  | Implement feedback issue fixes | ✅ Done | Completed quite a few fixes. Continuous process. |
+  | Handle edge cases in endpoints  | ❌ In Progress | Worked on new endpoints. Will be addressed. |
+  | Continue with Milestone #2 requirements| ✅ Done | Continuous process.|
+  
+  ### Future Work
+  - Continue with Milestone 2 requirements
+  - Discuss remaining endpoints to be implemented
+</details>
+
+
+<details>
   <summary><h3>T2 Week 3 | January 19 - January 23 </h3></summary>
 
   ### Burnup Chart
