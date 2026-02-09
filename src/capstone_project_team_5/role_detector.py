@@ -156,7 +156,6 @@ def _classify_role(
 
 
 def _generate_justification(
-    role: str,
     contribution_pct: float,
     user_commits: int,
     collaborator_count: int,
