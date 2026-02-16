@@ -68,12 +68,3 @@ class UserProfileUpdateRequest(BaseModel):
     linkedin_url: str | None = Field(None, description="LinkedIn profile URL")
     github_username: str | None = Field(None, description="GitHub username")
     website: str | None = Field(None, description="Personal website URL")
-
-
-class UserWithProfileResponse(BaseModel):
-    """Response schema combining user info and profile."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    user: UserInfoResponse
-    profile: UserProfileResponse | None = None
