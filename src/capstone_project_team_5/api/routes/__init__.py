@@ -1,5 +1,13 @@
 """Route handlers for the API."""
 
-from capstone_project_team_5.api.routes import health, portfolio, projects, skills, users
+from capstone_project_team_5.api.routes import (
+    educations,
+    health,
+    portfolio,
+    projects,
+    skills,
+    users,
+    work_experiences,
+)
 
-__all__ = ["health", "projects", "skills", "portfolio", "users"]
+__all__ = ["health", "projects", "skills", "portfolio", "users", "work_experiences", "educations"]
