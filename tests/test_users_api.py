@@ -74,17 +74,11 @@ class TestGetCurrentUserInfo:
         assert "created_at" in data
 
     def test_get_current_user_info_no_auth(self, client: TestClient) -> None:
-        """Test getting current user info without authentication fails."""
-        response = client.get("/api/users/me")
-
-        assert response.status_code == 401
-        assert "authentication" in response.json()["detail"].lower()
-
-    def test_missing_auth_header(self, client: TestClient) -> None:
         """Test that missing X-Username header returns 401."""
         response = client.get("/api/users/me")
 
         assert response.status_code == 401
+        assert "authentication" in response.json()["detail"].lower()
 
 
 class TestGetProfile:
