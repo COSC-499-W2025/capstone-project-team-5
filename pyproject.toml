@@ -22,6 +22,7 @@ dependencies = [
     "fastapi>=0.128.0",
     "uvicorn[standard]>=0.40.0",
     "python-multipart>=0.0.21",
+    "pylatex>=1.4.2",
 ]
 
 [project.scripts]
