@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Annotated, Any
 
-from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -20,6 +21,7 @@ from capstone_project_team_5.api.schemas.projects import (
     ProjectsAnalyzeAllResponse,
     ProjectSummary,
     ProjectUpdateRequest,
+    ProjectUploadAction,
     ProjectUploadResponse,
     ScoreConfig,
 )
@@ -83,6 +85,45 @@ def _build_consent_tool(use_ai: bool) -> ConsentTool:
         tool.use_external_services = True
         tool.external_services = {"Gemini": {"allowed": True}}
     return tool
+
+
+def _parse_project_mapping(raw_mapping: str | None) -> dict[str, int]:
+    """Parse optional project mapping from form data."""
+    if raw_mapping is None or not raw_mapping.strip():
+        return {}
+
+    try:
+        payload = json.loads(raw_mapping)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Invalid project_mapping JSON. Expected an object of {project_name: project_id}."
+            ),
+        ) from exc
+
+    if not isinstance(payload, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Invalid project_mapping payload. Expected an object of {project_name: project_id}."
+            ),
+        )
+
+    parsed: dict[str, int] = {}
+    for raw_name, raw_project_id in payload.items():
+        if not isinstance(raw_name, str) or not raw_name.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid project_mapping key. Project names must be non-empty strings.",
+            )
+        if not isinstance(raw_project_id, int) or raw_project_id <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid project_mapping value. Project IDs must be positive integers.",
+            )
+        parsed[raw_name] = raw_project_id
+    return parsed
 
 
 def _get_ordered_uploads(session: Session, upload_ids: list[int]) -> list[UploadRecord]:
@@ -355,10 +396,20 @@ def delete_project(project_id: int) -> Response:
 )
 async def upload_project_zip(
     file: Annotated[UploadFile, File(description="ZIP archive containing project files")],
+    project_mapping: Annotated[
+        str | None,
+        Form(
+            description=(
+                "Optional JSON object mapping uploaded project names to existing project IDs. "
+                "Use this to explicitly resolve ambiguous project-name matches."
+            )
+        ),
+    ] = None,
 ) -> ProjectUploadResponse:
     filename = Path(file.filename or "upload.zip").name
     if not filename.lower().endswith(".zip"):
         filename = f"{filename}.zip"
+    requested_mapping = _parse_project_mapping(project_mapping)
 
     with TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir) / filename
@@ -381,8 +432,21 @@ async def upload_project_zip(
 
         detected_names = [project.name for project in result.projects]
         matches = find_matching_projects(detected_names) if detected_names else {}
+        unknown_mapped_names = sorted(set(requested_mapping.keys()) - set(detected_names))
+        if unknown_mapped_names:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "message": (
+                        "project_mapping contains names that were not detected in this upload."
+                    ),
+                    "unknown_project_names": unknown_mapped_names,
+                },
+            )
         ambiguous = {
-            name: ids for name, ids in matches.items() if len(ids) > 1 and name in detected_names
+            name: ids
+            for name, ids in matches.items()
+            if len(ids) > 1 and name in detected_names and name not in requested_mapping
         }
         if ambiguous:
             raise HTTPException(
@@ -419,23 +483,44 @@ async def upload_project_zip(
                 ) from exc
 
             existing_match_ids = [
-                ids[0] for name, ids in matches.items() if len(ids) == 1 and name in detected_names
+                ids[0]
+                for name, ids in matches.items()
+                if len(ids) == 1 and name in detected_names and name not in requested_mapping
             ]
+            existing_match_ids.extend(requested_mapping.values())
             existing_projects: dict[int, Project] = {}
             if existing_match_ids:
                 for project in (
                     session.query(Project).filter(Project.id.in_(existing_match_ids)).all()
                 ):
                     existing_projects[project.id] = project
+            missing_mapped_ids = sorted(
+                project_id
+                for project_id in set(requested_mapping.values())
+                if project_id not in existing_projects
+            )
+            if missing_mapped_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "message": "project_mapping references unknown project IDs.",
+                        "unknown_project_ids": missing_mapped_ids,
+                    },
+                )
 
             updated_projects: list[Project] = []
             new_projects: list[Project] = []
+            upload_actions: list[dict[str, Any]] = []
             for detected_project in result.projects:
-                match_ids = matches.get(detected_project.name, [])
-                if len(match_ids) == 1:
-                    existing = existing_projects.get(match_ids[0])
-                    if existing is None:
-                        match_ids = []
+                mapped_project_id = requested_mapping.get(detected_project.name)
+                if mapped_project_id is not None:
+                    match_ids = [mapped_project_id]
+                else:
+                    match_ids = matches.get(detected_project.name, [])
+                    if len(match_ids) == 1:
+                        existing = existing_projects.get(match_ids[0])
+                        if existing is None:
+                            match_ids = []
 
                 if not match_ids:
                     new_project = Project(
@@ -448,6 +533,14 @@ async def upload_project_zip(
                     )
                     session.add(new_project)
                     new_projects.append(new_project)
+                    upload_actions.append(
+                        {
+                            "project": new_project,
+                            "project_name": detected_project.name,
+                            "action": "created",
+                            "merged_into_project_id": None,
+                        }
+                    )
                     continue
 
                 existing = existing_projects[match_ids[0]]
@@ -470,9 +563,28 @@ async def upload_project_zip(
                 )
                 existing.updated_at = datetime.now(UTC)
                 updated_projects.append(existing)
+                upload_actions.append(
+                    {
+                        "project": existing,
+                        "project_name": detected_project.name,
+                        "action": "merged",
+                        "merged_into_project_id": existing.id,
+                    }
+                )
 
             session.flush()
             projects = sorted(new_projects + updated_projects, key=lambda project: project.id)
+            actions = [
+                ProjectUploadAction(
+                    project_id=int(action["project"].id),
+                    project_name=str(action["project_name"]),
+                    action=str(action["action"]),
+                    merged_into_project_id=action["merged_into_project_id"],
+                )
+                for action in upload_actions
+            ]
+            created_count = sum(1 for action in actions if action.action == "created")
+            merged_count = sum(1 for action in actions if action.action == "merged")
 
         return ProjectUploadResponse(
             upload_id=upload_record.id,
@@ -481,6 +593,9 @@ async def upload_project_zip(
             file_count=upload_record.file_count,
             created_at=upload_record.created_at,
             projects=[_project_to_summary(project) for project in projects],
+            actions=actions,
+            created_count=created_count,
+            merged_count=merged_count,
         )
 
 
