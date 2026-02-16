@@ -33,11 +33,12 @@ def find_matching_projects(
     with get_session() as session:
         for project_name in detected_projects:
             normalized_name = project_name.lower()
-            found_projects = (
-                session.query(Project).filter(func.lower(Project.name) == normalized_name).all()
+            found_project_ids = (
+                session.query(Project.id).filter(func.lower(Project.name) == normalized_name).all()
             )
+            found_projects = [project_id for (project_id,) in found_project_ids]
             if found_projects:
-                matches[project_name] = [p.id for p in found_projects]
+                matches[project_name] = found_projects
 
     return matches
 

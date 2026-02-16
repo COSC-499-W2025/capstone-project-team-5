@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, confloat
 
@@ -39,6 +40,18 @@ class ProjectUploadResponse(BaseModel):
     file_count: int
     created_at: datetime
     projects: list[ProjectSummary]
+    actions: list[ProjectUploadAction]
+    created_count: int
+    merged_count: int
+
+
+class ProjectUploadAction(BaseModel):
+    """Action performed for a project in an upload operation."""
+
+    project_id: int
+    project_name: str
+    action: Literal["created", "merged"]
+    merged_into_project_id: int | None = None
 
 
 class ProjectUpdateRequest(BaseModel):

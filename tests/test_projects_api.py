@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -36,7 +37,7 @@ def _upload_single_project(client: TestClient, name: str) -> int:
     return response.json()["projects"][0]["id"]
 
 
-def test_upload_projects_returns_metadata() -> None:
+def test_upload_projects_returns_metadata(api_db: None) -> None:
     client = TestClient(app)
     zip_bytes = _create_zip_bytes(
         [
@@ -58,6 +59,9 @@ def test_upload_projects_returns_metadata() -> None:
     assert len(data["projects"]) == 1
     assert data["projects"][0]["name"] == "myproject"
     assert data["projects"][0]["is_showcase"] is False
+    assert data["created_count"] == 1
+    assert data["merged_count"] == 0
+    assert data["actions"][0]["action"] == "created"
 
 
 def test_list_and_get_project() -> None:
@@ -239,8 +243,13 @@ def test_upload_appends_to_existing_project_by_name(api_db: None) -> None:
         files={"file": ("second.zip", zip_bytes2, "application/zip")},
     )
     assert upload_response2.status_code == 201
-    returned_ids = {project["id"] for project in upload_response2.json()["projects"]}
+    response_payload = upload_response2.json()
+    returned_ids = {project["id"] for project in response_payload["projects"]}
     assert project_id in returned_ids
+    assert response_payload["created_count"] == 0
+    assert response_payload["merged_count"] == 1
+    assert response_payload["actions"][0]["action"] == "merged"
+    assert response_payload["actions"][0]["merged_into_project_id"] == project_id
 
     with get_session() as session:
         projects = session.query(Project).filter(Project.name == "proj").all()
@@ -249,7 +258,56 @@ def test_upload_appends_to_existing_project_by_name(api_db: None) -> None:
         assert sources.count() == 1
 
 
-def test_upload_returns_409_on_ambiguous_project_name() -> None:
+def test_upload_with_project_mapping_resolves_ambiguous_name(api_db: None) -> None:
+    client = TestClient(app)
+    target_project_id = _upload_single_project(client, "ambig")
+    second_project_id = _upload_single_project(client, "othername")
+    with get_session() as session:
+        second_project = session.query(Project).filter(Project.id == second_project_id).first()
+        assert second_project is not None
+        second_project.name = "ambig"
+        session.flush()
+
+    zip_bytes = _create_zip_bytes([("ambig/main.py", b"print('x')\n")])
+    response = client.post(
+        "/api/projects/upload",
+        data={"project_mapping": json.dumps({"ambig": target_project_id})},
+        files={"file": ("ambig.zip", zip_bytes, "application/zip")},
+    )
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["created_count"] == 0
+    assert payload["merged_count"] == 1
+    assert payload["actions"][0]["action"] == "merged"
+    assert payload["actions"][0]["merged_into_project_id"] == target_project_id
+
+
+def test_upload_rejects_invalid_project_mapping_json(api_db: None) -> None:
+    client = TestClient(app)
+    zip_bytes = _create_zip_bytes([("proj/main.py", b"print('x')\n")])
+    response = client.post(
+        "/api/projects/upload",
+        data={"project_mapping": "{invalid-json"},
+        files={"file": ("proj.zip", zip_bytes, "application/zip")},
+    )
+    assert response.status_code == 400
+    assert "Invalid project_mapping JSON" in response.json()["detail"]
+
+
+def test_upload_rejects_unknown_project_name_in_mapping(api_db: None) -> None:
+    client = TestClient(app)
+    zip_bytes = _create_zip_bytes([("proj/main.py", b"print('x')\n")])
+    response = client.post(
+        "/api/projects/upload",
+        data={"project_mapping": json.dumps({"different_name": 1})},
+        files={"file": ("proj.zip", zip_bytes, "application/zip")},
+    )
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["unknown_project_names"] == ["different_name"]
+
+
+def test_upload_returns_409_on_ambiguous_project_name(api_db: None) -> None:
     client = TestClient(app)
     with get_session() as session:
         upload1 = UploadRecord(filename="a.zip", size_bytes=1, file_count=1)

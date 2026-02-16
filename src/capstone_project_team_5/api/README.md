@@ -36,6 +36,7 @@ The server runs on `http://localhost:8000` by default.
 | PATCH | `/api/projects/{id}` | Updates a project by ID |
 | DELETE | `/api/projects/{id}` | Deletes a project by ID |
 | POST | `/api/projects/upload` | Uploads a ZIP and persists detected projects |
+| POST | `/api/projects/upload` + `project_mapping` | Explicitly maps uploaded project names to existing project IDs for incremental merges |
 
 ### Example Requests
 
@@ -98,6 +99,20 @@ Upload a ZIP file:
 curl -X POST http://localhost:8000/api/projects/upload \
   -F "file=@/path/to/project.zip"
 ```
+
+Upload a ZIP file with explicit mapping (resolves ambiguous names):
+
+```bash
+curl -X POST http://localhost:8000/api/projects/upload \
+  -F "file=@/path/to/project.zip" \
+  -F 'project_mapping={"code_collab_proj":12,"text_indiv_proj":27}'
+```
+
+`/api/projects/upload` response now includes merge metadata:
+
+- `actions`: per-project action entries (`created` or `merged`)
+- `created_count`: number of newly created projects
+- `merged_count`: number of detected projects merged into existing projects
 
 ## Interactive Documentation
 
