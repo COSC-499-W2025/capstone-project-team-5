@@ -8,7 +8,15 @@ from typing import TYPE_CHECKING
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from capstone_project_team_5.api.routes import consent, health, portfolio, projects, skills
+from capstone_project_team_5.api.routes import (
+    consent,
+    educations,
+    health,
+    portfolio,
+    projects,
+    skills,
+    work_experiences,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -43,6 +51,8 @@ app.include_router(consent.router, prefix="/api")
 app.include_router(projects.router, prefix="/api")
 app.include_router(skills.router, prefix="/api")
 app.include_router(portfolio.router, prefix="/api")
+app.include_router(work_experiences.router, prefix="/api")
+app.include_router(educations.router, prefix="/api")
 
 
 def main() -> None:
