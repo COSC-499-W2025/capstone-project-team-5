@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from src.capstone_project_team_5.role_type_detection import (
+from capstone_project_team_5.role_type_detection import (
     CategoryStats,
     FileContribution,
     analyze_file_categories,
