@@ -6,7 +6,6 @@ Reproduces the popular ATS-friendly single-page resume layout from
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING
 
 from pylatex import Document, NoEscape, Package
@@ -95,9 +94,6 @@ _CUSTOM_COMMANDS = r"""
 \newcommand{\resumeItemListStart}{\begin{itemize}}
 \newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
 """
-
-# Regex to strip http(s):// from display URLs
-_PROTOCOL_RE = re.compile(r"^https?://", re.IGNORECASE)
 
 
 class JakeResumeTemplate(ResumeTemplate):
@@ -328,10 +324,3 @@ class JakeResumeTemplate(ResumeTemplate):
         lines.append(r"}}")
         lines.append(r"\end{itemize}")
         doc.append(NoEscape("\n".join(lines)))
-
-    # -- utilities ---------------------------------------------------------
-
-    @staticmethod
-    def _strip_protocol(url: str) -> str:
-        """Remove ``https://`` or ``http://`` prefix from *url*."""
-        return _PROTOCOL_RE.sub("", url)

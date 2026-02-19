@@ -19,6 +19,9 @@ _LATEX_TILDE = re.compile(r"~")
 _LATEX_CARET = re.compile(r"\^")
 _LATEX_BACKSLASH = re.compile(r"\\")
 
+# Regex to strip http(s):// from display URLs
+_PROTOCOL_RE = re.compile(r"^https?://", re.IGNORECASE)
+
 _MONTH_ABBR = [
     "",
     "Jan.",
@@ -64,6 +67,11 @@ class ResumeTemplate(ABC):
         result = _LATEX_TILDE.sub(r"\\textasciitilde{}", result)
         result = _LATEX_CARET.sub(r"\\textasciicircum{}", result)
         return result
+
+    @staticmethod
+    def _strip_protocol(url: str) -> str:
+        """Remove ``https://`` or ``http://`` prefix from *url*."""
+        return _PROTOCOL_RE.sub("", url)
 
     @staticmethod
     def format_date_range(
