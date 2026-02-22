@@ -13,26 +13,26 @@ from enum import StrEnum
 class ProjectRole(StrEnum):
     """Enumeration of all possible project roles.
 
-    Roles are ordered by typical contribution level (highest to lowest).
+    Roles are grouped by project responsibility and contribution pattern.
     """
 
-    # Primary ownership roles
+    # Ownership and origin roles
     SOLO_DEVELOPER = "Solo Developer"
     PROJECT_CREATOR = "Project Creator"
 
     # Leadership roles
     LEAD_DEVELOPER = "Lead Developer"
     TECH_LEAD = "Tech Lead"
-    MAINTAINER = "Maintainer"
-    DOCUMENTATION_LEAD = "Documentation Lead"
 
-    # Active contribution roles
+    # Contribution roles
     CORE_CONTRIBUTOR = "Core Contributor"
     MAJOR_CONTRIBUTOR = "Major Contributor"
-
-    # Supporting roles
     CONTRIBUTOR = "Contributor"
     MINOR_CONTRIBUTOR = "Minor Contributor"
+
+    # Supporting roles
+    MAINTAINER = "Maintainer"
+    DOCUMENTATION_LEAD = "Documentation Lead"
 
 
 @dataclass(frozen=True)
