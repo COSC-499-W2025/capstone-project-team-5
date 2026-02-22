@@ -461,9 +461,13 @@ class TestSpecializedRoleDetection:
             AuthorContribution(author="Bob", commits=70, added=7000, deleted=400),
         ]
 
-        monkeypatch.setattr("capstone_project_team_5.role_detector._is_project_creator", lambda *_: True)
+        monkeypatch.setattr(
+            "capstone_project_team_5.role_detector._is_project_creator", lambda *_: True
+        )
         monkeypatch.setattr("capstone_project_team_5.role_detector._is_tech_lead", lambda *_: False)
-        monkeypatch.setattr("capstone_project_team_5.role_detector._is_maintainer", lambda *_: False)
+        monkeypatch.setattr(
+            "capstone_project_team_5.role_detector._is_maintainer", lambda *_: False
+        )
 
         role = detect_user_role(
             project_path=Path("/fake/path"),
@@ -483,9 +487,13 @@ class TestSpecializedRoleDetection:
             AuthorContribution(author="Bob", commits=65, added=6500, deleted=650),
         ]
 
-        monkeypatch.setattr("capstone_project_team_5.role_detector._is_project_creator", lambda *_: False)
+        monkeypatch.setattr(
+            "capstone_project_team_5.role_detector._is_project_creator", lambda *_: False
+        )
         monkeypatch.setattr("capstone_project_team_5.role_detector._is_tech_lead", lambda *_: True)
-        monkeypatch.setattr("capstone_project_team_5.role_detector._is_maintainer", lambda *_: False)
+        monkeypatch.setattr(
+            "capstone_project_team_5.role_detector._is_maintainer", lambda *_: False
+        )
 
         role = detect_user_role(
             project_path=Path("/fake/path"),
@@ -505,7 +513,9 @@ class TestSpecializedRoleDetection:
             AuthorContribution(author="Bob", commits=72, added=7200, deleted=720),
         ]
 
-        monkeypatch.setattr("capstone_project_team_5.role_detector._is_project_creator", lambda *_: False)
+        monkeypatch.setattr(
+            "capstone_project_team_5.role_detector._is_project_creator", lambda *_: False
+        )
         monkeypatch.setattr("capstone_project_team_5.role_detector._is_tech_lead", lambda *_: False)
         monkeypatch.setattr("capstone_project_team_5.role_detector._is_maintainer", lambda *_: True)
 
@@ -527,10 +537,16 @@ class TestSpecializedRoleDetection:
             AuthorContribution(author="Bob", commits=78, added=7800, deleted=780),
         ]
 
-        monkeypatch.setattr("capstone_project_team_5.role_detector._is_project_creator", lambda *_: False)
+        monkeypatch.setattr(
+            "capstone_project_team_5.role_detector._is_project_creator", lambda *_: False
+        )
         monkeypatch.setattr("capstone_project_team_5.role_detector._is_tech_lead", lambda *_: False)
-        monkeypatch.setattr("capstone_project_team_5.role_detector._is_documentation_lead", lambda *_: True)
-        monkeypatch.setattr("capstone_project_team_5.role_detector._is_maintainer", lambda *_: False)
+        monkeypatch.setattr(
+            "capstone_project_team_5.role_detector._is_documentation_lead", lambda *_: True
+        )
+        monkeypatch.setattr(
+            "capstone_project_team_5.role_detector._is_maintainer", lambda *_: False
+        )
 
         role = detect_user_role(
             project_path=Path("/fake/path"),

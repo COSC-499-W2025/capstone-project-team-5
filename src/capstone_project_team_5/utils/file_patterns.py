@@ -99,7 +99,10 @@ def is_documentation_file(path: str) -> bool:
     """Return True if a path looks like documentation content."""
     normalized = normalize_path(path)
     filename = PurePosixPath(normalized).name
-    return any(fnmatch(normalized, pattern) or fnmatch(filename, pattern) for pattern in DOCUMENTATION_PATTERNS)
+    return any(
+        fnmatch(normalized, pattern) or fnmatch(filename, pattern)
+        for pattern in DOCUMENTATION_PATTERNS
+    )
 
 
 def is_code_file(path: str) -> bool:

@@ -149,10 +149,16 @@ def _detect_specialized_role(
         return ProjectRole.PROJECT_CREATOR.value, "identified as earliest project author"
 
     if _is_tech_lead(project_path, current_user, user_contrib.commits, contribution_pct):
-        return ProjectRole.TECH_LEAD.value, "high concentration of infrastructure and architecture changes"
+        return (
+            ProjectRole.TECH_LEAD.value,
+            "high concentration of infrastructure and architecture changes",
+        )
 
     if _is_documentation_lead(project_path, current_user, user_contrib.commits, contribution_pct):
-        return ProjectRole.DOCUMENTATION_LEAD.value, "documentation changes dominate contribution profile"
+        return (
+            ProjectRole.DOCUMENTATION_LEAD.value,
+            "documentation changes dominate contribution profile",
+        )
 
     if _is_maintainer(project_path, current_user, user_contrib.commits):
         return ProjectRole.MAINTAINER.value, "consistent maintenance activity over time"
@@ -166,7 +172,9 @@ def _is_project_creator(project_path: Path, current_user: str) -> bool:
     Requires earliest detected author match and evidence of setup-file authorship.
     """
     try:
-        earliest_author = run_git(project_path, "log", "--reverse", "--format=%an", "--max-count=1").strip()
+        earliest_author = run_git(
+            project_path, "log", "--reverse", "--format=%an", "--max-count=1"
+        ).strip()
         if not earliest_author or not _matches_user(earliest_author, current_user):
             return False
 
@@ -302,8 +310,7 @@ def _get_maintenance_commit_ratio(project_path: Path, current_user: str) -> floa
         return 0.0
 
     maintenance_total = sum(
-        user_counts.get(commit_type, 0)
-        for commit_type in ("fix", "chore", "docs", "refactor")
+        user_counts.get(commit_type, 0) for commit_type in ("fix", "chore", "docs", "refactor")
     )
     return maintenance_total / total
 
