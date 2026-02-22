@@ -16,7 +16,7 @@ class ProjectRole(StrEnum):
     Roles are grouped by project responsibility and contribution pattern.
     """
 
-    # Ownership and origin roles
+    # Ownership roles
     SOLO_DEVELOPER = "Solo Developer"
     PROJECT_CREATOR = "Project Creator"
 
