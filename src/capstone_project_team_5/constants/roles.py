@@ -24,6 +24,7 @@ class ProjectRole(StrEnum):
     LEAD_DEVELOPER = "Lead Developer"
     TECH_LEAD = "Tech Lead"
     MAINTAINER = "Maintainer"
+    DOCUMENTATION_LEAD = "Documentation Lead"
 
     # Active contribution roles
     CORE_CONTRIBUTOR = "Core Contributor"
@@ -70,25 +71,30 @@ ROLE_METADATA: dict[ProjectRole, RoleMetadata] = {
         description="Ongoing maintenance and consistent contributions over time",
         display_priority=5,
     ),
+    ProjectRole.DOCUMENTATION_LEAD: RoleMetadata(
+        role=ProjectRole.DOCUMENTATION_LEAD,
+        description="Primary owner of project documentation and knowledge sharing",
+        display_priority=6,
+    ),
     ProjectRole.CORE_CONTRIBUTOR: RoleMetadata(
         role=ProjectRole.CORE_CONTRIBUTOR,
         description="Essential contributor with significant ongoing involvement",
-        display_priority=6,
+        display_priority=7,
     ),
     ProjectRole.MAJOR_CONTRIBUTOR: RoleMetadata(
         role=ProjectRole.MAJOR_CONTRIBUTOR,
         description="Substantial contributions to the project",
-        display_priority=7,
+        display_priority=8,
     ),
     ProjectRole.CONTRIBUTOR: RoleMetadata(
         role=ProjectRole.CONTRIBUTOR,
         description="Regular contributor to the project",
-        display_priority=8,
+        display_priority=9,
     ),
     ProjectRole.MINOR_CONTRIBUTOR: RoleMetadata(
         role=ProjectRole.MINOR_CONTRIBUTOR,
         description="Limited contributions to the project",
-        display_priority=9,
+        display_priority=10,
     ),
 }
 

@@ -10,7 +10,19 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from capstone_project_team_5.constants.roles import ProjectRole
-from capstone_project_team_5.utils.git import AuthorContribution
+from capstone_project_team_5.utils.file_patterns import (
+    count_matches,
+    is_code_file,
+    is_documentation_file,
+    is_infrastructure_file,
+    is_initialization_file,
+)
+from capstone_project_team_5.utils.git import (
+    AuthorContribution,
+    get_commit_type_counts,
+    get_weekly_activity,
+    run_git,
+)
 
 
 @dataclass
@@ -86,14 +98,25 @@ def detect_user_role(
 
     # Determine role based on contribution and collaboration
     is_collaborative = collaborator_count > 1
-    role, confidence = _classify_role(
+    base_role, confidence = _classify_role(
         contribution_pct, is_collaborative, collaborator_count, user_contrib.commits
+    )
+
+    # Multi-pass role detection for specialized roles
+    role, specialization_reason = _detect_specialized_role(
+        project_path=project_path,
+        current_user=current_user,
+        user_contrib=user_contrib,
+        contribution_pct=contribution_pct,
+        base_role=base_role,
     )
 
     # Generate human-readable justification
     justification = _generate_justification(
         contribution_pct, user_contrib.commits, collaborator_count, is_collaborative
     )
+    if specialization_reason:
+        justification = f"{justification}; {specialization_reason}"
 
     return UserRole(
         role=role,
@@ -104,6 +127,185 @@ def detect_user_role(
         total_contributors=collaborator_count,
         justification=justification,
     )
+
+
+def _detect_specialized_role(
+    project_path: Path,
+    current_user: str,
+    user_contrib: AuthorContribution,
+    contribution_pct: float,
+    base_role: str,
+) -> tuple[str, str | None]:
+    """Detect specialized roles through additional repository signals.
+
+    Returns:
+        tuple of (resolved_role, optional_reason)
+    """
+    if base_role == ProjectRole.SOLO_DEVELOPER.value:
+        return base_role, None
+
+    # Highest-priority specialized signal first.
+    if _is_project_creator(project_path, current_user):
+        return ProjectRole.PROJECT_CREATOR.value, "identified as earliest project author"
+
+    if _is_tech_lead(project_path, current_user, user_contrib.commits, contribution_pct):
+        return ProjectRole.TECH_LEAD.value, "high concentration of infrastructure and architecture changes"
+
+    if _is_documentation_lead(project_path, current_user, user_contrib.commits, contribution_pct):
+        return ProjectRole.DOCUMENTATION_LEAD.value, "documentation changes dominate contribution profile"
+
+    if _is_maintainer(project_path, current_user, user_contrib.commits):
+        return ProjectRole.MAINTAINER.value, "consistent maintenance activity over time"
+
+    return base_role, None
+
+
+def _is_project_creator(project_path: Path, current_user: str) -> bool:
+    """Heuristic for project creator role.
+
+    Requires earliest detected author match and evidence of setup-file authorship.
+    """
+    try:
+        earliest_author = run_git(project_path, "log", "--reverse", "--format=%an", "--max-count=1").strip()
+        if not earliest_author or not _matches_user(earliest_author, current_user):
+            return False
+
+        early_files = _get_early_commit_files(project_path, commit_limit=25)
+        init_file_count = count_matches(early_files, is_initialization_file)
+        return init_file_count > 0
+    except RuntimeError:
+        return False
+
+
+def _is_tech_lead(
+    project_path: Path,
+    current_user: str,
+    user_commits: int,
+    contribution_pct: float,
+) -> bool:
+    """Heuristic for tech lead role based on infra/config focus."""
+    if user_commits < 3 or contribution_pct < 15.0:
+        return False
+
+    files = _get_user_changed_files(project_path, current_user)
+    if not files:
+        return False
+
+    infra_count = count_matches(files, is_infrastructure_file)
+    docs_count = count_matches(files, is_documentation_file)
+    infra_ratio = infra_count / len(files)
+
+    # Infra-heavy profile with some supporting docs indicates architecture ownership.
+    return infra_count >= 3 and infra_ratio >= 0.35 and docs_count >= 1
+
+
+def _is_maintainer(project_path: Path, current_user: str, user_commits: int) -> bool:
+    """Heuristic for maintainer role using sustained activity and maintenance commits."""
+    if user_commits < 6:
+        return False
+
+    active_week_count = _get_active_week_count(project_path, current_user)
+    if active_week_count < 6:
+        return False
+
+    maintenance_commit_ratio = _get_maintenance_commit_ratio(project_path, current_user)
+    return maintenance_commit_ratio >= 0.3
+
+
+def _is_documentation_lead(
+    project_path: Path,
+    current_user: str,
+    user_commits: int,
+    contribution_pct: float,
+) -> bool:
+    """Heuristic for documentation lead based on docs-to-code ratio."""
+    if user_commits < 3 or contribution_pct < 10.0:
+        return False
+
+    files = _get_user_changed_files(project_path, current_user)
+    if not files:
+        return False
+
+    docs_count = count_matches(files, is_documentation_file)
+    code_count = count_matches(files, is_code_file)
+
+    # Require clear docs ownership, not just occasional README edits.
+    return docs_count >= 4 and docs_count > code_count and (docs_count / len(files)) >= 0.5
+
+
+def _get_early_commit_files(project_path: Path, commit_limit: int = 25) -> list[str]:
+    """Get file paths touched in the earliest commits of the repository."""
+    try:
+        output = run_git(
+            project_path,
+            "log",
+            "--reverse",
+            "--name-only",
+            "--pretty=format:",
+            f"--max-count={commit_limit}",
+        )
+        return [line.strip() for line in output.splitlines() if line.strip()]
+    except RuntimeError:
+        return []
+
+
+def _get_user_changed_files(project_path: Path, current_user: str) -> list[str]:
+    """Get file paths touched by the current user."""
+    try:
+        output = run_git(
+            project_path,
+            "log",
+            "--name-only",
+            "--pretty=format:",
+            f"--author={current_user}",
+            "--no-merges",
+        )
+        return [line.strip() for line in output.splitlines() if line.strip()]
+    except RuntimeError:
+        return []
+
+
+def _get_active_week_count(project_path: Path, current_user: str, weeks: int = 12) -> int:
+    """Count number of active weeks with at least one commit for the user."""
+    try:
+        activity = get_weekly_activity(project_path, weeks=weeks)
+    except RuntimeError:
+        return 0
+
+    author_weeks: list[int] = []
+    for author, counts in activity.items():
+        if _matches_user(author, current_user):
+            author_weeks = counts
+            break
+
+    return sum(1 for count in author_weeks if count > 0)
+
+
+def _get_maintenance_commit_ratio(project_path: Path, current_user: str) -> float:
+    """Return ratio of maintenance-style commits for user.
+
+    Maintenance commits are: fix, chore, docs, refactor.
+    """
+    try:
+        type_counts = get_commit_type_counts(project_path)
+    except RuntimeError:
+        return 0.0
+
+    user_counts: dict[str, int] = {}
+    for author, counts in type_counts.items():
+        if _matches_user(author, current_user):
+            user_counts = counts
+            break
+
+    total = sum(user_counts.values())
+    if total == 0:
+        return 0.0
+
+    maintenance_total = sum(
+        user_counts.get(commit_type, 0)
+        for commit_type in ("fix", "chore", "docs", "refactor")
+    )
+    return maintenance_total / total
 
 
 def _matches_user(author_name: str, current_user: str) -> bool:

@@ -9,6 +9,12 @@ from capstone_project_team_5.role_detector import (
     detect_user_role,
     format_role_summary,
 )
+from capstone_project_team_5.utils.file_patterns import (
+    is_code_file,
+    is_documentation_file,
+    is_infrastructure_file,
+    is_initialization_file,
+)
 from capstone_project_team_5.utils.git import AuthorContribution
 
 
@@ -443,3 +449,120 @@ class TestRoleJustification:
         assert "50 commits" in role.justification
         assert "50.0%" in role.justification
         assert "2 other contributors" in role.justification
+
+
+class TestSpecializedRoleDetection:
+    """Tests for multi-pass specialized role overrides."""
+
+    def test_project_creator_override(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        """Project Creator should override contribution-only role when signal is present."""
+        contributions = [
+            AuthorContribution(author="Alice", commits=30, added=3000, deleted=200),
+            AuthorContribution(author="Bob", commits=70, added=7000, deleted=400),
+        ]
+
+        monkeypatch.setattr("capstone_project_team_5.role_detector._is_project_creator", lambda *_: True)
+        monkeypatch.setattr("capstone_project_team_5.role_detector._is_tech_lead", lambda *_: False)
+        monkeypatch.setattr("capstone_project_team_5.role_detector._is_maintainer", lambda *_: False)
+
+        role = detect_user_role(
+            project_path=Path("/fake/path"),
+            current_user="Alice",
+            author_contributions=contributions,
+            collaborator_count=2,
+        )
+
+        assert role is not None
+        assert role.role == "Project Creator"
+        assert "earliest project author" in role.justification
+
+    def test_tech_lead_override(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        """Tech Lead should override base role when infrastructure signal is present."""
+        contributions = [
+            AuthorContribution(author="Alice", commits=35, added=3500, deleted=350),
+            AuthorContribution(author="Bob", commits=65, added=6500, deleted=650),
+        ]
+
+        monkeypatch.setattr("capstone_project_team_5.role_detector._is_project_creator", lambda *_: False)
+        monkeypatch.setattr("capstone_project_team_5.role_detector._is_tech_lead", lambda *_: True)
+        monkeypatch.setattr("capstone_project_team_5.role_detector._is_maintainer", lambda *_: False)
+
+        role = detect_user_role(
+            project_path=Path("/fake/path"),
+            current_user="Alice",
+            author_contributions=contributions,
+            collaborator_count=2,
+        )
+
+        assert role is not None
+        assert role.role == "Tech Lead"
+        assert "infrastructure" in role.justification
+
+    def test_maintainer_override(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        """Maintainer should override base role when sustained activity signal is present."""
+        contributions = [
+            AuthorContribution(author="Alice", commits=28, added=2800, deleted=280),
+            AuthorContribution(author="Bob", commits=72, added=7200, deleted=720),
+        ]
+
+        monkeypatch.setattr("capstone_project_team_5.role_detector._is_project_creator", lambda *_: False)
+        monkeypatch.setattr("capstone_project_team_5.role_detector._is_tech_lead", lambda *_: False)
+        monkeypatch.setattr("capstone_project_team_5.role_detector._is_maintainer", lambda *_: True)
+
+        role = detect_user_role(
+            project_path=Path("/fake/path"),
+            current_user="Alice",
+            author_contributions=contributions,
+            collaborator_count=2,
+        )
+
+        assert role is not None
+        assert role.role == "Maintainer"
+        assert "maintenance" in role.justification
+
+    def test_documentation_lead_override(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        """Documentation Lead should override base role when docs-heavy signal is present."""
+        contributions = [
+            AuthorContribution(author="Alice", commits=22, added=2200, deleted=220),
+            AuthorContribution(author="Bob", commits=78, added=7800, deleted=780),
+        ]
+
+        monkeypatch.setattr("capstone_project_team_5.role_detector._is_project_creator", lambda *_: False)
+        monkeypatch.setattr("capstone_project_team_5.role_detector._is_tech_lead", lambda *_: False)
+        monkeypatch.setattr("capstone_project_team_5.role_detector._is_documentation_lead", lambda *_: True)
+        monkeypatch.setattr("capstone_project_team_5.role_detector._is_maintainer", lambda *_: False)
+
+        role = detect_user_role(
+            project_path=Path("/fake/path"),
+            current_user="Alice",
+            author_contributions=contributions,
+            collaborator_count=2,
+        )
+
+        assert role is not None
+        assert role.role == "Documentation Lead"
+        assert "documentation" in role.justification
+
+
+class TestFilePatternUtilities:
+    """Tests for file-pattern-based role signal utilities."""
+
+    def test_is_initialization_file(self) -> None:
+        assert is_initialization_file("package.json") is True
+        assert is_initialization_file("backend/requirements.txt") is True
+        assert is_initialization_file("src/main.py") is False
+
+    def test_is_infrastructure_file(self) -> None:
+        assert is_infrastructure_file("Dockerfile") is True
+        assert is_infrastructure_file(".github/workflows/ci.yml") is True
+        assert is_infrastructure_file("src/app.py") is False
+
+    def test_is_documentation_file(self) -> None:
+        assert is_documentation_file("README.md") is True
+        assert is_documentation_file("docs/architecture.md") is True
+        assert is_documentation_file("src/service.ts") is False
+
+    def test_is_code_file(self) -> None:
+        assert is_code_file("src/service.ts") is True
+        assert is_code_file("backend/main.py") is True
+        assert is_code_file("README.md") is False
