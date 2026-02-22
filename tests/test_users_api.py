@@ -191,3 +191,42 @@ class TestUpsertProfile:
         data = response.json()
         assert data["first_name"] == "Jane"
         assert data["last_name"] == "Doe"  # Unchanged
+
+
+class TestDeleteProfile:
+    """Tests for DELETE /api/users/{username}/profile endpoint."""
+
+    def test_delete_profile_success(self, client: TestClient, test_user: tuple[str, int]) -> None:
+        """Test deleting existing profile returns 204 and removes it."""
+        username, _ = test_user
+
+        # Create profile first
+        client.post(
+            f"/api/users/{username}/profile",
+            json={"first_name": "John", "last_name": "Doe"},
+            headers={"X-Username": username},
+        )
+
+        # Delete profile
+        response = client.delete(f"/api/users/{username}/profile", headers={"X-Username": username})
+        assert response.status_code == 204
+
+        # Verify profile is gone
+        response = client.get(f"/api/users/{username}/profile", headers={"X-Username": username})
+        assert response.status_code == 404
+
+    def test_delete_profile_not_found(self, client: TestClient, test_user: tuple[str, int]) -> None:
+        """Test deleting nonexistent profile returns 404."""
+        username, _ = test_user
+
+        response = client.delete(f"/api/users/{username}/profile", headers={"X-Username": username})
+        assert response.status_code == 404
+
+    def test_delete_profile_forbidden(self, client: TestClient, test_user: tuple[str, int]) -> None:
+        """Test deleting another user's profile returns 403."""
+        username, _ = test_user
+
+        response = client.delete(
+            f"/api/users/{username}/profile", headers={"X-Username": "otheruser"}
+        )
+        assert response.status_code == 403
