@@ -1,7 +1,8 @@
-"""Jake Gutierrez resume template.
+"""Rover resume template.
 
-Reproduces the popular ATS-friendly single-page resume layout from
-``github.com/jakegut/resume`` using PyLaTeX.
+Faithfully based on ``github.com/subidit/rover-resume`` — uppercase bold
+section headers with horizontal rules, native LaTeX sectioning,
+1-inch margins on A4, ``description`` list for skills.
 """
 
 from __future__ import annotations
@@ -20,88 +21,42 @@ if TYPE_CHECKING:
         ResumeWorkEntry,
     )
 
-__all__ = ["JakeResumeTemplate"]
+__all__ = ["RoverResumeTemplate"]
 
 # ---------------------------------------------------------------------------
 # LaTeX preamble fragments
 # ---------------------------------------------------------------------------
 
 _PACKAGES: list[Package] = [
-    Package("latexsym"),
-    Package("fullpage", options=NoEscape("empty")),
+    Package("geometry", options=NoEscape("a4paper,margin=1in")),
     Package("titlesec"),
-    Package("marvosym"),
-    Package("color", options=NoEscape("usenames,dvipsnames")),
-    Package("verbatim"),
     Package("enumitem"),
     Package("hyperref", options=NoEscape("hidelinks")),
-    Package("fancyhdr"),
-    Package("babel", options=NoEscape("english")),
-    Package("tabularx"),
     Package("fontenc", options=NoEscape("T1")),
 ]
 
 _PREAMBLE_SETUP = r"""
-\pagestyle{fancy}
-\fancyhf{}
-\fancyfoot{}
-\renewcommand{\headrulewidth}{0pt}
-\renewcommand{\footrulewidth}{0pt}
-\addtolength{\oddsidemargin}{-0.5in}
-\addtolength{\evensidemargin}{-0.5in}
-\addtolength{\textwidth}{1in}
-\addtolength{\topmargin}{-.5in}
-\addtolength{\textheight}{1.0in}
-\urlstyle{same}
-\raggedbottom
-\raggedright
-\setlength{\tabcolsep}{0in}
-\titleformat{\section}{
-  \vspace{-4pt}\scshape\raggedright\large
-}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+\setlength{\parindent}{0pt}
+\setcounter{secnumdepth}{0}
+\titleformat{\section}{\large\bfseries\uppercase}{}{}{}[\titlerule]
+\titleformat{\subsection}{\bfseries}{}{0em}{}
+\titleformat*{\subsubsection}{\itshape}
+\titlespacing{\section}{0pt}{6pt}{4pt}
+\titlespacing{\subsection}{0pt}{4pt}{0pt}
+\titlespacing{\subsubsection}{0pt}{2pt}{0pt}
+\setlist[itemize]{noitemsep, topsep=2pt, left=0pt .. 1.5em}
+\setlist[description]{itemsep=0pt}
+\pagestyle{empty}
 \pdfgentounicode=1
 """
 
-_CUSTOM_COMMANDS = r"""
-\newcommand{\resumeItem}[1]{
-  \item\small{
-    {#1 \vspace{-2pt}}
-  }
-}
-\newcommand{\resumeSubheading}[4]{
-  \vspace{-2pt}\item
-    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
-      \textbf{#1} & #2 \\
-      \textit{\small#3} & \textit{\small #4} \\
-    \end{tabular*}\vspace{-7pt}
-}
-\newcommand{\resumeSubSubheading}[2]{
-    \item
-    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
-      \textit{\small#1} & \textit{\small #2} \\
-    \end{tabular*}\vspace{-7pt}
-}
-\newcommand{\resumeProjectHeading}[2]{
-    \item
-    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
-      \small#1 & #2 \\
-    \end{tabular*}\vspace{-7pt}
-}
-\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
-\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
-\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
-\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
-\newcommand{\resumeItemListStart}{\begin{itemize}}
-\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
-"""
 
-
-class JakeResumeTemplate(ResumeTemplate):
-    """Jake Gutierrez's ATS-friendly single-page resume."""
+class RoverResumeTemplate(ResumeTemplate):
+    """Rover-style ATS-friendly resume with uppercase section headers."""
 
     @property
     def name(self) -> str:  # pragma: no cover
-        return "Jake's Resume"
+        return "Rover Resume"
 
     # ------------------------------------------------------------------
     # public API
@@ -136,23 +91,20 @@ class JakeResumeTemplate(ResumeTemplate):
     def _create_document(self) -> Document:
         doc = Document(
             documentclass="article",
-            document_options=["letterpaper", "11pt"],
-            page_numbers=True,  # Jake's preamble uses fancyhdr
-            indent=True,  # Jake's preamble sets \raggedright
+            document_options=["a4paper", "11pt"],
+            page_numbers=True,
+            indent=True,
             lmodern=False,
             textcomp=False,
             microtype=False,
             fontenc=None,
             inputenc=None,
         )
-        # Remove lastpage auto-injected by page_numbers=True;
-        # Jake's preamble handles page style via fancyhdr.
         doc.packages = [p for p in doc.packages if "lastpage" not in p.dumps()]
 
         for pkg in _PACKAGES:
             doc.packages.append(pkg)
         doc.preamble.append(NoEscape(_PREAMBLE_SETUP))
-        doc.preamble.append(NoEscape(_CUSTOM_COMMANDS))
         return doc
 
     # -- heading -----------------------------------------------------------
@@ -161,30 +113,37 @@ class JakeResumeTemplate(ResumeTemplate):
         esc = self.escape_latex
         name = esc(contact.get("name", ""))
 
+        # Right-side contact info
         parts: list[str] = []
         phone = contact.get("phone")
         if phone:
             parts.append(esc(phone))
         email = contact.get("email")
         if email:
-            parts.append(rf"\href{{mailto:{email}}}{{\underline{{{esc(email)}}}}}")
+            parts.append(rf"\href{{mailto:{email}}}{{{esc(email)}}}")
         linkedin = contact.get("linkedin_url")
         if linkedin:
             display = self._strip_protocol(linkedin)
-            parts.append(rf"\href{{{linkedin}}}{{\underline{{{esc(display)}}}}}")
+            parts.append(rf"\href{{{linkedin}}}{{{esc(display)}}}")
         github = contact.get("github_url")
         if github:
             display = self._strip_protocol(github)
-            parts.append(rf"\href{{{github}}}{{\underline{{{esc(display)}}}}}")
+            parts.append(rf"\href{{{github}}}{{{esc(display)}}}")
         website = contact.get("website_url")
         if website:
             display = self._strip_protocol(website)
-            parts.append(rf"\href{{{website}}}{{\underline{{{esc(display)}}}}}")
+            parts.append(rf"\href{{{website}}}{{{esc(display)}}}")
 
-        separator = r" $|$ "
-        heading = r"\begin{center}" rf"\textbf{{\Huge \scshape {name}}} \\ \vspace{{1pt}}"
+        heading = r"\begin{center}" "\n"
+        heading += r"\begin{minipage}[t]{0.5\textwidth}" "\n"
+        heading += rf"{{\Huge\bfseries {name}}}" "\n"
+        heading += r"\end{minipage}%" "\n"
+        heading += r"\hfill" "\n"
+        heading += r"\begin{minipage}[t]{0.4\textwidth}" "\n"
+        heading += r"\raggedleft" "\n"
         if parts:
-            heading += rf"\small {separator.join(parts)}"
+            heading += r" \\ ".join(parts) + "\n"
+        heading += r"\end{minipage}" "\n"
         heading += r"\end{center}"
         doc.append(NoEscape(heading))
 
@@ -196,7 +155,7 @@ class JakeResumeTemplate(ResumeTemplate):
         entries: list[ResumeEducationEntry],
     ) -> None:
         esc = self.escape_latex
-        lines = [r"\section{Education}", r"\resumeSubHeadingListStart"]
+        lines = [r"\section{Education}"]
 
         for entry in entries:
             institution = esc(entry.get("institution", ""))
@@ -204,28 +163,28 @@ class JakeResumeTemplate(ResumeTemplate):
             field = entry.get("field_of_study", "")
             if field:
                 degree = f"{degree} in {esc(field)}"
-            location = esc(entry.get("location", ""))
             date_range = self.format_date_range(
                 entry.get("start_date"),
                 entry.get("end_date"),
                 entry.get("is_current", False),
             )
+
+            # Double-line header: institution/location, degree/dates
             lines.append(
-                rf"\resumeSubheading{{{institution}}}{{{location}}}{{{degree}}}{{{date_range}}}"
+                rf"\subsection*{{{institution}"
+                rf" $|$ {{\normalfont\itshape {degree}}} \hfill {date_range}}}"
             )
 
-            # GPA + Achievements (must be inside a list environment)
             gpa = entry.get("gpa")
             achievements = entry.get("achievements", [])
             if gpa is not None or achievements:
-                lines.append(r"\resumeItemListStart")
+                lines.append(r"\begin{itemize}")
                 if gpa is not None:
-                    lines.append(rf"\resumeItem{{GPA: {gpa:.2f}}}")
+                    lines.append(rf"\item GPA: {gpa:.2f}")
                 for ach in achievements:
-                    lines.append(rf"\resumeItem{{{esc(ach)}}}")
-                lines.append(r"\resumeItemListEnd")
+                    lines.append(rf"\item {esc(ach)}")
+                lines.append(r"\end{itemize}")
 
-        lines.append(r"\resumeSubHeadingListEnd")
         doc.append(NoEscape("\n".join(lines)))
 
     # -- experience --------------------------------------------------------
@@ -236,7 +195,7 @@ class JakeResumeTemplate(ResumeTemplate):
         entries: list[ResumeWorkEntry],
     ) -> None:
         esc = self.escape_latex
-        lines = [r"\section{Experience}", r"\resumeSubHeadingListStart"]
+        lines = [r"\section{Experience}"]
 
         for entry in entries:
             company = esc(entry.get("company", ""))
@@ -247,18 +206,17 @@ class JakeResumeTemplate(ResumeTemplate):
                 entry.get("end_date"),
                 entry.get("is_current", False),
             )
-            lines.append(
-                rf"\resumeSubheading{{{title}}}{{{date_range}}}{{{company}}}{{{location}}}"
-            )
+
+            lines.append(rf"\subsection*{{{company} \hfill {location}}}")
+            lines.append(rf"\subsubsection*{{{title} \hfill {date_range}}}")
 
             bullets = entry.get("bullets", [])
             if bullets:
-                lines.append(r"\resumeItemListStart")
+                lines.append(r"\begin{itemize}")
                 for bullet in bullets:
-                    lines.append(rf"\resumeItem{{{esc(bullet)}}}")
-                lines.append(r"\resumeItemListEnd")
+                    lines.append(rf"\item {esc(bullet)}")
+                lines.append(r"\end{itemize}")
 
-        lines.append(r"\resumeSubHeadingListEnd")
         doc.append(NoEscape("\n".join(lines)))
 
     # -- projects ----------------------------------------------------------
@@ -269,58 +227,42 @@ class JakeResumeTemplate(ResumeTemplate):
         entries: list[ResumeProjectEntry],
     ) -> None:
         esc = self.escape_latex
-        lines = [r"\section{Projects}", r"\resumeSubHeadingListStart"]
+        lines = [r"\section{Projects}"]
 
         for entry in entries:
             name = esc(entry.get("name", ""))
             techs = entry.get("technologies", [])
-            tech_str = r" $|$ \emph{" + esc(", ".join(techs)) + "}" if techs else ""
+            tech_str = rf" $|$ {{\normalfont\itshape {esc(', '.join(techs))}}}" if techs else ""
             date_range = self.format_date_range(
                 entry.get("start_date"),
                 entry.get("end_date"),
             )
 
-            url = entry.get("url")
-            if url:
-                heading_text = rf"\textbf{{{name}}}{tech_str}"
-                display_url = self._strip_protocol(url)
-                heading_text += rf" $|$ \href{{{url}}}{{\underline{{{esc(display_url)}}}}}"
-            else:
-                heading_text = rf"\textbf{{{name}}}{tech_str}"
-
-            lines.append(rf"\resumeProjectHeading{{{heading_text}}}{{{date_range}}}")
+            lines.append(rf"\subsection*{{{name}{tech_str} \hfill {date_range}}}")
 
             bullets = entry.get("bullets", [])
             if bullets:
-                lines.append(r"\resumeItemListStart")
+                lines.append(r"\begin{itemize}")
                 for bullet in bullets:
-                    lines.append(rf"\resumeItem{{{esc(bullet)}}}")
-                lines.append(r"\resumeItemListEnd")
+                    lines.append(rf"\item {esc(bullet)}")
+                lines.append(r"\end{itemize}")
 
-        lines.append(r"\resumeSubHeadingListEnd")
         doc.append(NoEscape("\n".join(lines)))
 
     # -- skills ------------------------------------------------------------
 
     def _add_skills(self, doc: Document, skills: dict) -> None:
         esc = self.escape_latex
-        lines = [
-            r"\section{Technical Skills}",
-            r"\begin{itemize}[leftmargin=0.15in, label={}]",
-            r"\small{\item{",
-        ]
+        lines = [r"\section{Skills}", r"\begin{description}"]
 
         tools = skills.get("tools", [])
         practices = skills.get("practices", [])
         if tools:
             joined = esc(", ".join(tools))
-            suffix = r" \\" if practices else ""
-            lines.append(rf"\textbf{{Languages/Tools}}{{: {joined}}}{suffix}")
-
+            lines.append(rf"\item[Languages/Tools] {joined}")
         if practices:
             joined = esc(", ".join(practices))
-            lines.append(rf"\textbf{{Practices}}{{: {joined}}}")
+            lines.append(rf"\item[Practices] {joined}")
 
-        lines.append(r"}}")
-        lines.append(r"\end{itemize}")
+        lines.append(r"\end{description}")
         doc.append(NoEscape("\n".join(lines)))

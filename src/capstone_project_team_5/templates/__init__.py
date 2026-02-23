@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from capstone_project_team_5.templates.base import ResumeTemplate
 from capstone_project_team_5.templates.jake import JakeResumeTemplate
+from capstone_project_team_5.templates.modern import ModernResumeTemplate
+from capstone_project_team_5.templates.rover import RoverResumeTemplate
 
 __all__ = [
     "ResumeTemplate",
@@ -13,6 +15,8 @@ __all__ = [
 
 _REGISTRY: dict[str, ResumeTemplate] = {
     "jake": JakeResumeTemplate(),
+    "modern": ModernResumeTemplate(),
+    "rover": RoverResumeTemplate(),
 }
 
 

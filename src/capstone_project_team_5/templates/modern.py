@@ -1,7 +1,7 @@
-"""Jake Gutierrez resume template.
+"""Modern resume template.
 
-Reproduces the popular ATS-friendly single-page resume layout from
-``github.com/jakegut/resume`` using PyLaTeX.
+Helvetica sans-serif, no decorative rules on section headers, compact
+10pt body, tight margins.  Clean and dense single-page layout.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
         ResumeWorkEntry,
     )
 
-__all__ = ["JakeResumeTemplate"]
+__all__ = ["ModernResumeTemplate"]
 
 # ---------------------------------------------------------------------------
 # LaTeX preamble fragments
@@ -30,18 +30,16 @@ _PACKAGES: list[Package] = [
     Package("latexsym"),
     Package("fullpage", options=NoEscape("empty")),
     Package("titlesec"),
-    Package("marvosym"),
-    Package("color", options=NoEscape("usenames,dvipsnames")),
-    Package("verbatim"),
     Package("enumitem"),
     Package("hyperref", options=NoEscape("hidelinks")),
     Package("fancyhdr"),
-    Package("babel", options=NoEscape("english")),
-    Package("tabularx"),
     Package("fontenc", options=NoEscape("T1")),
+    Package("helvet"),
+    Package("tabularx"),
 ]
 
 _PREAMBLE_SETUP = r"""
+\renewcommand{\familydefault}{\sfdefault}
 \pagestyle{fancy}
 \fancyhf{}
 \fancyfoot{}
@@ -56,52 +54,45 @@ _PREAMBLE_SETUP = r"""
 \raggedbottom
 \raggedright
 \setlength{\tabcolsep}{0in}
-\titleformat{\section}{
-  \vspace{-4pt}\scshape\raggedright\large
-}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+\setlength{\parindent}{0pt}
+\titleformat{\section}{\large\bfseries}{}{0em}{}
+\titlespacing{\section}{0pt}{8pt}{4pt}
 \pdfgentounicode=1
 """
 
 _CUSTOM_COMMANDS = r"""
-\newcommand{\resumeItem}[1]{
-  \item\small{
-    {#1 \vspace{-2pt}}
-  }
-}
-\newcommand{\resumeSubheading}[4]{
+\newcommand{\modernSubheading}[4]{
   \vspace{-2pt}\item
     \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
       \textbf{#1} & #2 \\
       \textit{\small#3} & \textit{\small #4} \\
     \end{tabular*}\vspace{-7pt}
 }
-\newcommand{\resumeSubSubheading}[2]{
-    \item
-    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
-      \textit{\small#1} & \textit{\small #2} \\
-    \end{tabular*}\vspace{-7pt}
+\newcommand{\modernItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
 }
-\newcommand{\resumeProjectHeading}[2]{
+\newcommand{\modernProjectHeading}[2]{
     \item
     \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
       \small#1 & #2 \\
     \end{tabular*}\vspace{-7pt}
 }
-\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
 \renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
-\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
-\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
-\newcommand{\resumeItemListStart}{\begin{itemize}}
-\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+\newcommand{\modernListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\modernListEnd}{\end{itemize}}
+\newcommand{\modernItemListStart}{\begin{itemize}[leftmargin=0.15in]}
+\newcommand{\modernItemListEnd}{\end{itemize}\vspace{-5pt}}
 """
 
 
-class JakeResumeTemplate(ResumeTemplate):
-    """Jake Gutierrez's ATS-friendly single-page resume."""
+class ModernResumeTemplate(ResumeTemplate):
+    """Modern sans-serif resume with compact layout."""
 
     @property
     def name(self) -> str:  # pragma: no cover
-        return "Jake's Resume"
+        return "Modern Resume"
 
     # ------------------------------------------------------------------
     # public API
@@ -136,17 +127,15 @@ class JakeResumeTemplate(ResumeTemplate):
     def _create_document(self) -> Document:
         doc = Document(
             documentclass="article",
-            document_options=["letterpaper", "11pt"],
-            page_numbers=True,  # Jake's preamble uses fancyhdr
-            indent=True,  # Jake's preamble sets \raggedright
+            document_options=["letterpaper", "10pt"],
+            page_numbers=True,
+            indent=True,
             lmodern=False,
             textcomp=False,
             microtype=False,
             fontenc=None,
             inputenc=None,
         )
-        # Remove lastpage auto-injected by page_numbers=True;
-        # Jake's preamble handles page style via fancyhdr.
         doc.packages = [p for p in doc.packages if "lastpage" not in p.dumps()]
 
         for pkg in _PACKAGES:
@@ -167,22 +156,24 @@ class JakeResumeTemplate(ResumeTemplate):
             parts.append(esc(phone))
         email = contact.get("email")
         if email:
-            parts.append(rf"\href{{mailto:{email}}}{{\underline{{{esc(email)}}}}}")
+            parts.append(rf"\href{{mailto:{email}}}{{{esc(email)}}}")
         linkedin = contact.get("linkedin_url")
         if linkedin:
             display = self._strip_protocol(linkedin)
-            parts.append(rf"\href{{{linkedin}}}{{\underline{{{esc(display)}}}}}")
+            parts.append(rf"\href{{{linkedin}}}{{{esc(display)}}}")
         github = contact.get("github_url")
         if github:
             display = self._strip_protocol(github)
-            parts.append(rf"\href{{{github}}}{{\underline{{{esc(display)}}}}}")
+            parts.append(rf"\href{{{github}}}{{{esc(display)}}}")
         website = contact.get("website_url")
         if website:
             display = self._strip_protocol(website)
-            parts.append(rf"\href{{{website}}}{{\underline{{{esc(display)}}}}}")
+            parts.append(rf"\href{{{website}}}{{{esc(display)}}}")
 
-        separator = r" $|$ "
-        heading = r"\begin{center}" rf"\textbf{{\Huge \scshape {name}}} \\ \vspace{{1pt}}"
+        separator = r" \textbar\ "
+        heading = r"\begin{center}"
+        heading += rf"{{\Large\bfseries {name}}}"
+        heading += r" \\ \vspace{1pt}"
         if parts:
             heading += rf"\small {separator.join(parts)}"
         heading += r"\end{center}"
@@ -196,7 +187,7 @@ class JakeResumeTemplate(ResumeTemplate):
         entries: list[ResumeEducationEntry],
     ) -> None:
         esc = self.escape_latex
-        lines = [r"\section{Education}", r"\resumeSubHeadingListStart"]
+        lines = [r"\section{Education}", r"\modernListStart"]
 
         for entry in entries:
             institution = esc(entry.get("institution", ""))
@@ -211,21 +202,20 @@ class JakeResumeTemplate(ResumeTemplate):
                 entry.get("is_current", False),
             )
             lines.append(
-                rf"\resumeSubheading{{{institution}}}{{{location}}}{{{degree}}}{{{date_range}}}"
+                rf"\modernSubheading{{{institution}}}{{{location}}}{{{degree}}}{{{date_range}}}"
             )
 
-            # GPA + Achievements (must be inside a list environment)
             gpa = entry.get("gpa")
             achievements = entry.get("achievements", [])
             if gpa is not None or achievements:
-                lines.append(r"\resumeItemListStart")
+                lines.append(r"\modernItemListStart")
                 if gpa is not None:
-                    lines.append(rf"\resumeItem{{GPA: {gpa:.2f}}}")
+                    lines.append(rf"\modernItem{{GPA: {gpa:.2f}}}")
                 for ach in achievements:
-                    lines.append(rf"\resumeItem{{{esc(ach)}}}")
-                lines.append(r"\resumeItemListEnd")
+                    lines.append(rf"\modernItem{{{esc(ach)}}}")
+                lines.append(r"\modernItemListEnd")
 
-        lines.append(r"\resumeSubHeadingListEnd")
+        lines.append(r"\modernListEnd")
         doc.append(NoEscape("\n".join(lines)))
 
     # -- experience --------------------------------------------------------
@@ -236,7 +226,7 @@ class JakeResumeTemplate(ResumeTemplate):
         entries: list[ResumeWorkEntry],
     ) -> None:
         esc = self.escape_latex
-        lines = [r"\section{Experience}", r"\resumeSubHeadingListStart"]
+        lines = [r"\section{Experience}", r"\modernListStart"]
 
         for entry in entries:
             company = esc(entry.get("company", ""))
@@ -248,17 +238,17 @@ class JakeResumeTemplate(ResumeTemplate):
                 entry.get("is_current", False),
             )
             lines.append(
-                rf"\resumeSubheading{{{title}}}{{{date_range}}}{{{company}}}{{{location}}}"
+                rf"\modernSubheading{{{title}}}{{{date_range}}}{{{company}}}{{{location}}}"
             )
 
             bullets = entry.get("bullets", [])
             if bullets:
-                lines.append(r"\resumeItemListStart")
+                lines.append(r"\modernItemListStart")
                 for bullet in bullets:
-                    lines.append(rf"\resumeItem{{{esc(bullet)}}}")
-                lines.append(r"\resumeItemListEnd")
+                    lines.append(rf"\modernItem{{{esc(bullet)}}}")
+                lines.append(r"\modernItemListEnd")
 
-        lines.append(r"\resumeSubHeadingListEnd")
+        lines.append(r"\modernListEnd")
         doc.append(NoEscape("\n".join(lines)))
 
     # -- projects ----------------------------------------------------------
@@ -269,7 +259,7 @@ class JakeResumeTemplate(ResumeTemplate):
         entries: list[ResumeProjectEntry],
     ) -> None:
         esc = self.escape_latex
-        lines = [r"\section{Projects}", r"\resumeSubHeadingListStart"]
+        lines = [r"\section{Projects}", r"\modernListStart"]
 
         for entry in entries:
             name = esc(entry.get("name", ""))
@@ -284,20 +274,20 @@ class JakeResumeTemplate(ResumeTemplate):
             if url:
                 heading_text = rf"\textbf{{{name}}}{tech_str}"
                 display_url = self._strip_protocol(url)
-                heading_text += rf" $|$ \href{{{url}}}{{\underline{{{esc(display_url)}}}}}"
+                heading_text += rf" $|$ \href{{{url}}}{{{esc(display_url)}}}"
             else:
                 heading_text = rf"\textbf{{{name}}}{tech_str}"
 
-            lines.append(rf"\resumeProjectHeading{{{heading_text}}}{{{date_range}}}")
+            lines.append(rf"\modernProjectHeading{{{heading_text}}}{{{date_range}}}")
 
             bullets = entry.get("bullets", [])
             if bullets:
-                lines.append(r"\resumeItemListStart")
+                lines.append(r"\modernItemListStart")
                 for bullet in bullets:
-                    lines.append(rf"\resumeItem{{{esc(bullet)}}}")
-                lines.append(r"\resumeItemListEnd")
+                    lines.append(rf"\modernItem{{{esc(bullet)}}}")
+                lines.append(r"\modernItemListEnd")
 
-        lines.append(r"\resumeSubHeadingListEnd")
+        lines.append(r"\modernListEnd")
         doc.append(NoEscape("\n".join(lines)))
 
     # -- skills ------------------------------------------------------------
@@ -305,7 +295,7 @@ class JakeResumeTemplate(ResumeTemplate):
     def _add_skills(self, doc: Document, skills: dict) -> None:
         esc = self.escape_latex
         lines = [
-            r"\section{Technical Skills}",
+            r"\section{Skills}",
             r"\begin{itemize}[leftmargin=0.15in, label={}]",
             r"\small{\item{",
         ]
@@ -315,7 +305,7 @@ class JakeResumeTemplate(ResumeTemplate):
         if tools:
             joined = esc(", ".join(tools))
             suffix = r" \\" if practices else ""
-            lines.append(rf"\textbf{{Languages/Tools}}{{: {joined}}}{suffix}")
+            lines.append(rf"\textbf{{Tools}}{{: {joined}}}{suffix}")
 
         if practices:
             joined = esc(", ".join(practices))
