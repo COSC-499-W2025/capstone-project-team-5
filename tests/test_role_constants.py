@@ -25,7 +25,11 @@ class TestProjectRole:
     def test_role_enum_values(self) -> None:
         """Test that role enum values match expected strings."""
         assert ProjectRole.SOLO_DEVELOPER.value == "Solo Developer"
+        assert ProjectRole.PROJECT_CREATOR.value == "Project Creator"
         assert ProjectRole.LEAD_DEVELOPER.value == "Lead Developer"
+        assert ProjectRole.TECH_LEAD.value == "Tech Lead"
+        assert ProjectRole.MAINTAINER.value == "Maintainer"
+        assert ProjectRole.DOCUMENTATION_LEAD.value == "Documentation Lead"
         assert ProjectRole.CORE_CONTRIBUTOR.value == "Core Contributor"
         assert ProjectRole.MAJOR_CONTRIBUTOR.value == "Major Contributor"
         assert ProjectRole.CONTRIBUTOR.value == "Contributor"
@@ -64,7 +68,7 @@ class TestRoleHelperFunctions:
     def test_get_role_priority_with_string(self) -> None:
         """Test getting priority from role string."""
         priority = get_role_priority("Minor Contributor")
-        assert priority == 9  # Should be lowest priority
+        assert priority == 10  # Should be lowest priority
 
     def test_get_role_priority_unknown_role(self) -> None:
         """Test getting priority for unknown role returns default."""

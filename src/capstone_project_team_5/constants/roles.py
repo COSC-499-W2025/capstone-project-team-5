@@ -145,25 +145,26 @@ DIRECTORY_PATTERNS = {
 class ProjectRole(StrEnum):
     """Enumeration of all possible project roles.
 
-    Roles are ordered by typical contribution level (highest to lowest).
+    Roles are grouped by project responsibility and contribution pattern.
     """
 
-    # Primary ownership roles
+    # Ownership roles
     SOLO_DEVELOPER = "Solo Developer"
     PROJECT_CREATOR = "Project Creator"
 
     # Leadership roles
     LEAD_DEVELOPER = "Lead Developer"
     TECH_LEAD = "Tech Lead"
-    MAINTAINER = "Maintainer"
 
-    # Active contribution roles
+    # Contribution roles
     CORE_CONTRIBUTOR = "Core Contributor"
     MAJOR_CONTRIBUTOR = "Major Contributor"
-
-    # Supporting roles
     CONTRIBUTOR = "Contributor"
     MINOR_CONTRIBUTOR = "Minor Contributor"
+
+    # Supporting roles
+    MAINTAINER = "Maintainer"
+    DOCUMENTATION_LEAD = "Documentation Lead"
 
 
 @dataclass(frozen=True)
@@ -202,25 +203,30 @@ ROLE_METADATA: dict[ProjectRole, RoleMetadata] = {
         description="Ongoing maintenance and consistent contributions over time",
         display_priority=5,
     ),
+    ProjectRole.DOCUMENTATION_LEAD: RoleMetadata(
+        role=ProjectRole.DOCUMENTATION_LEAD,
+        description="Primary owner of project documentation and knowledge sharing",
+        display_priority=6,
+    ),
     ProjectRole.CORE_CONTRIBUTOR: RoleMetadata(
         role=ProjectRole.CORE_CONTRIBUTOR,
         description="Essential contributor with significant ongoing involvement",
-        display_priority=6,
+        display_priority=7,
     ),
     ProjectRole.MAJOR_CONTRIBUTOR: RoleMetadata(
         role=ProjectRole.MAJOR_CONTRIBUTOR,
         description="Substantial contributions to the project",
-        display_priority=7,
+        display_priority=8,
     ),
     ProjectRole.CONTRIBUTOR: RoleMetadata(
         role=ProjectRole.CONTRIBUTOR,
         description="Regular contributor to the project",
-        display_priority=8,
+        display_priority=9,
     ),
     ProjectRole.MINOR_CONTRIBUTOR: RoleMetadata(
         role=ProjectRole.MINOR_CONTRIBUTOR,
         description="Limited contributions to the project",
-        display_priority=9,
+        display_priority=10,
     ),
 }
 
