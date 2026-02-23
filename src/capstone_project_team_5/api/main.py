@@ -14,6 +14,7 @@ from capstone_project_team_5.api.routes import (
     health,
     portfolio,
     projects,
+    resumes,
     skills,
     users,
     work_experiences,
@@ -55,6 +56,7 @@ app.include_router(portfolio.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(work_experiences.router, prefix="/api")
 app.include_router(educations.router, prefix="/api")
+app.include_router(resumes.router, prefix="/api")
 
 
 def main() -> None:
