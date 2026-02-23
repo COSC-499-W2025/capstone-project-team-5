@@ -9,6 +9,138 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+FILE_CATEGORIES = {
+    "frontend": {
+        ".jsx",
+        ".tsx",
+        ".vue",
+        ".svelte",
+        ".html",
+        ".htm",
+        ".css",
+        ".scss",
+        ".sass",
+        ".less",
+        ".styl",
+        ".js",
+        ".ts",
+        ".mjs",  # Can be frontend or backend, context matters
+    },
+    "backend": {
+        ".py",
+        ".java",
+        ".go",
+        ".rb",
+        ".php",
+        ".rs",
+        ".kt",
+        ".scala",
+        ".c",
+        ".cpp",
+        ".h",
+        ".hpp",
+        ".cs",
+        ".sql",
+        ".prisma",
+        ".graphql",
+    },
+    "mobile": {
+        ".swift",
+        ".m",
+        ".mm",  # iOS
+        ".kt",
+        ".java",  # Android (overlap with backend)
+        ".dart",  # Flutter
+    },
+    "devops": {
+        ".yml",
+        ".yaml",
+        ".tf",
+        ".tfvars",  # Terraform
+        ".sh",
+        ".bash",
+        ".zsh",
+        "Dockerfile",
+        "docker-compose.yml",
+        "docker-compose.yaml",
+        ".jenkinsfile",
+        ".gitlab-ci.yml",
+        ".github",
+    },
+    "data": {
+        ".ipynb",
+        ".r",
+        ".rmd",
+        ".parquet",
+        ".csv",
+        ".json",
+        ".jsonl",
+        ".sql",  # Overlap with backend
+        ".pkl",
+        ".pickle",
+    },
+    "testing": {
+        ".test.js",
+        ".test.ts",
+        ".test.jsx",
+        ".test.tsx",
+        ".spec.js",
+        ".spec.ts",
+        ".spec.jsx",
+        ".spec.tsx",
+        ".test.py",
+        "_test.py",
+        ".test.go",
+        "_test.go",
+        ".test.java",
+        "test_*.py",
+    },
+    "documentation": {
+        ".md",
+        ".mdx",
+        ".rst",
+        ".adoc",
+        ".txt",
+        ".pdf",  # Documentation PDFs
+    },
+    "design": {
+        ".fig",
+        ".sketch",
+        ".xd",
+        ".ai",
+        ".psd",
+        ".svg",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".webp",  # When in design/assets dirs
+    },
+    "config": {
+        ".json",
+        ".toml",
+        ".ini",
+        ".conf",
+        ".config",
+        ".env",
+        ".env.example",
+        "package.json",
+        "requirements.txt",
+        "Cargo.toml",
+        "go.mod",
+    },
+}
+
+DIRECTORY_PATTERNS = {
+    "frontend": {"src/components", "src/pages", "src/views", "public", "static", "assets/js"},
+    "backend": {"src/api", "src/server", "src/services", "src/models", "src/controllers"},
+    "devops": {".github/workflows", "infrastructure", "terraform", "ansible", "k8s", "kubernetes"},
+    "data": {"notebooks", "data", "datasets", "models", "pipelines"},
+    "testing": {"tests", "test", "__tests__", "spec", "e2e", "integration"},
+    "documentation": {"docs", "documentation", "wiki"},
+    "design": {"design", "designs", "mockups", "assets/images", "assets/icons"},
+}
+
 
 class ProjectRole(StrEnum):
     """Enumeration of all possible project roles.
