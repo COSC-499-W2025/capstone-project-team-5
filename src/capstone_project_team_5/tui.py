@@ -26,6 +26,12 @@ from textual.worker import Worker, WorkerState
 from capstone_project_team_5.consent_tool import ConsentTool
 from capstone_project_team_5.services import create_portfolio_item, upload_zip
 from capstone_project_team_5.services.auth import authenticate_user, create_user
+from capstone_project_team_5.services.education import (
+    create_education,
+    delete_education,
+    get_educations,
+    update_education,
+)
 from capstone_project_team_5.services.portfolio_persistence import (
     get_latest_portfolio_item_for_project,
 )
@@ -807,12 +813,15 @@ ProgressBar {
         self._show_profile_sub_buttons()
         self.query_one("#list-column", Container).display = False
         profile = get_user_profile(self._current_user)
-        md = self._render_profile_markdown(profile)
+        educations = get_educations(self._current_user) or []
+        md = self._render_profile_markdown(profile, educations)
         self._current_markdown = md
         self.query_one("#output", Markdown).update(md)
         status.update("Viewing personal profile.")
 
-    def _render_profile_markdown(self, profile: dict | None) -> str:
+    def _render_profile_markdown(
+        self, profile: dict | None, educations: list[dict] | None = None
+    ) -> str:
         """Render user profile data as markdown for the output pane."""
         parts: list[str] = []
         parts.append("# My Profile\n")
@@ -842,6 +851,45 @@ ProgressBar {
             updated = profile.get("updated_at")
             if updated:
                 parts.append(f"\n*Last updated: {updated}*")
+
+        # ── Education section ──
+        parts.append("\n---")
+        parts.append("\n## Education\n")
+        if not educations:
+            parts.append("No education entries yet.\n")
+            parts.append("Click **Edit Education** to add your education history.\n")
+        else:
+            for edu in educations:
+                institution = edu.get("institution") or "—"
+                degree = edu.get("degree") or "—"
+                field_of_study = edu.get("field_of_study") or ""
+                gpa = edu.get("gpa")
+                start_date = edu.get("start_date")
+                end_date = edu.get("end_date")
+                is_current = edu.get("is_current", False)
+                achievements = edu.get("achievements") or ""
+
+                parts.append(f"### {institution}")
+                degree_line = f"**{degree}**"
+                if field_of_study:
+                    degree_line += f" in {field_of_study}"
+                parts.append(degree_line)
+
+                date_str = ""
+                if start_date:
+                    date_str = str(start_date)
+                if is_current:
+                    date_str += " – Present"
+                elif end_date:
+                    date_str += f" – {end_date}"
+                if date_str:
+                    parts.append(f"*{date_str.strip()}*")
+
+                if gpa is not None:
+                    parts.append(f"- **GPA:** {gpa}")
+                if achievements:
+                    parts.append(f"- **Achievements:** {achievements}")
+                parts.append("")
 
         parts.append("\n---")
         parts.append(
@@ -899,7 +947,8 @@ ProgressBar {
 
         updated = upsert_user_profile(self._current_user, profile_data)
         if updated:
-            md = self._render_profile_markdown(updated)
+            educations = get_educations(self._current_user) or []
+            md = self._render_profile_markdown(updated, educations)
             self._current_markdown = md
             self.query_one("#output", Markdown).update(md)
             status.update("Profile updated successfully.")
@@ -918,8 +967,198 @@ ProgressBar {
 
     @on(Button.Pressed, "#btn-edit-education")
     def handle_edit_education_button(self) -> None:
-        """Placeholder for Edit Education (not yet implemented)."""
-        self.query_one("#status", Label).update("Education editing coming soon.")
+        """Handle the Edit Education sub-button press."""
+        self._prompt_edit_education()
+
+    def _prompt_edit_education(self) -> None:
+        """Open easygui dialogs to manage education entries."""
+        import easygui
+
+        status = self.query_one("#status", Label)
+
+        if self._current_user is None:
+            status.update("Please log in before editing education.")
+            return
+
+        educations = get_educations(self._current_user) or []
+
+        # Build choices: existing entries + "Add New"
+        choices: list[str] = []
+        for edu in educations:
+            label = f"{edu.get('institution', '?')} – {edu.get('degree', '?')}"
+            choices.append(label)
+        choices.append("+ Add New Education")
+
+        choice = easygui.choicebox(
+            msg="Select an education entry to edit, or add a new one.",
+            title="Manage Education",
+            choices=choices,
+        )
+
+        if choice is None:
+            status.update("Education edit cancelled.")
+            return
+
+        if choice == "+ Add New Education":
+            self._prompt_education_form(education_id=None, existing=None)
+        else:
+            idx = choices.index(choice)
+            edu = educations[idx]
+            action = easygui.buttonbox(
+                msg=f"What would you like to do with "
+                f'"{edu.get("institution", "?")} – {edu.get("degree", "?")}"?',
+                title="Education Action",
+                choices=["Edit", "Delete", "Cancel"],
+            )
+            if action == "Edit":
+                self._prompt_education_form(education_id=edu["id"], existing=edu)
+            elif action == "Delete":
+                self._delete_education_entry(edu["id"], edu)
+            else:
+                status.update("Education edit cancelled.")
+
+    def _prompt_education_form(self, education_id: int | None, existing: dict | None) -> None:
+        """Show the education form dialog for creating or editing an entry."""
+        from datetime import datetime
+
+        import easygui
+
+        status = self.query_one("#status", Label)
+
+        field_names = [
+            "Institution",
+            "Degree",
+            "Field of Study",
+            "GPA (0.0–5.0)",
+            "Start Date (YYYY-MM-DD)",
+            "End Date (YYYY-MM-DD)",
+            "Currently Enrolled (yes/no)",
+            "Achievements",
+        ]
+
+        if existing:
+            start_str = str(existing["start_date"]) if existing.get("start_date") else ""
+            end_str = str(existing["end_date"]) if existing.get("end_date") else ""
+            gpa_str = str(existing["gpa"]) if existing.get("gpa") is not None else ""
+            is_current_str = "yes" if existing.get("is_current") else "no"
+            field_values = [
+                existing.get("institution") or "",
+                existing.get("degree") or "",
+                existing.get("field_of_study") or "",
+                gpa_str,
+                start_str,
+                end_str,
+                is_current_str,
+                existing.get("achievements") or "",
+            ]
+        else:
+            field_values = ["", "", "", "", "", "", "no", ""]
+
+        title = "Edit Education" if education_id else "Add Education"
+        result = easygui.multenterbox(
+            msg="Fill in the education details.\nInstitution and Degree are required.",
+            title=title,
+            fields=field_names,
+            values=field_values,
+        )
+
+        if result is None:
+            status.update("Education edit cancelled.")
+            return
+
+        institution = result[0].strip()
+        degree = result[1].strip()
+        field_of_study = result[2].strip()
+        gpa_raw = result[3].strip()
+        start_raw = result[4].strip()
+        end_raw = result[5].strip()
+        is_current_raw = result[6].strip().lower()
+        achievements = result[7].strip()
+
+        if not institution or not degree:
+            easygui.msgbox("Institution and Degree are required.", "Validation Error")
+            status.update("Education save failed: missing required fields.")
+            return
+
+        from capstone_project_team_5.services.education import EducationData
+
+        edu_data: EducationData = {
+            "institution": institution,
+            "degree": degree,
+        }
+
+        if field_of_study:
+            edu_data["field_of_study"] = field_of_study
+
+        if gpa_raw:
+            try:
+                edu_data["gpa"] = float(gpa_raw)
+            except ValueError:
+                easygui.msgbox("GPA must be a number between 0.0 and 5.0.", "Validation Error")
+                status.update("Education save failed: invalid GPA.")
+                return
+
+        if start_raw:
+            try:
+                edu_data["start_date"] = datetime.strptime(start_raw, "%Y-%m-%d").date()
+            except ValueError:
+                easygui.msgbox("Invalid start date format. Use YYYY-MM-DD.", "Error")
+                status.update("Education save failed: invalid start date.")
+                return
+
+        if end_raw:
+            try:
+                edu_data["end_date"] = datetime.strptime(end_raw, "%Y-%m-%d").date()
+            except ValueError:
+                easygui.msgbox("Invalid end date format. Use YYYY-MM-DD.", "Error")
+                status.update("Education save failed: invalid end date.")
+                return
+
+        edu_data["is_current"] = is_current_raw in ("yes", "y", "true", "1")
+        if achievements:
+            edu_data["achievements"] = achievements
+
+        if education_id:
+            saved = update_education(self._current_user, education_id, edu_data)  # type: ignore[arg-type]
+        else:
+            saved = create_education(self._current_user, edu_data)  # type: ignore[arg-type]
+
+        if saved:
+            profile = get_user_profile(self._current_user)
+            all_educations = get_educations(self._current_user) or []
+            md = self._render_profile_markdown(profile, all_educations)
+            self._current_markdown = md
+            self.query_one("#output", Markdown).update(md)
+            status.update("Education saved successfully.")
+        else:
+            status.update("Failed to save education. Check your input and try again.")
+
+    def _delete_education_entry(self, education_id: int, edu: dict) -> None:
+        """Confirm and delete an education entry."""
+        import easygui
+
+        status = self.query_one("#status", Label)
+
+        confirm = easygui.ynbox(
+            msg=f"Are you sure you want to delete "
+            f'"{edu.get("institution", "?")} – {edu.get("degree", "?")}"?',
+            title="Confirm Delete",
+        )
+
+        if not confirm:
+            status.update("Education deletion cancelled.")
+            return
+
+        success = delete_education(self._current_user, education_id)  # type: ignore[arg-type]
+        if success:
+            profile = get_user_profile(self._current_user)
+            all_educations = get_educations(self._current_user) or []
+            md = self._render_profile_markdown(profile, all_educations)
+            self._current_markdown = md
+            self.query_one("#output", Markdown).update(md)
+            status.update("Education entry deleted.")
+        else:
+            status.update("Failed to delete education entry.")
 
     @on(Button.Pressed, "#btn-delete-analysis")
     def handle_delete_analysis(self) -> None:
