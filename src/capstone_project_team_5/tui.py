@@ -819,7 +819,7 @@ ProgressBar {
 
         if profile is None:
             parts.append("No profile information saved yet.\n")
-            parts.append("Click **Edit Profile** below to add your details.\n")
+            parts.append("Click **Edit Personal Info** below to add your details.\n")
         else:
             field_labels = [
                 ("first_name", "First Name"),
