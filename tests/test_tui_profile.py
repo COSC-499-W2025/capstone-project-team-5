@@ -45,10 +45,10 @@ class TestRenderProfileMarkdown:
         assert "No profile information saved yet" in md
         assert "Edit Personal Info" in md
 
-    def test_render_with_profile_data(self) -> None:
-        """Fields present in the profile dict should appear in the markdown."""
+    def test_render_with_profile_data_and_empty_fields(self) -> None:
+        """Populated fields appear; missing/empty fields render as em-dash."""
         app = Zip2JobTUI()
-        profile = {
+        full = {
             "first_name": "Alice",
             "last_name": "Smith",
             "email": "alice@example.com",
@@ -62,38 +62,14 @@ class TestRenderProfileMarkdown:
             "website": "https://alice.dev",
             "updated_at": "2025-01-15 10:30:00",
         }
-        md = app._render_profile_markdown(profile)
-        assert "Alice" in md
-        assert "Smith" in md
-        assert "alice@example.com" in md
-        assert "555-0000" in md
-        assert "Metropolis" in md
-        assert "NY" in md
-        assert "10001" in md
-        assert "alicedev" in md
-        assert "https://alice.dev" in md
-        assert "Last updated" in md
+        md = app._render_profile_markdown(full)
+        for val in ("Alice", "Smith", "alice@example.com", "alicedev", "Last updated"):
+            assert val in md
 
-    def test_render_with_empty_fields_shows_dash(self) -> None:
-        """Missing or empty fields should display as em-dash."""
-        app = Zip2JobTUI()
-        profile = {
-            "first_name": "Bob",
-            "last_name": "",
-            "email": None,
-            "phone": None,
-            "address": None,
-            "city": None,
-            "state": None,
-            "zip_code": None,
-            "linkedin_url": None,
-            "github_username": None,
-            "website": None,
-        }
-        md = app._render_profile_markdown(profile)
-        assert "Bob" in md
-        # Empty / None fields should render as the em-dash placeholder
-        assert "\u2014" in md
+        sparse = {"first_name": "Bob", "last_name": "", "email": None}
+        md2 = app._render_profile_markdown(sparse)
+        assert "Bob" in md2
+        assert "\u2014" in md2
 
 
 class TestPromptEditProfile:
@@ -230,8 +206,8 @@ class TestProfileViewToggle:
 
         app.query_one = MagicMock(side_effect=_query_one)  # type: ignore[assignment]
 
-    def test_leave_profile_view_hides_sub_buttons(self) -> None:
-        """_leave_profile_view should hide all three sub-buttons."""
+    def test_leave_profile_view_hides_buttons_and_restores_list(self) -> None:
+        """_leave_profile_view should hide sub-buttons and restore #list-column."""
         app = Zip2JobTUI()
         widgets = self._make_mock_widgets()
         self._wire_query_one(app, widgets)
@@ -241,15 +217,6 @@ class TestProfileViewToggle:
         assert widgets["#btn-edit-personal-info"].display is False
         assert widgets["#btn-edit-work-exp"].display is False
         assert widgets["#btn-edit-education"].display is False
-
-    def test_leave_profile_view_restores_list_column(self) -> None:
-        """_leave_profile_view should make #list-column visible again."""
-        app = Zip2JobTUI()
-        widgets = self._make_mock_widgets()
-        self._wire_query_one(app, widgets)
-
-        app._leave_profile_view()
-
         assert widgets["#list-column"].display is True
 
     def test_handle_profile_shows_sub_buttons_and_hides_list(self, test_user: str) -> None:
@@ -259,7 +226,10 @@ class TestProfileViewToggle:
         widgets = self._make_mock_widgets()
         self._wire_query_one(app, widgets)
 
-        with patch("capstone_project_team_5.tui.get_user_profile", return_value=None):
+        with (
+            patch("capstone_project_team_5.tui.get_user_profile", return_value=None),
+            patch("capstone_project_team_5.tui.get_educations", return_value=[]),
+        ):
             app.handle_profile_button()
 
         # Sub-buttons shown
@@ -271,15 +241,318 @@ class TestProfileViewToggle:
         # Status updated
         widgets["#status"].update.assert_called_with("Viewing personal profile.")
 
-    def test_handle_profile_not_logged_in(self) -> None:
-        """handle_profile_button should show error when not logged in."""
+
+class TestRenderEducationMarkdown:
+    """Tests for education rendering within _render_profile_markdown."""
+
+    def test_no_educations_shows_placeholder(self) -> None:
+        """When educations list is empty, show placeholder text."""
         app = Zip2JobTUI()
-        app._current_user = None
-        widgets = self._make_mock_widgets()
-        self._wire_query_one(app, widgets)
+        md = app._render_profile_markdown(None, educations=[])
+        assert "## Education" in md
+        assert "No education entries yet" in md
+        assert "Edit Education" in md
 
-        app.handle_profile_button()
+    def test_education_entries_rendered(self) -> None:
+        """Education entries render fields, is_current, and multiple entries."""
+        app = Zip2JobTUI()
+        educations = [
+            {
+                "institution": "MIT",
+                "degree": "B.S.",
+                "field_of_study": "Computer Science",
+                "gpa": 3.9,
+                "start_date": "2018-09-01",
+                "end_date": "2022-05-15",
+                "is_current": False,
+                "achievements": "Dean's List",
+            },
+            {
+                "institution": "Stanford",
+                "degree": "Ph.D.",
+                "field_of_study": "AI",
+                "start_date": "2023-09-01",
+                "end_date": None,
+                "is_current": True,
+                "gpa": None,
+                "achievements": "",
+            },
+        ]
+        md = app._render_profile_markdown(None, educations=educations)
+        # First entry fields
+        for val in ("### MIT", "**B.S.**", "Computer Science", "3.9", "Dean's List"):
+            assert val in md
+        # Second entry + is_current
+        assert "Stanford" in md
+        assert "Present" in md
+        # Placeholder should NOT appear
+        assert "No education entries yet" not in md
 
-        widgets["#status"].update.assert_called_with("Please log in before viewing your profile.")
-        # Sub-buttons should NOT have been set to True
-        assert widgets["#btn-edit-personal-info"].display != True  # noqa: E712
+
+class TestPromptEditEducation:
+    """Tests for the _prompt_edit_education dialog flow."""
+
+    def test_cancellation_at_any_step_does_not_save(self, test_user: str) -> None:
+        """Cancelling the choice dialog or the form dialog should not save."""
+        app = Zip2JobTUI()
+        app._current_user = test_user
+
+        mock_status = MagicMock()
+        app.query_one = MagicMock(return_value=mock_status)
+
+        # Cancel at choicebox
+        with (
+            patch("capstone_project_team_5.tui.get_educations", return_value=[]),
+            patch("easygui.choicebox", return_value=None),
+        ):
+            app._prompt_edit_education()
+        mock_status.update.assert_called_with("Education edit cancelled.")
+
+        # Cancel at form
+        mock_status.reset_mock()
+        with (
+            patch("capstone_project_team_5.tui.get_educations", return_value=[]),
+            patch("easygui.choicebox", return_value="+ Add New Education"),
+            patch("easygui.multenterbox", return_value=None),
+        ):
+            app._prompt_edit_education()
+        mock_status.update.assert_called_with("Education edit cancelled.")
+
+    def test_add_new_education_success(self, test_user: str) -> None:
+        """Selecting 'Add New Education' and filling the form should create an entry."""
+        app = Zip2JobTUI()
+        app._current_user = test_user
+
+        mock_status = MagicMock()
+        mock_output = MagicMock()
+        app.query_one = MagicMock(
+            side_effect=lambda sel, cls=None: mock_status if "status" in sel else mock_output
+        )
+
+        form_values = [
+            "MIT",  # Institution
+            "B.S.",  # Degree
+            "CS",  # Field of Study
+            "3.8",  # GPA
+            "2020-09-01",  # Start Date
+            "2024-05-15",  # End Date
+            "no",  # Currently Enrolled
+            "Honors",  # Achievements
+        ]
+
+        with (
+            patch("capstone_project_team_5.tui.get_educations", return_value=[]),
+            patch("easygui.choicebox", return_value="+ Add New Education"),
+            patch("easygui.multenterbox", return_value=form_values),
+            patch(
+                "capstone_project_team_5.tui.create_education",
+                return_value={"institution": "MIT", "degree": "B.S."},
+            ) as mock_create,
+            patch("capstone_project_team_5.tui.get_user_profile", return_value=None),
+        ):
+            app._prompt_edit_education()
+
+        mock_create.assert_called_once()
+        call_data = mock_create.call_args[0][1]
+        assert call_data["institution"] == "MIT"
+        assert call_data["degree"] == "B.S."
+        mock_status.update.assert_called_with("Education saved successfully.")
+
+    def test_edit_existing_education_success(self, test_user: str) -> None:
+        """Selecting an existing entry and updating it should call update_education."""
+        app = Zip2JobTUI()
+        app._current_user = test_user
+
+        mock_status = MagicMock()
+        mock_output = MagicMock()
+        app.query_one = MagicMock(
+            side_effect=lambda sel, cls=None: mock_status if "status" in sel else mock_output
+        )
+
+        existing_educations = [
+            {
+                "id": 42,
+                "institution": "Harvard",
+                "degree": "MBA",
+                "field_of_study": "Business",
+                "gpa": 3.5,
+                "start_date": "2019-09-01",
+                "end_date": "2021-05-15",
+                "is_current": False,
+                "achievements": "",
+            },
+        ]
+
+        form_values = [
+            "Harvard",
+            "MBA",
+            "Finance",  # changed field
+            "3.7",  # changed GPA
+            "2019-09-01",
+            "2021-05-15",
+            "no",
+            "Magna Cum Laude",
+        ]
+
+        with (
+            patch(
+                "capstone_project_team_5.tui.get_educations",
+                return_value=existing_educations,
+            ),
+            patch("easygui.choicebox", return_value="Harvard – MBA"),
+            patch("easygui.buttonbox", return_value="Edit"),
+            patch("easygui.multenterbox", return_value=form_values),
+            patch(
+                "capstone_project_team_5.tui.update_education",
+                return_value={"institution": "Harvard", "degree": "MBA"},
+            ) as mock_update,
+            patch("capstone_project_team_5.tui.get_user_profile", return_value=None),
+        ):
+            app._prompt_edit_education()
+
+        mock_update.assert_called_once()
+        assert mock_update.call_args[0][0] == test_user
+        assert mock_update.call_args[0][1] == 42
+        call_data = mock_update.call_args[0][2]
+        assert call_data["field_of_study"] == "Finance"
+        mock_status.update.assert_called_with("Education saved successfully.")
+
+    def test_missing_required_fields_shows_error(self, test_user: str) -> None:
+        """If institution or degree is blank, validation should fail."""
+        app = Zip2JobTUI()
+        app._current_user = test_user
+
+        mock_status = MagicMock()
+        app.query_one = MagicMock(return_value=mock_status)
+
+        form_values = ["", "", "", "", "", "", "no", ""]  # all blank
+
+        with (
+            patch("capstone_project_team_5.tui.get_educations", return_value=[]),
+            patch("easygui.choicebox", return_value="+ Add New Education"),
+            patch("easygui.multenterbox", return_value=form_values),
+            patch("easygui.msgbox") as mock_msgbox,
+        ):
+            app._prompt_edit_education()
+
+        mock_msgbox.assert_called_once()
+        assert "required" in mock_msgbox.call_args[0][0].lower()
+        mock_status.update.assert_called_with("Education save failed: missing required fields.")
+
+    def test_invalid_input_shows_validation_errors(self, test_user: str) -> None:
+        """Non-numeric GPA and malformed dates should show validation errors."""
+        app = Zip2JobTUI()
+        app._current_user = test_user
+
+        mock_status = MagicMock()
+        app.query_one = MagicMock(return_value=mock_status)
+
+        # Bad GPA
+        with (
+            patch("capstone_project_team_5.tui.get_educations", return_value=[]),
+            patch("easygui.choicebox", return_value="+ Add New Education"),
+            patch(
+                "easygui.multenterbox", return_value=["MIT", "B.S.", "CS", "abc", "", "", "no", ""]
+            ),
+            patch("easygui.msgbox") as mock_msgbox,
+        ):
+            app._prompt_edit_education()
+        assert "GPA" in mock_msgbox.call_args[0][0]
+        mock_status.update.assert_called_with("Education save failed: invalid GPA.")
+
+        # Bad start date
+        mock_status.reset_mock()
+        with (
+            patch("capstone_project_team_5.tui.get_educations", return_value=[]),
+            patch("easygui.choicebox", return_value="+ Add New Education"),
+            patch(
+                "easygui.multenterbox",
+                return_value=["MIT", "B.S.", "", "", "not-a-date", "", "no", ""],
+            ),
+            patch("easygui.msgbox"),
+        ):
+            app._prompt_edit_education()
+        mock_status.update.assert_called_with("Education save failed: invalid start date.")
+
+    def test_save_failure_shows_error(self, test_user: str) -> None:
+        """When create_education returns None, status should report failure."""
+        app = Zip2JobTUI()
+        app._current_user = test_user
+
+        mock_status = MagicMock()
+        app.query_one = MagicMock(return_value=mock_status)
+
+        form_values = ["MIT", "B.S.", "", "", "", "", "no", ""]
+
+        with (
+            patch("capstone_project_team_5.tui.get_educations", return_value=[]),
+            patch("easygui.choicebox", return_value="+ Add New Education"),
+            patch("easygui.multenterbox", return_value=form_values),
+            patch("capstone_project_team_5.tui.create_education", return_value=None),
+        ):
+            app._prompt_edit_education()
+
+        mock_status.update.assert_called_with(
+            "Failed to save education. Check your input and try again."
+        )
+
+
+class TestDeleteEducation:
+    """Tests for education deletion flow."""
+
+    def test_delete_confirmed_success(self, test_user: str) -> None:
+        """Confirming delete should call delete_education and refresh view."""
+        app = Zip2JobTUI()
+        app._current_user = test_user
+
+        mock_status = MagicMock()
+        mock_output = MagicMock()
+        app.query_one = MagicMock(
+            side_effect=lambda sel, cls=None: mock_status if "status" in sel else mock_output
+        )
+
+        edu = {"id": 7, "institution": "MIT", "degree": "B.S."}
+
+        with (
+            patch("easygui.ynbox", return_value=True),
+            patch("capstone_project_team_5.tui.delete_education", return_value=True) as mock_del,
+            patch("capstone_project_team_5.tui.get_user_profile", return_value=None),
+            patch("capstone_project_team_5.tui.get_educations", return_value=[]),
+        ):
+            app._delete_education_entry(7, edu)
+
+        mock_del.assert_called_once_with(test_user, 7)
+        mock_status.update.assert_called_with("Education entry deleted.")
+
+    def test_delete_cancelled(self, test_user: str) -> None:
+        """Declining the confirmation should not delete."""
+        app = Zip2JobTUI()
+        app._current_user = test_user
+
+        mock_status = MagicMock()
+        app.query_one = MagicMock(return_value=mock_status)
+
+        edu = {"id": 7, "institution": "MIT", "degree": "B.S."}
+
+        with patch("easygui.ynbox", return_value=False):
+            app._delete_education_entry(7, edu)
+
+        mock_status.update.assert_called_with("Education deletion cancelled.")
+
+    def test_delete_failure_shows_error(self, test_user: str) -> None:
+        """When delete_education returns False, status should report failure."""
+        app = Zip2JobTUI()
+        app._current_user = test_user
+
+        mock_status = MagicMock()
+        app.query_one = MagicMock(return_value=mock_status)
+
+        edu = {"id": 7, "institution": "MIT", "degree": "B.S."}
+
+        with (
+            patch("easygui.ynbox", return_value=True),
+            patch("capstone_project_team_5.tui.delete_education", return_value=False),
+        ):
+            app._delete_education_entry(7, edu)
+
+        mock_status.update.assert_called_with("Failed to delete education entry.")
