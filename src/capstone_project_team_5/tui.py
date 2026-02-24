@@ -35,6 +35,10 @@ from capstone_project_team_5.services.project_thumbnail import (
     has_project_thumbnail,
     set_project_thumbnail,
 )
+from capstone_project_team_5.services.user_profile import (
+    get_user_profile,
+    upsert_user_profile,
+)
 from capstone_project_team_5.services.user_skill_list import (
     get_chronological_skills,
     render_skills_as_markdown,
@@ -130,6 +134,15 @@ Screen {
 #sidebar Button {
     margin-top: 1;
     width: 100%;
+}
+
+/* Indented profile sub-buttons */
+#btn-edit-personal-info,
+#btn-edit-work-exp,
+#btn-edit-education {
+    margin-left: 2;
+    width: 22;
+    margin-top: 0;
 }
 
 #btn-delete-analysis {
@@ -236,6 +249,22 @@ ProgressBar {
                         Static("Zip2Job\nAnalyzer", id="title"),
                         Label("Hi, -", id="user-label"),
                         Button("Log Out", id="btn-logout", variant="default"),
+                        Button("My Profile", id="btn-profile", variant="primary"),
+                        Button(
+                            "  Edit Personal Info",
+                            id="btn-edit-personal-info",
+                            variant="default",
+                        ),
+                        Button(
+                            "  Edit Work Experience",
+                            id="btn-edit-work-exp",
+                            variant="default",
+                        ),
+                        Button(
+                            "  Edit Education",
+                            id="btn-edit-education",
+                            variant="default",
+                        ),
                         Button("Analyze ZIP", id="btn-analyze", variant="primary"),
                         Button("Retrieve Projects", id="btn-retrieve", variant="default"),
                         Button("View Skills", id="btn-skills", variant="default"),
@@ -322,6 +351,10 @@ ProgressBar {
         export_pdf_btn.display = False
         export_txt_btn.display = False
         update_dates_btn.display = False
+        # Profile sub-buttons hidden until "My Profile" is clicked.
+        self.query_one("#btn-edit-personal-info", Button).display = False
+        self.query_one("#btn-edit-work-exp", Button).display = False
+        self.query_one("#btn-edit-education", Button).display = False
         # Auth inputs are hidden until user chooses login or signup.
         username_input.display = False
         password_input.display = False
@@ -650,6 +683,7 @@ ProgressBar {
     @on(Button.Pressed, "#btn-analyze")
     def handle_analyze_zip(self) -> None:
         status = self.query_one("#status", Label)
+        self._leave_profile_view()
 
         try:
             if self._current_user is None:
@@ -697,6 +731,7 @@ ProgressBar {
         "Analyze ZIP" when you want to upload and analyze a new archive.
         """
         status = self.query_one("#status", Label)
+        self._leave_profile_view()
         if self._current_user is None:
             status.update("Please log in before retrieving saved analyses.")
             return
@@ -716,6 +751,7 @@ ProgressBar {
         """
 
         status = self.query_one("#status", Label)
+        self._leave_profile_view()
 
         if self._current_user is None:
             status.update("Please login before viewing skills.")
@@ -744,6 +780,146 @@ ProgressBar {
 
         except Exception as e:
             status.update(f"Error fetching skills: {e}")
+
+    def _leave_profile_view(self) -> None:
+        """Hide the nested profile sub-buttons and restore the list column."""
+        self.query_one("#btn-edit-personal-info", Button).display = False
+        self.query_one("#btn-edit-work-exp", Button).display = False
+        self.query_one("#btn-edit-education", Button).display = False
+        self.query_one("#list-column", Container).display = True
+
+    def _show_profile_sub_buttons(self) -> None:
+        """Show the nested profile sub-buttons."""
+        self.query_one("#btn-edit-personal-info", Button).display = True
+        self.query_one("#btn-edit-work-exp", Button).display = True
+        self.query_one("#btn-edit-education", Button).display = True
+
+    @on(Button.Pressed, "#btn-profile")
+    def handle_profile_button(self) -> None:
+        """Display the current user's personal profile and reveal sub-buttons."""
+        status = self.query_one("#status", Label)
+
+        if self._current_user is None:
+            status.update("Please log in before viewing your profile.")
+            return
+
+        self._reset_analysis_selection_ui()
+        self._show_profile_sub_buttons()
+        self.query_one("#list-column", Container).display = False
+        profile = get_user_profile(self._current_user)
+        md = self._render_profile_markdown(profile)
+        self._current_markdown = md
+        self.query_one("#output", Markdown).update(md)
+        status.update("Viewing personal profile.")
+
+    def _render_profile_markdown(self, profile: dict | None) -> str:
+        """Render user profile data as markdown for the output pane."""
+        parts: list[str] = []
+        parts.append("# My Profile\n")
+
+        if profile is None:
+            parts.append("No profile information saved yet.\n")
+            parts.append("Click **Edit Profile** below to add your details.\n")
+        else:
+            field_labels = [
+                ("first_name", "First Name"),
+                ("last_name", "Last Name"),
+                ("email", "Email"),
+                ("phone", "Phone"),
+                ("address", "Address"),
+                ("city", "City"),
+                ("state", "State"),
+                ("zip_code", "ZIP Code"),
+                ("linkedin_url", "LinkedIn URL"),
+                ("github_username", "GitHub Username"),
+                ("website", "Website"),
+            ]
+            parts.append("## Contact Information\n")
+            for key, label in field_labels:
+                value = profile.get(key) or "—"
+                parts.append(f"- **{label}:** {value}")
+
+            updated = profile.get("updated_at")
+            if updated:
+                parts.append(f"\n*Last updated: {updated}*")
+
+        parts.append("\n---")
+        parts.append(
+            "\nUse the **Edit Personal Info** button in the sidebar"
+            " to create or update your information."
+        )
+        return "\n".join(parts)
+
+    def _prompt_edit_profile(self) -> None:
+        """Open an easygui dialog to edit the user's profile fields."""
+        import easygui
+
+        status = self.query_one("#status", Label)
+
+        if self._current_user is None:
+            status.update("Please log in before editing your profile.")
+            return
+
+        profile = get_user_profile(self._current_user) or {}
+
+        field_defs = [
+            ("first_name", "First Name"),
+            ("last_name", "Last Name"),
+            ("email", "Email"),
+            ("phone", "Phone"),
+            ("address", "Address"),
+            ("city", "City"),
+            ("state", "State"),
+            ("zip_code", "ZIP Code"),
+            ("linkedin_url", "LinkedIn URL"),
+            ("github_username", "GitHub Username"),
+            ("website", "Website"),
+        ]
+
+        field_names = [label for _, label in field_defs]
+        field_values = [str(profile.get(key) or "") for key, _ in field_defs]
+
+        result = easygui.multenterbox(
+            msg="Update your personal information.\nLeave fields blank to clear them.",
+            title="Edit Profile",
+            fields=field_names,
+            values=field_values,
+        )
+
+        if result is None:
+            status.update("Profile edit cancelled.")
+            return
+
+        from capstone_project_team_5.services.user_profile import UserProfileData
+
+        profile_data: UserProfileData = {}
+        for i, (key, _) in enumerate(field_defs):
+            value = result[i].strip() if result[i] else ""
+            profile_data[key] = value  # type: ignore[literal-required]
+
+        updated = upsert_user_profile(self._current_user, profile_data)
+        if updated:
+            md = self._render_profile_markdown(updated)
+            self._current_markdown = md
+            self.query_one("#output", Markdown).update(md)
+            status.update("Profile updated successfully.")
+        else:
+            status.update("Failed to save profile. Please try again.")
+
+    @on(Button.Pressed, "#btn-edit-personal-info")
+    def handle_edit_personal_info_button(self) -> None:
+        """Handle the Edit Personal Info sub-button press."""
+        self._prompt_edit_profile()
+
+    @on(Button.Pressed, "#btn-edit-work-exp")
+    def handle_edit_work_exp_button(self) -> None:
+        """Placeholder for Edit Work Experience (not yet implemented)."""
+        self.query_one("#status", Label).update("Work experience editing coming soon.")
+
+    @on(Button.Pressed, "#btn-edit-education")
+    def handle_edit_education_button(self) -> None:
+        """Placeholder for Edit Education (not yet implemented)."""
+        self.query_one("#status", Label).update("Education editing coming soon.")
 
     @on(Button.Pressed, "#btn-delete-analysis")
     def handle_delete_analysis(self) -> None:
@@ -2486,6 +2662,7 @@ ProgressBar {
         status.update("Logged out. Please log in again.")
         self._update_thumbnail_buttons(None)
         self._update_dates_button(None)
+        self._leave_profile_view()
 
     @on(Button.Pressed, "#btn-exit")
     def exit_app(self) -> None:
