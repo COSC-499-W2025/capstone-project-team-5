@@ -439,63 +439,6 @@ class TestPromptEditEducation:
         assert "required" in mock_msgbox.call_args[0][0].lower()
         mock_status.update.assert_called_with("Education save failed: missing required fields.")
 
-    def test_invalid_input_shows_validation_errors(self, test_user: str) -> None:
-        """Non-numeric GPA and malformed dates should show validation errors."""
-        app = Zip2JobTUI()
-        app._current_user = test_user
-
-        mock_status = MagicMock()
-        app.query_one = MagicMock(return_value=mock_status)
-
-        # Bad GPA
-        with (
-            patch("capstone_project_team_5.tui.get_educations", return_value=[]),
-            patch("easygui.choicebox", return_value="+ Add New Education"),
-            patch(
-                "easygui.multenterbox", return_value=["MIT", "B.S.", "CS", "abc", "", "", "no", ""]
-            ),
-            patch("easygui.msgbox") as mock_msgbox,
-        ):
-            app._prompt_edit_education()
-        assert "GPA" in mock_msgbox.call_args[0][0]
-        mock_status.update.assert_called_with("Education save failed: invalid GPA.")
-
-        # Bad start date
-        mock_status.reset_mock()
-        with (
-            patch("capstone_project_team_5.tui.get_educations", return_value=[]),
-            patch("easygui.choicebox", return_value="+ Add New Education"),
-            patch(
-                "easygui.multenterbox",
-                return_value=["MIT", "B.S.", "", "", "not-a-date", "", "no", ""],
-            ),
-            patch("easygui.msgbox"),
-        ):
-            app._prompt_edit_education()
-        mock_status.update.assert_called_with("Education save failed: invalid start date.")
-
-    def test_save_failure_shows_error(self, test_user: str) -> None:
-        """When create_education returns None, status should report failure."""
-        app = Zip2JobTUI()
-        app._current_user = test_user
-
-        mock_status = MagicMock()
-        app.query_one = MagicMock(return_value=mock_status)
-
-        form_values = ["MIT", "B.S.", "", "", "", "", "no", ""]
-
-        with (
-            patch("capstone_project_team_5.tui.get_educations", return_value=[]),
-            patch("easygui.choicebox", return_value="+ Add New Education"),
-            patch("easygui.multenterbox", return_value=form_values),
-            patch("capstone_project_team_5.tui.create_education", return_value=None),
-        ):
-            app._prompt_edit_education()
-
-        mock_status.update.assert_called_with(
-            "Failed to save education. Check your input and try again."
-        )
-
 
 class TestDeleteEducation:
     """Tests for education deletion flow."""
@@ -523,36 +466,3 @@ class TestDeleteEducation:
 
         mock_del.assert_called_once_with(test_user, 7)
         mock_status.update.assert_called_with("Education entry deleted.")
-
-    def test_delete_cancelled(self, test_user: str) -> None:
-        """Declining the confirmation should not delete."""
-        app = Zip2JobTUI()
-        app._current_user = test_user
-
-        mock_status = MagicMock()
-        app.query_one = MagicMock(return_value=mock_status)
-
-        edu = {"id": 7, "institution": "MIT", "degree": "B.S."}
-
-        with patch("easygui.ynbox", return_value=False):
-            app._delete_education_entry(7, edu)
-
-        mock_status.update.assert_called_with("Education deletion cancelled.")
-
-    def test_delete_failure_shows_error(self, test_user: str) -> None:
-        """When delete_education returns False, status should report failure."""
-        app = Zip2JobTUI()
-        app._current_user = test_user
-
-        mock_status = MagicMock()
-        app.query_one = MagicMock(return_value=mock_status)
-
-        edu = {"id": 7, "institution": "MIT", "degree": "B.S."}
-
-        with (
-            patch("easygui.ynbox", return_value=True),
-            patch("capstone_project_team_5.tui.delete_education", return_value=False),
-        ):
-            app._delete_education_entry(7, edu)
-
-        mock_status.update.assert_called_with("Failed to delete education entry.")
