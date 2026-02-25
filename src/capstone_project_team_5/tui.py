@@ -49,6 +49,12 @@ from capstone_project_team_5.services.user_skill_list import (
     get_chronological_skills,
     render_skills_as_markdown,
 )
+from capstone_project_team_5.services.work_experience import (
+    create_work_experience,
+    delete_work_experience,
+    get_work_experiences,
+    update_work_experience,
+)
 from capstone_project_team_5.tui_rendering import (
     render_detected_list,
     render_project_markdown,
@@ -814,13 +820,17 @@ ProgressBar {
         self.query_one("#list-column", Container).display = False
         profile = get_user_profile(self._current_user)
         educations = get_educations(self._current_user) or []
-        md = self._render_profile_markdown(profile, educations)
+        work_experiences = get_work_experiences(self._current_user) or []
+        md = self._render_profile_markdown(profile, educations, work_experiences)
         self._current_markdown = md
         self.query_one("#output", Markdown).update(md)
         status.update("Viewing personal profile.")
 
     def _render_profile_markdown(
-        self, profile: dict | None, educations: list[dict] | None = None
+        self,
+        profile: dict | None,
+        educations: list[dict] | None = None,
+        work_experiences: list[dict] | None = None,
     ) -> str:
         """Render user profile data as markdown for the output pane."""
         parts: list[str] = []
@@ -891,6 +901,51 @@ ProgressBar {
                     parts.append(f"- **Achievements:** {achievements}")
                 parts.append("")
 
+        # ── Work Experience section ──
+        parts.append("\n---")
+        parts.append("\n## Work Experience\n")
+        if not work_experiences:
+            parts.append("No work experience entries yet.\n")
+            parts.append("Click **Edit Work Experience** to add your work history.\n")
+        else:
+            for exp in work_experiences:
+                company = exp.get("company") or "—"
+                title = exp.get("title") or "—"
+                location = exp.get("location") or ""
+                start_date = exp.get("start_date")
+                end_date = exp.get("end_date")
+                is_current = exp.get("is_current", False)
+                description = exp.get("description") or ""
+                bullets = exp.get("bullets") or ""
+
+                parts.append(f"### {company}")
+                title_line = f"**{title}**"
+                if location:
+                    title_line += f" — {location}"
+                parts.append(title_line)
+
+                date_str = ""
+                if start_date:
+                    date_str = str(start_date)
+                if is_current:
+                    date_str += " – Present"
+                elif end_date:
+                    date_str += f" – {end_date}"
+                if date_str:
+                    parts.append(f"*{date_str.strip()}*")
+
+                if description:
+                    parts.append(f"\n{description}")
+                if bullets:
+                    import json as _json
+
+                    with suppress(Exception):
+                        bullet_list = _json.loads(bullets)
+                        if isinstance(bullet_list, list):
+                            for b in bullet_list:
+                                parts.append(f"- {b}")
+                parts.append("")
+
         parts.append("\n---")
         parts.append(
             "\nUse the **Edit Personal Info** button in the sidebar"
@@ -948,7 +1003,8 @@ ProgressBar {
         updated = upsert_user_profile(self._current_user, profile_data)
         if updated:
             educations = get_educations(self._current_user) or []
-            md = self._render_profile_markdown(updated, educations)
+            work_experiences = get_work_experiences(self._current_user) or []
+            md = self._render_profile_markdown(updated, educations, work_experiences)
             self._current_markdown = md
             self.query_one("#output", Markdown).update(md)
             status.update("Profile updated successfully.")
@@ -962,8 +1018,209 @@ ProgressBar {
 
     @on(Button.Pressed, "#btn-edit-work-exp")
     def handle_edit_work_exp_button(self) -> None:
-        """Placeholder for Edit Work Experience (not yet implemented)."""
-        self.query_one("#status", Label).update("Work experience editing coming soon.")
+        """Handle the Edit Work Experience sub-button press."""
+        self._prompt_edit_work_experience()
+
+    def _prompt_edit_work_experience(self) -> None:
+        """Open easygui dialogs to manage work experience entries."""
+        import easygui
+
+        status = self.query_one("#status", Label)
+
+        if self._current_user is None:
+            status.update("Please log in before editing work experience.")
+            return
+
+        work_exps = get_work_experiences(self._current_user) or []
+
+        # If no entries exist, skip the choicebox and go straight to the form
+        if not work_exps:
+            self._prompt_work_experience_form(work_exp_id=None, existing=None)
+            return
+
+        # Build choices: existing entries + "Add New"
+        choices: list[str] = []
+        for exp in work_exps:
+            label = f"{exp.get('company', '?')} – {exp.get('title', '?')}"
+            choices.append(label)
+        choices.append("+ Add New Work Experience")
+
+        choice = easygui.choicebox(
+            msg="Select a work experience entry to edit, or add a new one.",
+            title="Manage Work Experience",
+            choices=choices,
+        )
+
+        if choice is None:
+            status.update("Work experience edit cancelled.")
+            return
+
+        if choice == "+ Add New Work Experience":
+            self._prompt_work_experience_form(work_exp_id=None, existing=None)
+        else:
+            idx = choices.index(choice)
+            exp = work_exps[idx]
+            action = easygui.buttonbox(
+                msg=f"What would you like to do with "
+                f'"{exp.get("company", "?")} – {exp.get("title", "?")}"?',
+                title="Work Experience Action",
+                choices=["Edit", "Delete", "Cancel"],
+            )
+            if action == "Edit":
+                self._prompt_work_experience_form(work_exp_id=exp["id"], existing=exp)
+            elif action == "Delete":
+                self._delete_work_experience_entry(exp["id"], exp)
+            else:
+                status.update("Work experience edit cancelled.")
+
+    def _prompt_work_experience_form(self, work_exp_id: int | None, existing: dict | None) -> None:
+        """Show the work experience form dialog for creating or editing an entry."""
+        from datetime import datetime
+
+        import easygui
+
+        status = self.query_one("#status", Label)
+
+        field_names = [
+            "Company",
+            "Title",
+            "Location",
+            "Start Date (YYYY-MM-DD)",
+            "End Date (YYYY-MM-DD)",
+            "Currently Employed (yes/no)",
+            "Description",
+            "Bullet Points (comma-separated)",
+        ]
+
+        if existing:
+            start_str = str(existing["start_date"]) if existing.get("start_date") else ""
+            end_str = str(existing["end_date"]) if existing.get("end_date") else ""
+            is_current_str = "yes" if existing.get("is_current") else "no"
+            existing_bullets = existing.get("bullets") or ""
+            if existing_bullets:
+                import json as _json
+
+                with suppress(Exception):
+                    parsed = _json.loads(existing_bullets)
+                    if isinstance(parsed, list):
+                        existing_bullets = ", ".join(str(b) for b in parsed)
+            field_values = [
+                existing.get("company") or "",
+                existing.get("title") or "",
+                existing.get("location") or "",
+                start_str,
+                end_str,
+                is_current_str,
+                existing.get("description") or "",
+                existing_bullets,
+            ]
+        else:
+            field_values = ["", "", "", "", "", "no", "", ""]
+
+        title = "Edit Work Experience" if work_exp_id else "Add Work Experience"
+        result = easygui.multenterbox(
+            msg="Fill in the work experience details.\nCompany and Title are required.",
+            title=title,
+            fields=field_names,
+            values=field_values,
+        )
+
+        if result is None:
+            status.update("Work experience edit cancelled.")
+            return
+
+        company = result[0].strip()
+        job_title = result[1].strip()
+        location = result[2].strip()
+        start_raw = result[3].strip()
+        end_raw = result[4].strip()
+        is_current_raw = result[5].strip().lower()
+        description = result[6].strip()
+        bullets_raw = result[7].strip()
+
+        if not company or not job_title:
+            easygui.msgbox("Company and Title are required.", "Validation Error")
+            status.update("Work experience save failed: missing required fields.")
+            return
+
+        from capstone_project_team_5.services.work_experience import WorkExperienceData
+
+        exp_data: WorkExperienceData = {
+            "company": company,
+            "title": job_title,
+        }
+
+        if location:
+            exp_data["location"] = location
+
+        if start_raw:
+            try:
+                exp_data["start_date"] = datetime.strptime(start_raw, "%Y-%m-%d").date()
+            except ValueError:
+                easygui.msgbox("Invalid start date format. Use YYYY-MM-DD.", "Error")
+                status.update("Work experience save failed: invalid start date.")
+                return
+
+        if end_raw:
+            try:
+                exp_data["end_date"] = datetime.strptime(end_raw, "%Y-%m-%d").date()
+            except ValueError:
+                easygui.msgbox("Invalid end date format. Use YYYY-MM-DD.", "Error")
+                status.update("Work experience save failed: invalid end date.")
+                return
+
+        exp_data["is_current"] = is_current_raw in ("yes", "y", "true", "1")
+        if description:
+            exp_data["description"] = description
+        if bullets_raw:
+            import json as _json
+
+            bullet_list = [b.strip() for b in bullets_raw.split(",") if b.strip()]
+            exp_data["bullets"] = _json.dumps(bullet_list)
+
+        if work_exp_id:
+            saved = update_work_experience(self._current_user, work_exp_id, exp_data)  # type: ignore[arg-type]
+        else:
+            saved = create_work_experience(self._current_user, exp_data)  # type: ignore[arg-type]
+
+        if saved:
+            profile = get_user_profile(self._current_user)
+            all_educations = get_educations(self._current_user) or []
+            all_work_exps = get_work_experiences(self._current_user) or []
+            md = self._render_profile_markdown(profile, all_educations, all_work_exps)
+            self._current_markdown = md
+            self.query_one("#output", Markdown).update(md)
+            status.update("Work experience saved successfully.")
+        else:
+            status.update("Failed to save work experience. Check your input and try again.")
+
+    def _delete_work_experience_entry(self, work_exp_id: int, exp: dict) -> None:
+        """Confirm and delete a work experience entry."""
+        import easygui
+
+        status = self.query_one("#status", Label)
+
+        confirm = easygui.ynbox(
+            msg=f"Are you sure you want to delete "
+            f'"{exp.get("company", "?")} – {exp.get("title", "?")}"?',
+            title="Confirm Delete",
+        )
+
+        if not confirm:
+            status.update("Work experience deletion cancelled.")
+            return
+
+        success = delete_work_experience(self._current_user, work_exp_id)  # type: ignore[arg-type]
+        if success:
+            profile = get_user_profile(self._current_user)
+            all_educations = get_educations(self._current_user) or []
+            all_work_exps = get_work_experiences(self._current_user) or []
+            md = self._render_profile_markdown(profile, all_educations, all_work_exps)
+            self._current_markdown = md
+            self.query_one("#output", Markdown).update(md)
+            status.update("Work experience entry deleted.")
+        else:
+            status.update("Failed to delete work experience entry.")
 
     @on(Button.Pressed, "#btn-edit-education")
     def handle_edit_education_button(self) -> None:
@@ -981,6 +1238,11 @@ ProgressBar {
             return
 
         educations = get_educations(self._current_user) or []
+
+        # If no entries exist, skip the choicebox and go straight to the form
+        if not educations:
+            self._prompt_education_form(education_id=None, existing=None)
+            return
 
         # Build choices: existing entries + "Add New"
         choices: list[str] = []
@@ -1126,7 +1388,8 @@ ProgressBar {
         if saved:
             profile = get_user_profile(self._current_user)
             all_educations = get_educations(self._current_user) or []
-            md = self._render_profile_markdown(profile, all_educations)
+            all_work_exps = get_work_experiences(self._current_user) or []
+            md = self._render_profile_markdown(profile, all_educations, all_work_exps)
             self._current_markdown = md
             self.query_one("#output", Markdown).update(md)
             status.update("Education saved successfully.")
@@ -1153,7 +1416,8 @@ ProgressBar {
         if success:
             profile = get_user_profile(self._current_user)
             all_educations = get_educations(self._current_user) or []
-            md = self._render_profile_markdown(profile, all_educations)
+            all_work_exps = get_work_experiences(self._current_user) or []
+            md = self._render_profile_markdown(profile, all_educations, all_work_exps)
             self._current_markdown = md
             self.query_one("#output", Markdown).update(md)
             status.update("Education entry deleted.")
