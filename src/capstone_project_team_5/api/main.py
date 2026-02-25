@@ -19,7 +19,6 @@ from capstone_project_team_5.api.routes import (
     users,
     work_experiences,
 )
-from capstone_project_team_5.api.routes.skills import global_router as skills_global_router
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -53,7 +52,7 @@ app.include_router(health.router)
 app.include_router(consent.router, prefix="/api")
 app.include_router(projects.router, prefix="/api")
 app.include_router(skills.router, prefix="/api")
-app.include_router(skills_global_router, prefix="/api")
+app.include_router(skills.global_router, prefix="/api")
 app.include_router(portfolio.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(work_experiences.router, prefix="/api")
