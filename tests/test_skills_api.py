@@ -248,3 +248,93 @@ def test_get_project_practices_empty_and_not_found(
 
     response = client.get("/api/projects/99999/skills/practices")
     assert response.status_code == 404
+
+
+# --- Global skills endpoint tests ---
+
+
+@pytest.fixture
+def skills_in_db(api_db: None) -> tuple[list[int], list[int]]:
+    """Create skills not associated with any project. Returns (tool_ids, practice_ids)."""
+    unique_id = uuid.uuid4().hex[:8]
+
+    with get_session() as session:
+        tools = [
+            _get_or_create_skill(session, f"GlobalTool_{i}_{unique_id}", SkillType.TOOL)
+            for i in range(3)
+        ]
+        practices = [
+            _get_or_create_skill(session, f"GlobalPractice_{i}_{unique_id}", SkillType.PRACTICE)
+            for i in range(2)
+        ]
+        session.flush()
+        return [t.id for t in tools], [p.id for p in practices]
+
+
+def test_get_all_skills_returns_paginated_response(
+    client: TestClient, skills_in_db: tuple[list[int], list[int]]
+) -> None:
+    """Test that GET /api/skills returns a paginated response with items and pagination keys."""
+    response = client.get("/api/skills")
+    assert response.status_code == 200
+    data = response.json()
+
+    assert "items" in data
+    assert "pagination" in data
+    assert isinstance(data["items"], list)
+    assert data["pagination"]["total"] >= 5  # at least the 5 skills we created
+    assert data["pagination"]["limit"] == DEFAULT_LIMIT
+    assert data["pagination"]["offset"] == 0
+
+    for item in data["items"]:
+        assert "id" in item
+        assert "name" in item
+        assert "skill_type" in item
+
+
+def test_get_all_skills_filter_by_type(
+    client: TestClient, skills_in_db: tuple[list[int], list[int]]
+) -> None:
+    """Test that skill_type query param correctly filters results."""
+    tools_resp = client.get("/api/skills?skill_type=tool")
+    assert tools_resp.status_code == 200
+    tools_data = tools_resp.json()
+    for item in tools_data["items"]:
+        assert item["skill_type"] == "tool"
+
+    practices_resp = client.get("/api/skills?skill_type=practice")
+    assert practices_resp.status_code == 200
+    practices_data = practices_resp.json()
+    for item in practices_data["items"]:
+        assert item["skill_type"] == "practice"
+
+
+def test_get_all_skills_pagination_params(
+    client: TestClient, skills_in_db: tuple[list[int], list[int]]
+) -> None:
+    """Test limit and offset pagination on the global skills endpoint."""
+    # Get total count first
+    total = client.get("/api/skills").json()["pagination"]["total"]
+
+    # First page
+    resp = client.get("/api/skills?limit=2&offset=0")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["items"]) == 2
+    assert data["pagination"]["limit"] == 2
+    assert data["pagination"]["offset"] == 0
+    assert data["pagination"]["has_more"] is (total > 2)
+
+    # Offset past the end
+    resp = client.get(f"/api/skills?limit=2&offset={total}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["items"] == []
+    assert data["pagination"]["has_more"] is False
+
+
+def test_get_all_skills_invalid_params(client: TestClient, api_db: None) -> None:
+    """Test that invalid pagination params return 422."""
+    assert client.get(f"/api/skills?limit={MAX_LIMIT + 1}").status_code == 422
+    assert client.get("/api/skills?limit=0").status_code == 422
+    assert client.get("/api/skills?offset=-1").status_code == 422
