@@ -169,7 +169,7 @@ def get_project_practices(
     "/",
     response_model=PaginatedSkillsResponse,
     summary="List all skills",
-    description="Return all skills across all projects, optionally filtered by type.",
+    description="Return all skills in the catalog, optionally filtered by type.",
 )
 def get_all_skills(
     skill_type: SkillType | None = Query(  # noqa: B008
