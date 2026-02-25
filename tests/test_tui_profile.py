@@ -131,6 +131,8 @@ class TestPromptEditProfile:
                     "email": "a@b.com",
                 },
             ) as mock_upsert,
+            patch("capstone_project_team_5.tui.get_educations", return_value=[]),
+            patch("capstone_project_team_5.tui.get_work_experiences", return_value=[]),
         ):
             app._prompt_edit_profile()
 
@@ -229,6 +231,7 @@ class TestProfileViewToggle:
         with (
             patch("capstone_project_team_5.tui.get_user_profile", return_value=None),
             patch("capstone_project_team_5.tui.get_educations", return_value=[]),
+            patch("capstone_project_team_5.tui.get_work_experiences", return_value=[]),
         ):
             app.handle_profile_button()
 
@@ -293,26 +296,16 @@ class TestPromptEditEducation:
     """Tests for the _prompt_edit_education dialog flow."""
 
     def test_cancellation_at_any_step_does_not_save(self, test_user: str) -> None:
-        """Cancelling the choice dialog or the form dialog should not save."""
+        """Cancelling the form dialog should not save."""
         app = Zip2JobTUI()
         app._current_user = test_user
 
         mock_status = MagicMock()
         app.query_one = MagicMock(return_value=mock_status)
 
-        # Cancel at choicebox
+        # With no entries, goes straight to form; cancel at form
         with (
             patch("capstone_project_team_5.tui.get_educations", return_value=[]),
-            patch("easygui.choicebox", return_value=None),
-        ):
-            app._prompt_edit_education()
-        mock_status.update.assert_called_with("Education edit cancelled.")
-
-        # Cancel at form
-        mock_status.reset_mock()
-        with (
-            patch("capstone_project_team_5.tui.get_educations", return_value=[]),
-            patch("easygui.choicebox", return_value="+ Add New Education"),
             patch("easygui.multenterbox", return_value=None),
         ):
             app._prompt_edit_education()
@@ -342,6 +335,7 @@ class TestPromptEditEducation:
 
         with (
             patch("capstone_project_team_5.tui.get_educations", return_value=[]),
+            patch("capstone_project_team_5.tui.get_work_experiences", return_value=[]),
             patch("easygui.choicebox", return_value="+ Add New Education"),
             patch("easygui.multenterbox", return_value=form_values),
             patch(
@@ -399,6 +393,7 @@ class TestPromptEditEducation:
                 "capstone_project_team_5.tui.get_educations",
                 return_value=existing_educations,
             ),
+            patch("capstone_project_team_5.tui.get_work_experiences", return_value=[]),
             patch("easygui.choicebox", return_value="Harvard – MBA"),
             patch("easygui.buttonbox", return_value="Edit"),
             patch("easygui.multenterbox", return_value=form_values),
@@ -429,7 +424,6 @@ class TestPromptEditEducation:
 
         with (
             patch("capstone_project_team_5.tui.get_educations", return_value=[]),
-            patch("easygui.choicebox", return_value="+ Add New Education"),
             patch("easygui.multenterbox", return_value=form_values),
             patch("easygui.msgbox") as mock_msgbox,
         ):
@@ -461,8 +455,172 @@ class TestDeleteEducation:
             patch("capstone_project_team_5.tui.delete_education", return_value=True) as mock_del,
             patch("capstone_project_team_5.tui.get_user_profile", return_value=None),
             patch("capstone_project_team_5.tui.get_educations", return_value=[]),
+            patch("capstone_project_team_5.tui.get_work_experiences", return_value=[]),
         ):
             app._delete_education_entry(7, edu)
 
         mock_del.assert_called_once_with(test_user, 7)
         mock_status.update.assert_called_with("Education entry deleted.")
+
+
+class TestRenderWorkExperienceMarkdown:
+    """Tests for work experience rendering within _render_profile_markdown."""
+
+    def test_no_work_experiences_shows_placeholder(self) -> None:
+        """When work_experiences list is empty, show placeholder text."""
+        app = Zip2JobTUI()
+        md = app._render_profile_markdown(None, educations=[], work_experiences=[])
+        assert "## Work Experience" in md
+        assert "No work experience entries yet" in md
+        assert "Edit Work Experience" in md
+
+    def test_work_experience_entries_rendered(self) -> None:
+        """Work experience entries render fields, is_current, and multiple entries."""
+        app = Zip2JobTUI()
+        work_experiences = [
+            {
+                "company": "Acme Corp",
+                "title": "Software Engineer",
+                "location": "New York, NY",
+                "start_date": "2020-06-01",
+                "end_date": "2023-01-15",
+                "is_current": False,
+                "description": "Built web applications.",
+                "bullets": None,
+            },
+            {
+                "company": "TechCo",
+                "title": "Senior Developer",
+                "location": "Remote",
+                "start_date": "2023-02-01",
+                "end_date": None,
+                "is_current": True,
+                "description": "",
+                "bullets": None,
+            },
+        ]
+        md = app._render_profile_markdown(None, educations=[], work_experiences=work_experiences)
+        # First entry fields
+        for val in ("### Acme Corp", "**Software Engineer**", "New York, NY", "Built web"):
+            assert val in md
+        # Second entry + is_current
+        assert "TechCo" in md
+        assert "Present" in md
+        # Placeholder should NOT appear
+        assert "No work experience entries yet" not in md
+
+
+class TestPromptEditWorkExperience:
+    """Tests for the _prompt_edit_work_experience dialog flow."""
+
+    def test_cancellation_does_not_save(self, test_user: str) -> None:
+        """Cancelling the form dialog should not save."""
+        app = Zip2JobTUI()
+        app._current_user = test_user
+
+        mock_status = MagicMock()
+        app.query_one = MagicMock(return_value=mock_status)
+
+        # With no entries, goes straight to form; cancel at form
+        with (
+            patch("capstone_project_team_5.tui.get_work_experiences", return_value=[]),
+            patch("easygui.multenterbox", return_value=None),
+        ):
+            app._prompt_edit_work_experience()
+        mock_status.update.assert_called_with("Work experience edit cancelled.")
+
+    def test_add_new_work_experience_success(self, test_user: str) -> None:
+        """Selecting 'Add New' and filling the form should create an entry."""
+        app = Zip2JobTUI()
+        app._current_user = test_user
+
+        mock_status = MagicMock()
+        mock_output = MagicMock()
+        app.query_one = MagicMock(
+            side_effect=lambda sel, cls=None: mock_status if "status" in sel else mock_output
+        )
+
+        form_values = [
+            "Acme Corp",  # Company
+            "Software Engineer",  # Title
+            "NYC",  # Location
+            "2020-06-01",  # Start Date
+            "2023-01-15",  # End Date
+            "no",  # Currently Employed
+            "Built APIs",  # Description
+            "Led team of 5, Shipped v2.0",  # Bullet Points
+        ]
+
+        with (
+            patch("capstone_project_team_5.tui.get_work_experiences", return_value=[]),
+            patch("easygui.choicebox", return_value="+ Add New Work Experience"),
+            patch("easygui.multenterbox", return_value=form_values),
+            patch(
+                "capstone_project_team_5.tui.create_work_experience",
+                return_value={"company": "Acme Corp", "title": "Software Engineer"},
+            ) as mock_create,
+            patch("capstone_project_team_5.tui.get_user_profile", return_value=None),
+            patch("capstone_project_team_5.tui.get_educations", return_value=[]),
+        ):
+            app._prompt_edit_work_experience()
+
+        mock_create.assert_called_once()
+        call_data = mock_create.call_args[0][1]
+        assert call_data["company"] == "Acme Corp"
+        assert call_data["title"] == "Software Engineer"
+        mock_status.update.assert_called_with("Work experience saved successfully.")
+
+    def test_missing_required_fields_shows_error(self, test_user: str) -> None:
+        """If company or title is blank, validation should fail."""
+        app = Zip2JobTUI()
+        app._current_user = test_user
+
+        mock_status = MagicMock()
+        app.query_one = MagicMock(return_value=mock_status)
+
+        form_values = ["", "", "", "", "", "no", "", ""]  # all blank
+
+        with (
+            patch("capstone_project_team_5.tui.get_work_experiences", return_value=[]),
+            patch("easygui.choicebox", return_value="+ Add New Work Experience"),
+            patch("easygui.multenterbox", return_value=form_values),
+            patch("easygui.msgbox") as mock_msgbox,
+        ):
+            app._prompt_edit_work_experience()
+
+        mock_msgbox.assert_called_once()
+        assert "required" in mock_msgbox.call_args[0][0].lower()
+        mock_status.update.assert_called_with(
+            "Work experience save failed: missing required fields."
+        )
+
+
+class TestDeleteWorkExperience:
+    """Tests for work experience deletion flow."""
+
+    def test_delete_confirmed_success(self, test_user: str) -> None:
+        """Confirming delete should call delete_work_experience and refresh view."""
+        app = Zip2JobTUI()
+        app._current_user = test_user
+
+        mock_status = MagicMock()
+        mock_output = MagicMock()
+        app.query_one = MagicMock(
+            side_effect=lambda sel, cls=None: mock_status if "status" in sel else mock_output
+        )
+
+        exp = {"id": 10, "company": "Acme", "title": "Dev"}
+
+        with (
+            patch("easygui.ynbox", return_value=True),
+            patch(
+                "capstone_project_team_5.tui.delete_work_experience", return_value=True
+            ) as mock_del,
+            patch("capstone_project_team_5.tui.get_user_profile", return_value=None),
+            patch("capstone_project_team_5.tui.get_educations", return_value=[]),
+            patch("capstone_project_team_5.tui.get_work_experiences", return_value=[]),
+        ):
+            app._delete_work_experience_entry(10, exp)
+
+        mock_del.assert_called_once_with(test_user, 10)
+        mock_status.update.assert_called_with("Work experience entry deleted.")
