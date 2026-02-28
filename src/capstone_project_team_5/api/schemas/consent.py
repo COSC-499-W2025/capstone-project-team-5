@@ -27,6 +27,7 @@ class ConsentRecordSummary(BaseModel):
     external_services: dict[str, Any]
     default_ignore_patterns: list[str]
     created_at: datetime
+    updated_at: datetime
 
 
 class ConsentUpsertRequest(BaseModel):

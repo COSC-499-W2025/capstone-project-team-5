@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
@@ -98,6 +98,7 @@ def _to_summary(record: ConsentRecord) -> ConsentRecordSummary:
         external_services=record.external_services,
         default_ignore_patterns=record.default_ignore_patterns,
         created_at=record.created_at,
+        updated_at=record.updated_at,
     )
 
 
@@ -123,6 +124,7 @@ def get_available_services() -> AvailableServicesResponse:
 def upsert_consent(
     body: ConsentUpsertRequest,
     current_username: Annotated[str | None, Depends(get_optional_username)],
+    response: Response,
 ) -> ConsentRecordSummary:
     """Create or replace the current consent settings.
 
@@ -146,6 +148,7 @@ def upsert_consent(
             session.refresh(existing)
             return _to_summary(existing)
 
+        response.status_code = status.HTTP_201_CREATED
         record = ConsentRecord(
             user_id=user_id,
             consent_given=body.consent_given,
