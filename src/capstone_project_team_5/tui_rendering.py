@@ -85,6 +85,15 @@ def render_project_markdown(upload: dict[str, Any], proj: dict[str, Any], rank: 
         else:
             parts.append(f"**{user_role}**")
 
+    role_types = proj.get("user_role_types")
+    if role_types:
+        primary_role = role_types["primary_role"]
+        parts.append(f"**Primary Role** {primary_role}")
+
+        if role_types.get("secondary_roles"):
+            secondary_roles = role_types["secondary_roles"]
+            parts.append(f", Secondary Roles: {secondary_roles}")
+
     git_info = proj.get("git") or {}
     if git_info.get("is_repo"):
         current = git_info.get("current_author_contribution") or {}
@@ -216,6 +225,17 @@ def render_saved_list(saved: list[dict[str, Any]]) -> str:
                 elif user_contrib_pct is not None:
                     role_text += f" ({user_contrib_pct:.1f}% contributions)"
                 parts.append(f"  - {role_text}")
+
+            role_types = p.get("user_role_types")
+            if role_types:
+                primary_role = role_types["primary_role"]
+                role_type_text = f"**Primary Role** {primary_role}"
+
+                if role_types.get("secondary_roles"):
+                    secondary_roles = role_types["secondary_roles"]
+                    role_type_text += f", Secondary Roles: {secondary_roles}"
+
+                parts.append(f" - {role_type_text}")
 
             if p.get("importance_rank") is not None:
                 parts.append(
