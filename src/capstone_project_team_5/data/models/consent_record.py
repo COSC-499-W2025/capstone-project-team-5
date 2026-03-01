@@ -31,6 +31,7 @@ class ConsentRecord(Base):
             }
         default_ignore_patterns: JSON list of file/folder patterns to ignore during analysis.
         created_at: UTC timestamp of when the consent was recorded.
+        updated_at: UTC timestamp of the most recent update (auto-set on write).
     """
 
     __tablename__ = "consent_records"
@@ -47,4 +48,10 @@ class ConsentRecord(Base):
     default_ignore_patterns: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
