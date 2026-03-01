@@ -1639,13 +1639,19 @@ ProgressBar {
                 role_line += f" ({user_contrib_pct:.1f}% contributions)"
 
         role_types = project.get("user_role_types")
-        if role_types:
-            primary_role = role_types["primary_role"]
-            role_type_line = f"**Primary Role** {primary_role}"
+        role_type_line = ""
 
-            if role_types.get("secondary_roles"):
-                secondary_roles = role_types["secondary_roles"]
-                role_type_line += f", Secondary Roles: {secondary_roles}"
+        if role_types:
+            primary_role = role_types.get("primary_role")
+            if primary_role:
+                role_type_line += f"**Primary Role** {primary_role}"
+
+            secondary_roles = role_types.get("secondary_roles")
+            if secondary_roles:
+                if role_type_line:
+                    role_type_line += f", Secondary Roles: {secondary_roles}"
+                else:
+                    role_type_line = f"Secondary Roles: {secondary_roles}"
 
         if self._current_user and project_id:
             from capstone_project_team_5.services.portfolio import get_portfolio_item
@@ -1670,12 +1676,13 @@ ProgressBar {
             analysis_date = analysis.get("created_at", "Unknown")
 
             role_block = f"{role_line}\n\n" if role_line else ""
+
             md = (
                 f"# {title}\n\n"
                 f"**[✏️ User Edited - {updated}]**\n\n"
                 f"*Viewing edited version for analysis: {analysis_lang} @ {analysis_date}*\n\n"
                 f"{role_block}{content}\n\n"
-                f"{role_type_line if role_type_line else ''}"
+                f"{role_type_line}"
             )
         else:
             # Fetch full CodeAnalysis + metrics from the database for this snapshot.
