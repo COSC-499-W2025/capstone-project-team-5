@@ -559,6 +559,38 @@ class TestSpecializedRoleDetection:
         assert role.role == "Documentation Lead"
         assert "documentation" in role.justification
 
+    def test_security_lead_override(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        """Security Lead should override base role when security signal is present."""
+        contributions = [
+            AuthorContribution(author="Alice", commits=24, added=2400, deleted=240),
+            AuthorContribution(author="Bob", commits=76, added=7600, deleted=760),
+        ]
+
+        monkeypatch.setattr(
+            "capstone_project_team_5.role_detector._is_project_creator", lambda *_: False
+        )
+        monkeypatch.setattr("capstone_project_team_5.role_detector._is_tech_lead", lambda *_: False)
+        monkeypatch.setattr(
+            "capstone_project_team_5.role_detector._is_security_lead", lambda *_: True
+        )
+        monkeypatch.setattr(
+            "capstone_project_team_5.role_detector._is_documentation_lead", lambda *_: False
+        )
+        monkeypatch.setattr(
+            "capstone_project_team_5.role_detector._is_maintainer", lambda *_: False
+        )
+
+        role = detect_user_role(
+            project_path=Path("/fake/path"),
+            current_user="Alice",
+            author_contributions=contributions,
+            collaborator_count=2,
+        )
+
+        assert role is not None
+        assert role.role == "Security Lead"
+        assert "security" in role.justification
+
 
 class TestFilePatternUtilities:
     """Tests for file-pattern-based role signal utilities."""

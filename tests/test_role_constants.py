@@ -28,6 +28,7 @@ class TestProjectRole:
         assert ProjectRole.PROJECT_CREATOR.value == "Project Creator"
         assert ProjectRole.LEAD_DEVELOPER.value == "Lead Developer"
         assert ProjectRole.TECH_LEAD.value == "Tech Lead"
+        assert ProjectRole.SECURITY_LEAD.value == "Security Lead"
         assert ProjectRole.MAINTAINER.value == "Maintainer"
         assert ProjectRole.DOCUMENTATION_LEAD.value == "Documentation Lead"
         assert ProjectRole.CORE_CONTRIBUTOR.value == "Core Contributor"
