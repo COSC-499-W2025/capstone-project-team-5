@@ -17,6 +17,7 @@ from capstone_project_team_5.data.db import get_session
 from capstone_project_team_5.data.models import Project, ProjectSkill, Skill
 
 router = APIRouter(prefix="/projects/{project_id}/skills", tags=["skills"])
+global_router = APIRouter(prefix="/skills", tags=["skills"])
 
 
 def _skill_to_response(skill: Skill) -> SkillResponse:
@@ -160,5 +161,46 @@ def get_project_practices(
                 limit=limit,
                 offset=offset,
                 has_more=(offset + len(practices)) < total,
+            ),
+        )
+
+
+@global_router.get(
+    "/",
+    response_model=PaginatedSkillsResponse,
+    summary="List all skills",
+    description="Return all skills in the catalog, optionally filtered by type.",
+)
+def get_all_skills(
+    skill_type: SkillType | None = Query(  # noqa: B008
+        default=None,
+        description="Filter by skill type (tool or practice)",
+    ),
+    limit: int = Query(
+        default=DEFAULT_LIMIT,
+        ge=1,
+        le=MAX_LIMIT,
+        description=f"Maximum number of items to return (1-{MAX_LIMIT})",
+    ),
+    offset: int = Query(
+        default=0,
+        ge=0,
+        description="Number of items to skip",
+    ),
+) -> PaginatedSkillsResponse:
+    with get_session() as session:
+        query = session.query(Skill)
+        if skill_type is not None:
+            query = query.filter(Skill.skill_type == skill_type)
+        query = query.order_by(Skill.name)
+        total = query.count()
+        skills = query.offset(offset).limit(limit).all()
+        return PaginatedSkillsResponse(
+            items=[_skill_to_response(s) for s in skills],
+            pagination=PaginationMeta(
+                total=total,
+                limit=limit,
+                offset=offset,
+                has_more=(offset + len(skills)) < total,
             ),
         )
