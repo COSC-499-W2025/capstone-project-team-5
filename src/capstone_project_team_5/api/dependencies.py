@@ -63,4 +63,4 @@ def get_optional_username(
     Returns:
         str | None: Authenticated username, or None for anonymous access.
     """
-    return x_username or None
+    return x_username
