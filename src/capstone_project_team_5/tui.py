@@ -1644,7 +1644,7 @@ ProgressBar {
         if role_types:
             primary_role = role_types.get("primary_role")
             if primary_role:
-                role_type_line += f"**Primary Role** {primary_role}"
+                role_type_line = f"**Primary Role** {primary_role}"
 
             secondary_roles = role_types.get("secondary_roles")
             if secondary_roles:
