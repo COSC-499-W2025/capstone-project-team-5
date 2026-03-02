@@ -3,6 +3,59 @@
 **GitHub:** [@ribhavsharma](https://github.com/ribhavsharma)
 ---
 
+
+
+## **Term 2 – Weeks 6–8 | February 16 – March 6, 2026**
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1035" height="621" alt="image" src="https://github.com/user-attachments/assets/922fb752-b13a-4baa-99f8-7b34c389a621" />
+
+<!-- Add evaluation image here -->
+
+</details>
+
+## **Task Progress**  
+
+### **Coding Tasks**
+https://github.com/COSC-499-W2025/capstone-project-team-5/pull/338
+- Opened **PR [#338 – fix: ownership fix for portfolios + minor resume error handling
+](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/338)**, fixing portfolio ownership logic.
+- Opened **PR [#283 – Add `/config/score` endpoint](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/283)**, implementing configurable scoring logic.
+- Opened **PR [#293 – Add `/portfolio` endpoints (CRUD)](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/293)**, completing portfolio management APIs.
+- Opened **PR [#310](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/310)**, addressing final backend refinements ahead of milestone submission.
+
+### **Testing / Debugging**
+- Verified correctness of portfolio and configuration endpoints.
+- Tested scoring configuration changes to ensure expected downstream ranking behavior.
+- Performed final checks on demo-critical backend flows prior to Milestone 2 submission.
+
+### **Reviewing / Collaboration**
+Reviewed multiple PRs to support feature completion, UI consistency, and overall code quality. Feedback primarily focused on implementation correctness, edge cases, clarity, and alignment with existing backend and frontend patterns.
+
+Reviewed PRs:
+- **[#303](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/303)** – reviewed ranking logic and scoring integration.
+- **[#309](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/309)** – provided feedback on backend implementation details and edge cases.
+- **[#312](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/312)** – reviewed feature completeness and API usage.
+- **[#313](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/313)** – checked consistency with existing data models.
+- **[#315](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/315)** – reviewed logic flow and code clarity.
+- **[#317](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/317)** – focused on correctness and maintainability.
+- **[#320](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/320)** – reviewed UI-related changes for consistency.
+- **[#321](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/321)** – provided final feedback before merge.
+
+### **Presentation / Documentation**
+- Helped prepare Milestone 2 presentation slides.
+- Recorded our video demo submission showcasing completed functionality.
+- Took notes on approaches used by other teams during milestone presentations to identify areas for improvement.
+
+### **Issues / Blockers**
+- No major blockers during this period.
+
+### **Next Steps**
+- Start implementing the Electron-based frontend.
+- Integrate frontend with existing backend APIs.
+- Continue Quiz 3 preparation.
+
 ## **Term 2 – Week 4-5 | February 2–13, 2026**
 
 <details>
