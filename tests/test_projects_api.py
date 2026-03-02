@@ -64,6 +64,96 @@ def test_upload_projects_returns_metadata(api_db: None) -> None:
     assert data["actions"][0]["action"] == "created"
 
 
+def test_list_projects_pagination(api_db: None) -> None:
+    """Test that GET /api/projects returns a paginated response."""
+    client = TestClient(app)
+
+    # Create some projects
+    for name in ["project_a", "project_b", "project_c"]:
+        zip_bytes = _create_zip_bytes([(f"{name}/main.py", b"print('x')\n")])
+        response = client.post(
+            "/api/projects/upload",
+            files={"file": (f"{name}.zip", zip_bytes, "application/zip")},
+        )
+        assert response.status_code == 201
+
+    # Test default pagination
+    response = client.get("/api/projects")
+    assert response.status_code == 200
+    data = response.json()
+
+    assert "items" in data
+    assert "pagination" in data
+    assert len(data["items"]) >= 3
+    assert data["pagination"]["total"] >= 3
+    assert data["pagination"]["limit"] == 50  # default
+    assert data["pagination"]["offset"] == 0
+    assert isinstance(data["pagination"]["has_more"], bool)
+
+    # Test custom pagination params
+    response = client.get("/api/projects?limit=2&offset=0")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["items"]) == 2
+    assert data["pagination"]["limit"] == 2
+    assert data["pagination"]["has_more"] is True
+
+    # Test offset
+    response = client.get("/api/projects?limit=2&offset=2")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["items"]) >= 1
+    assert data["pagination"]["offset"] == 2
+
+
+def test_list_projects_invalid_pagination_params(api_db: None) -> None:
+    """Test that invalid pagination parameters return 422."""
+    client = TestClient(app)
+    assert client.get("/api/projects?limit=0").status_code == 422
+    assert client.get("/api/projects?limit=-1").status_code == 422
+    assert client.get("/api/projects?offset=-1").status_code == 422
+    assert client.get("/api/projects?limit=101").status_code == 422
+
+
+def test_list_projects_empty_database(api_db: None) -> None:
+    """Test pagination returns correct response when no projects exist."""
+    client = TestClient(app)
+
+    response = client.get("/api/projects")
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["items"] == []
+    assert data["pagination"]["total"] == 0
+    assert data["pagination"]["limit"] == 50
+    assert data["pagination"]["offset"] == 0
+    assert data["pagination"]["has_more"] is False
+
+
+def test_list_projects_offset_beyond_total(api_db: None) -> None:
+    """Test pagination when offset >= total returns empty items."""
+    client = TestClient(app)
+
+    # Create 2 projects
+    for name in ["proj_offset_a", "proj_offset_b"]:
+        zip_bytes = _create_zip_bytes([(f"{name}/main.py", b"print('x')\n")])
+        response = client.post(
+            "/api/projects/upload",
+            files={"file": (f"{name}.zip", zip_bytes, "application/zip")},
+        )
+        assert response.status_code == 201
+
+    # Request with offset beyond total
+    response = client.get("/api/projects?offset=100")
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["items"] == []
+    assert data["pagination"]["total"] == 2
+    assert data["pagination"]["offset"] == 100
+    assert data["pagination"]["has_more"] is False
+
+
 def test_list_and_get_project() -> None:
     client = TestClient(app)
     zip_bytes = _create_zip_bytes(
@@ -81,7 +171,9 @@ def test_list_and_get_project() -> None:
 
     list_response = client.get("/api/projects")
     assert list_response.status_code == 200
-    list_payload = list_response.json()
+    list_data = list_response.json()
+    list_payload = list_data["items"]
+    assert "pagination" in list_data
     # Ensure project is present and has showcase flag with default False.
     project_row = next(project for project in list_payload if project["id"] == project_id)
     listed = next(project for project in list_payload if project["id"] == project_id)
@@ -199,7 +291,8 @@ def test_thumbnail_upload_and_get() -> None:
     assert detail_payload["thumbnail_url"] == f"/api/projects/{project_id}/thumbnail"
 
     list_response = client.get("/api/projects")
-    list_payload = list_response.json()
+    list_data = list_response.json()
+    list_payload = list_data["items"]
     listed = next(project for project in list_payload if project["id"] == project_id)
     assert listed["has_thumbnail"] is True
     assert listed["thumbnail_url"] == f"/api/projects/{project_id}/thumbnail"
@@ -499,7 +592,8 @@ def test_analyze_all_updates_all_projects(api_db: None) -> None:
 
     list_response = client.get("/api/projects")
     assert list_response.status_code == 200
-    all_projects = list_response.json()
+    list_data = list_response.json()
+    all_projects = list_data["items"]
     for project in all_projects:
         if project["id"] in project_ids:
             assert project["importance_score"] is not None
