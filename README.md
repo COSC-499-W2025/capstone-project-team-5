@@ -30,7 +30,7 @@ Three test-data ZIP files are located in the **repository root**:
 | `test-data-v1.zip` | Earlier snapshot of `code_collab_proj` (7 files — basic app, one test, initial docs) |
 | `test-data-v2.zip` | Later snapshot of `code_collab_proj` (11 files — added endpoints, more tests, updated docs) |
 
-Upload `test-data-v1.zip` first, then `test-data-v2.zip` to test incremental uploads. To regenerate these files run `python scripts/generate_test_data.py`.
+Upload `test-data-v1.zip` first, then `test-data-v2.zip` to test incremental uploads.
 
 # Development Setup
 ```bash
