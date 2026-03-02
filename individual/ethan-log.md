@@ -136,3 +136,14 @@ Over the course of these two weeks time was spent peer testing during week 4 alo
 | Project Chronology | Done | Completed in whole. |    
 
 ![screenshot](Week9_checklist.png)
+
+## Term 2 - Weeks #6-8 (Feburary 9 - March 1)
+
+Coding tasks involved assisting in role detection complimenting the existing role detection that was at the time based off the users relative contribution amounts compared to other contributors. Role type detection aims to provide users with feedback about what logical role they provided (frontend, devops, ...). https://github.com/COSC-499-W2025/capstone-project-team-5/pull/314, https://github.com/COSC-499-W2025/capstone-project-team-5/pull/331. The plan going forward is to get setup with Electron and build the desktop app UI for the final milestone.
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| Role type detection. | Done | Completed in whole. | 
+| Final UI. | In Progress. | Will start this week. |   
+
+![screenshot](Week9_checklist.png)
