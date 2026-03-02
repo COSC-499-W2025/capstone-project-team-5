@@ -80,6 +80,7 @@ class ProjectAnalysis:
     user_role: str | None = None
     user_contribution_percentage: float | None = None
     role_justification: str | None = None
+    user_role_types: dict[str, str] | None = None  # Map primary role and secondary roles
 
 
 def analyze_project(project_path: Path, consent_tool: ConsentTool | None = None) -> ProjectAnalysis:

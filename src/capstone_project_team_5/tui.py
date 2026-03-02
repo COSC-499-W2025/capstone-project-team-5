@@ -1159,6 +1159,7 @@ ProgressBar {
                             "user_role": p.user_role,
                             "user_contribution_percentage": p.user_contribution_percentage,
                             "role_justification": p.role_justification,
+                            "user_role_types": p.user_role_types,
                             "has_git_repo": p.has_git_repo,
                             "is_collaborative": p.is_collaborative,
                             "is_showcase": bool(getattr(p, "is_showcase", False)),
@@ -1338,6 +1339,7 @@ ProgressBar {
                             "user_role": proj.user_role,
                             "user_contribution_percentage": proj.user_contribution_percentage,
                             "role_justification": proj.role_justification,
+                            "user_role_types": proj.user_role_types,
                             "is_showcase": bool(getattr(proj, "is_showcase", False)),
                         }
                     )
@@ -1636,6 +1638,21 @@ ProgressBar {
             elif user_contrib_pct is not None:
                 role_line += f" ({user_contrib_pct:.1f}% contributions)"
 
+        role_types = project.get("user_role_types")
+        role_type_line = ""
+
+        if role_types:
+            primary_role = role_types.get("primary_role")
+            if primary_role:
+                role_type_line = f"**Primary Role** {primary_role}"
+
+            secondary_roles = role_types.get("secondary_roles")
+            if secondary_roles:
+                if role_type_line:
+                    role_type_line += f", Secondary Roles: {secondary_roles}"
+                else:
+                    role_type_line = f"Secondary Roles: {secondary_roles}"
+
         if self._current_user and project_id:
             from capstone_project_team_5.services.portfolio import get_portfolio_item
 
@@ -1659,11 +1676,13 @@ ProgressBar {
             analysis_date = analysis.get("created_at", "Unknown")
 
             role_block = f"{role_line}\n\n" if role_line else ""
+
             md = (
                 f"# {title}\n\n"
                 f"**[✏️ User Edited - {updated}]**\n\n"
                 f"*Viewing edited version for analysis: {analysis_lang} @ {analysis_date}*\n\n"
-                f"{role_block}{content}"
+                f"{role_block}{content}\n\n"
+                f"{role_type_line}"
             )
         else:
             # Fetch full CodeAnalysis + metrics from the database for this snapshot.
@@ -1752,6 +1771,18 @@ ProgressBar {
                 elif user_contrib_pct is not None:
                     role_line += f" ({user_contrib_pct:.1f}% contributions)"
                 parts.append(role_line)
+
+            role_types = project.get("user_role_types")
+            if role_types:
+                primary_role = role_types["primary_role"]
+                role_type_line = f"- Primary Role {primary_role}"
+
+                if role_types.get("secondary_roles"):
+                    secondary_roles = role_types["secondary_roles"]
+                    role_type_line += f", Secondary Roles: {secondary_roles}"
+
+                parts.append(role_type_line)
+
             start_date = project.get("start_date")
             end_date = project.get("end_date")
             duration = self._format_duration_from_dates(start_date, end_date)
@@ -1823,6 +1854,17 @@ ProgressBar {
             elif user_contrib_pct is not None:
                 role_line += f" ({user_contrib_pct:.1f}% contributions)"
             parts.append(role_line)
+
+        role_types = project_dict.get("user_role_types")
+        if role_types:
+            primary_role = role_types["primary_role"]
+            role_type_line = f"- Primary Role {primary_role}"
+
+            if role_types.get("secondary_roles"):
+                secondary_roles = role_types["secondary_roles"]
+                role_type_line += f", Secondary Roles: {secondary_roles}"
+
+            parts.append(role_type_line)
 
         language = (
             metrics.get("language")

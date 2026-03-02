@@ -13,6 +13,7 @@ from capstone_project_team_5.detection import identify_language_and_framework
 from capstone_project_team_5.file_walker import DirectoryWalker
 from capstone_project_team_5.models.upload import DetectedProject
 from capstone_project_team_5.role_detector import detect_user_role
+from capstone_project_team_5.role_type_detection import detect_enhanced_user_role
 from capstone_project_team_5.services.bullet_generator import (
     build_testing_bullet,
     generate_resume_bullets,
@@ -215,6 +216,22 @@ def analyze_projects_structured(
                 analysis.user_role = user_role_info.role
                 analysis.user_contribution_percentage = user_role_info.contribution_percentage
                 analysis.role_justification = user_role_info.justification
+
+            user_role_types = detect_enhanced_user_role(
+                project_path=project_path,
+                current_user=current_name,
+                author_contributions=contributions,
+            )
+
+            if user_role_types:
+                analysis.user_role_types = {
+                    "primary_role": user_role_types.primary_role,
+                    "secondary_roles": (
+                        ", ".join(user_role_types.secondary_roles)
+                        if user_role_types.secondary_roles
+                        else ""
+                    ),
+                }
 
             for ac in contributions:
                 git_author_contribs.append(

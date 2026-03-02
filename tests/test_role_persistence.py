@@ -247,3 +247,227 @@ def test_role_justification_none_when_not_provided(
 
         assert project is not None
         assert project.role_justification is None
+
+
+def test_user_role_types_persisted_to_database(
+    temp_user: str, temp_project: tuple[str, str]
+) -> None:
+    """Test that user_role_types dict is saved to the Project table."""
+    project_name, project_rel_path = temp_project
+
+    # Create analysis with user_role_types
+    analysis = ProjectAnalysis(
+        project_path=Path("."),
+        language="Python",
+        user_role="Lead Developer",
+        user_contribution_percentage=75.5,
+        user_role_types={
+            "primary_role": "Full Stack Developer",
+            "secondary_roles": "QA Engineer, DevOps Engineer",
+        },
+    )
+
+    # Save to database
+    save_code_analysis_to_db(project_name, project_rel_path, analysis, username=temp_user)
+
+    # Verify user_role_types was saved
+    with get_session() as session:
+        project = (
+            session.query(Project)
+            .filter(Project.name == project_name, Project.rel_path == project_rel_path)
+            .first()
+        )
+
+        assert project is not None
+        assert project.user_role_types is not None
+        assert project.user_role_types["primary_role"] == "Full Stack Developer"
+        assert project.user_role_types["secondary_roles"] == "QA Engineer, DevOps Engineer"
+
+
+def test_user_role_types_none_when_not_provided(
+    temp_user: str, temp_project: tuple[str, str]
+) -> None:
+    """Test that user_role_types remains None when not included in analysis."""
+    project_name, project_rel_path = temp_project
+
+    # Create analysis without user_role_types
+    analysis = ProjectAnalysis(
+        project_path=Path("."),
+        language="Python",
+        user_role="Contributor",
+        user_contribution_percentage=25.0,
+        user_role_types=None,
+    )
+
+    # Save to database
+    save_code_analysis_to_db(project_name, project_rel_path, analysis, username=temp_user)
+
+    # Verify user_role_types remains None
+    with get_session() as session:
+        project = (
+            session.query(Project)
+            .filter(Project.name == project_name, Project.rel_path == project_rel_path)
+            .first()
+        )
+
+        assert project is not None
+        assert project.user_role_types is None
+
+
+def test_user_role_types_with_empty_secondary_roles(
+    temp_user: str, temp_project: tuple[str, str]
+) -> None:
+    """Test that user_role_types with empty secondary_roles is handled correctly."""
+    project_name, project_rel_path = temp_project
+
+    # Create analysis with only primary role (no secondary roles)
+    analysis = ProjectAnalysis(
+        project_path=Path("."),
+        language="Python",
+        user_role="Backend Developer",
+        user_contribution_percentage=80.0,
+        user_role_types={"primary_role": "Backend Developer", "secondary_roles": ""},
+    )
+
+    # Save to database
+    save_code_analysis_to_db(project_name, project_rel_path, analysis, username=temp_user)
+
+    # Verify user_role_types was saved correctly
+    with get_session() as session:
+        project = (
+            session.query(Project)
+            .filter(Project.name == project_name, Project.rel_path == project_rel_path)
+            .first()
+        )
+
+        assert project is not None
+        assert project.user_role_types is not None
+        assert project.user_role_types["primary_role"] == "Backend Developer"
+        assert project.user_role_types["secondary_roles"] == ""
+
+
+def test_all_technical_roles_can_be_persisted(
+    temp_user: str, temp_project: tuple[str, str]
+) -> None:
+    """Test that all technical role classifications can be saved and retrieved."""
+    project_name, project_rel_path = temp_project
+
+    technical_roles = [
+        ("Frontend Developer", ""),
+        ("Backend Developer", ""),
+        ("Full Stack Developer", "QA Engineer"),
+        ("DevOps Engineer", ""),
+        ("Data Engineer", "Backend Developer"),
+        ("QA Engineer", ""),
+        ("Technical Writer", ""),
+        ("Mobile Developer", "Frontend Developer"),
+    ]
+
+    for primary_role, secondary_roles in technical_roles:
+        analysis = ProjectAnalysis(
+            project_path=Path("."),
+            language="Python",
+            user_role="Contributor",
+            user_contribution_percentage=50.0,
+            user_role_types={"primary_role": primary_role, "secondary_roles": secondary_roles},
+        )
+        save_code_analysis_to_db(project_name, project_rel_path, analysis, username=temp_user)
+
+        with get_session() as session:
+            project = (
+                session.query(Project)
+                .filter(Project.name == project_name, Project.rel_path == project_rel_path)
+                .first()
+            )
+
+            assert project is not None
+            assert project.user_role_types is not None
+            assert project.user_role_types["primary_role"] == primary_role
+            assert project.user_role_types["secondary_roles"] == secondary_roles
+
+
+def test_user_role_types_updated_on_subsequent_save(
+    temp_user: str, temp_project: tuple[str, str]
+) -> None:
+    """Test that user_role_types is updated when analysis is run again."""
+    project_name, project_rel_path = temp_project
+
+    # First save with initial role types
+    analysis1 = ProjectAnalysis(
+        project_path=Path("."),
+        language="Python",
+        user_role="Contributor",
+        user_contribution_percentage=25.0,
+        user_role_types={"primary_role": "Frontend Developer", "secondary_roles": ""},
+    )
+    save_code_analysis_to_db(project_name, project_rel_path, analysis1, username=temp_user)
+
+    # Second save with updated role types
+    analysis2 = ProjectAnalysis(
+        project_path=Path("."),
+        language="Python",
+        user_role="Lead Developer",
+        user_contribution_percentage=85.0,
+        user_role_types={
+            "primary_role": "Full Stack Developer",
+            "secondary_roles": "DevOps Engineer, QA Engineer",
+        },
+    )
+    save_code_analysis_to_db(project_name, project_rel_path, analysis2, username=temp_user)
+
+    # Verify user_role_types was updated
+    with get_session() as session:
+        project = (
+            session.query(Project)
+            .filter(Project.name == project_name, Project.rel_path == project_rel_path)
+            .first()
+        )
+
+        assert project is not None
+        assert project.user_role_types is not None
+        assert project.user_role_types["primary_role"] == "Full Stack Developer"
+        assert project.user_role_types["secondary_roles"] == "DevOps Engineer, QA Engineer"
+
+
+def test_user_role_types_with_multiple_secondary_roles(
+    temp_user: str, temp_project: tuple[str, str]
+) -> None:
+    """Test that user_role_types with multiple secondary roles is handled correctly."""
+    project_name, project_rel_path = temp_project
+
+    # Create analysis with multiple secondary roles
+    analysis = ProjectAnalysis(
+        project_path=Path("."),
+        language="Python",
+        user_role="Lead Developer",
+        user_contribution_percentage=70.0,
+        user_role_types={
+            "primary_role": "Full Stack Developer",
+            "secondary_roles": "QA Engineer, DevOps Engineer, Technical Writer",
+        },
+    )
+
+    # Save to database
+    save_code_analysis_to_db(project_name, project_rel_path, analysis, username=temp_user)
+
+    # Verify all secondary roles were saved
+    with get_session() as session:
+        project = (
+            session.query(Project)
+            .filter(Project.name == project_name, Project.rel_path == project_rel_path)
+            .first()
+        )
+
+        assert project is not None
+        assert project.user_role_types is not None
+        assert project.user_role_types["primary_role"] == "Full Stack Developer"
+        assert project.user_role_types["secondary_roles"] == (
+            "QA Engineer, DevOps Engineer, Technical Writer"
+        )
+
+        # Verify we can split and parse secondary roles
+        secondary_list = [r.strip() for r in project.user_role_types["secondary_roles"].split(",")]
+        assert len(secondary_list) == 3
+        assert "QA Engineer" in secondary_list
+        assert "DevOps Engineer" in secondary_list
+        assert "Technical Writer" in secondary_list

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, confloat
+from pydantic import BaseModel, ConfigDict, Field, confloat
 
 
 class ProjectSummary(BaseModel):
@@ -25,8 +25,16 @@ class ProjectSummary(BaseModel):
     importance_rank: int | None
     importance_score: float | None
     user_role: str | None
-    user_contribution_percentage: confloat(ge=0, le=100) | None
+    user_contribution_percentage: confloat(ge=0, le=100) | None  # type: ignore
     role_justification: str | None
+    user_role_types: dict[str, str] | None = Field(
+        None,
+        description="User's technical roles.",
+        example={
+            "primary_role": "Full Stack Developer",
+            "secondary_roles": "QA Engineer, DevOps Engineer",
+        },
+    )
     created_at: datetime
     updated_at: datetime
 
@@ -64,7 +72,7 @@ class ProjectUpdateRequest(BaseModel):
     importance_rank: int | None = None
     importance_score: float | None = None
     user_role: str | None = None
-    user_contribution_percentage: confloat(ge=0, le=100) | None = None
+    user_contribution_percentage: confloat(ge=0, le=100) | None = None  # type: ignore
     role_justification: str | None = None
     is_showcase: bool | None = None
 
@@ -151,8 +159,16 @@ class ProjectAnalysisResult(BaseModel):
     skill_timeline: list[SkillTimelineEntry]
     git: GitSummary
     user_role: str | None
-    user_contribution_percentage: confloat(ge=0, le=100) | None
+    user_contribution_percentage: confloat(ge=0, le=100) | None  # type: ignore
     role_justification: str | None
+    user_role_types: dict[str, str] | None = Field(
+        None,
+        description="User's technical roles.",
+        example={
+            "primary_role": "Full Stack Developer",
+            "secondary_roles": "QA Engineer, DevOps Engineer",
+        },
+    )
 
 
 class ProjectAnalysisSkipped(BaseModel):

@@ -74,6 +74,7 @@ def _project_to_summary(project: Project) -> ProjectSummary:
         user_role=project.user_role,
         user_contribution_percentage=project.user_contribution_percentage,
         role_justification=project.role_justification,
+        user_role_types=project.user_role_types,
         created_at=project.created_at,
         updated_at=project.updated_at,
     )
@@ -221,6 +222,7 @@ def _analysis_to_response(project_id: int, analysis: dict[str, Any]) -> ProjectA
         user_role=analysis.get("user_role"),
         user_contribution_percentage=analysis.get("user_contribution_percentage"),
         role_justification=analysis.get("role_justification"),
+        user_role_types=analysis.get("user_role_types"),
     )
 
 

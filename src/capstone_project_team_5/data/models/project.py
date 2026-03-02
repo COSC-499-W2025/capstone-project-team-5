@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from capstone_project_team_5.data.db import Base
@@ -43,6 +43,7 @@ class Project(Base):
     user_role: Mapped[str | None] = mapped_column(String, nullable=True)
     user_contribution_percentage: Mapped[float | None] = mapped_column(Float, nullable=True)
     role_justification: Mapped[str | None] = mapped_column(String, nullable=True)
+    user_role_types: Mapped[JSON | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )
