@@ -20,6 +20,18 @@ Please use the provided folder structure for your project. You are free to organ
 Please use a branching workflow, and once an item is ready, do remember to issue a PR, review, and merge it into the master branch.
 Be sure to keep your docs and README.md up-to-date.
 
+# Test Data
+
+Three test-data ZIP files are located in the **repository root**:
+
+| File | Description |
+|---|---|
+| `test-data.zip` | Multi-project showcase containing individual and collaborative projects (code, text, image, and mixed) |
+| `test-data-v1.zip` | Earlier snapshot of `code_collab_proj` (7 files — basic app, one test, initial docs) |
+| `test-data-v2.zip` | Later snapshot of `code_collab_proj` (11 files — added endpoints, more tests, updated docs) |
+
+Upload `test-data-v1.zip` first, then `test-data-v2.zip` to test incremental uploads. To regenerate these files run `python scripts/generate_test_data.py`.
+
 # Development Setup
 ```bash
 # Install dependencies
