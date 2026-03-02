@@ -492,18 +492,3 @@ POST   /api/consent                                      # Upsert consent record
 GET    /api/consent/latest                               # Get latest consent
 GET    /api/consent/llm/config                           # LLM config status
 ```
-
-### Endpoint Count Summary
-
-| Module | Endpoints | Auth | CRUD Complete? |
-|--------|-----------|------|----------------|
-| Health | 1 | — | N/A |
-| Users & Profiles | 5 | ✅ `X-Username` | ✅ Full CRUD |
-| Work Experiences | 5 | ✅ `X-Username` | ✅ Full CRUD |
-| Educations | 5 | ✅ `X-Username` | ✅ Full CRUD |
-| Resumes | 6 | ✅ `X-Username` | ✅ Full CRUD + PDF |
-| Projects | 13 | — | ✅ Full CRUD + Upload + Analyze + Thumbnails + Rerank |
-| Skills | 4 | — | Read-only (by design — auto-detected) |
-| Portfolio | 6 | — | ✅ Create + Read + Delete + Edit |
-| Consent | 4 | Optional `X-Username` | ✅ Upsert + Read + LLM Config |
-| **Total** | **49** | | |
