@@ -7,6 +7,64 @@
 
 # TERM2 Logs - Sparsh Khanna
 ---
+## Week 6-8 | February 8 - March 1, 2026
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+<img width="2107" height="1330" alt="image" src="https://github.com/user-attachments/assets/3331687c-c261-488b-b67e-761513d07a1a" />
+
+</details>
+
+### Tasks worked on
+
+- User API Endpoints Introduction [PR#311](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/311)
+- User API Amends and Improvements [PR#321](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/321)
+- Consent API Cleanup and Refactoring [PR#330](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/330)
+- Worked on System Architecture Design and DFD for M2.
+- Worked with the team on the M2 Presentation.
+- Wrote UTs to ensure code correctness and good coverage.
+- Reviewed Teammates code
+
+
+### Personal Contributions
+
+- User API Endpoints Introduction
+In this pull request I added new user management API endpoints, including the route handlers, Pydantic schemas for request/response validation, and a comprehensive test suite. The changes included adding user routes, user schemas, and registering the new router in the main API application.
+
+- User API Endpoint Improvements
+In this pull request I made amendments and improvements to the user API endpoints introduced earlier. This involved refactoring the user routes for better code quality and adding additional test cases to improve coverage and edge case handling.
+
+- Consent API Cleanup
+In this pull request I refactored and cleaned up the consent API routes, schemas and tests. The changes involved introducing a shared API dependencies module, simplifying the consent route handlers, updating the consent schema definitions, and extending the consent record model. The test suite was also significantly cleaned up and streamlined to remove redundancy and improve maintainability.
+
+- System Architecture Design & DFD
+Worked on updating our system architecture design and DFD diagrams for the M2 milestone to reflect the current state and direction of the project.
+
+- M2 Presentation
+Collaborated with the team to prepare and deliver the M2 presentation.
+
+### Tests Added
+- [PR#311](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/311)
+- tests/test_users_api.py
+- [PR#321](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/321)
+- tests/test_users_api.py (additional test cases)
+- [PR#330](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/330)
+- tests/test_consent_api.py
+
+### PRs Reviewed
+- [PR#331](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/331)
+- [PR#320](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/320)
+- [PR#318](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/318)
+- [PR#316](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/316)
+- [PR#314](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/314)
+- [PR#310](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/310)
+- [PR#298](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/298)
+
+### Additional Details
+
+These weeks' contributions spanned building out the user management API endpoints, iterating on them based on feedback, and cleaning up the consent API to reduce technical debt. Additionally, I contributed to the system architecture design and DFD for M2 and worked with the team on the M2 presentation.
+
+---
 ## Week 4-5 | January 26- February 8, 2026
 
 <details>
