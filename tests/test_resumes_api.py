@@ -411,6 +411,28 @@ class TestUpdateResume:
         )
         assert response.status_code == 404
 
+    def test_update_save_failure_returns_400(
+        self,
+        client: TestClient,
+        test_user: tuple[str, int],
+        test_project: int,
+    ) -> None:
+        username, _ = test_user
+        _create_resume(client, username, test_project, title="Original")
+
+        with patch("capstone_project_team_5.api.routes.resumes.save_resume", return_value=False):
+            response = client.patch(
+                f"/api/users/{username}/resumes/{test_project}",
+                json={"title": "Will Fail"},
+                headers={"X-Username": username},
+            )
+
+        assert response.status_code == 400
+        assert (
+            response.json()["detail"]
+            == "Failed to update resume. Check that the project_id is valid."
+        )
+
     def test_no_auth_returns_401(self, client: TestClient, test_user: tuple[str, int]) -> None:
         username, _ = test_user
         response = client.patch(
