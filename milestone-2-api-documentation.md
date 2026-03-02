@@ -398,7 +398,7 @@ The system currently operates as a **fully functional REST API** (49 endpoints).
 
 | Technology | Purpose |
 |-----------|---------|
-| **React** | UI framework |
+| **Electron with React** | UI framework |
 | **TypeScript** | Type safety |
 | **Tailwind CSS** | Styling |
 | **Axios / Fetch** | API client |
