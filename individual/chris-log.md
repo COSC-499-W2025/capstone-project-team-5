@@ -322,3 +322,28 @@ Over the past two weeks, we conducted in-class demos with other teams and used f
 | :---- | :----- | :------- |
 | Enhance R24 | In Progress | Implement specialzied role detections. |
 </details>
+
+## T2 - Week 6-8 | 08  February 2026 - 01 March 2026
+
+<details>
+  <summary><h3></h3></summary>
+<img alt="Screenshot 2026-03-01 221715" src="https://github.com/user-attachments/assets/34b3fa36-986b-41d8-ba7d-fc616a3fd57d" />
+
+
+Over the past few weeks, I focused on continuing enhancements to Requirement 24 and updating project documentation. I completed R24 Part 2 by expanding user role logic, completed R24 Part 3 by adding the Security Lead role, and helped update the System Architecture and Data-flow Diagram docs. Next week, my focus will be preparing for the quiz, meeting with the team to align on next steps, and completing code contributions based on those meeting outcomes.
+
+### Previous Weeks:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Enhance R24 Part 2 | Completed | Expanded User Role logic. |
+| Enhance R24 Part 3  | Completed | Added Security Lead Role. |
+| Update Docs | Completed | System Architecture and Data-flow Diagram |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Quiz | Not Yet Started | Study for and complete Quiz. |
+| Team Meetings | Not Yet Started | Discuss next steps. |
+| Code Contributions | Not Yet Started | Complete code contributions based on team meeting. |
+</details>
