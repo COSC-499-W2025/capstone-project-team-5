@@ -327,6 +327,7 @@ Over the past two weeks, we conducted in-class demos with other teams and used f
 
 <details>
   <summary><h3></h3></summary>
+<img alt="Screenshot 2026-03-01 221715" src="https://github.com/user-attachments/assets/34b3fa36-986b-41d8-ba7d-fc616a3fd57d" />
 
 
 Over the past few weeks, I focused on continuing enhancements to Requirement 24 and updating project documentation. I completed R24 Part 2 by expanding user role logic, completed R24 Part 3 by adding the Security Lead role, and helped update the System Architecture and Data-flow Diagram docs. Next week, my focus will be preparing for the quiz, meeting with the team to align on next steps, and completing code contributions based on those meeting outcomes.
