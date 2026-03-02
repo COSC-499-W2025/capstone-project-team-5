@@ -46,6 +46,11 @@ uv run ruff check . --fix
 **Explanation of Changes:**  
 As we have yet to receive feedback for the System Architecture Diagram, we were unable to make any meaningful changes.
 
+
+### M2 System Architecture Diagram
+<img alt="M2 System Architecture Diagram" src="docs/design/SysArchV2.png" />
+
+
 ---
 
 ### 🔄 Data Flow Diagram
