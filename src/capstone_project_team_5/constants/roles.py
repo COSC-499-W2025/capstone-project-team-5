@@ -155,6 +155,7 @@ class ProjectRole(StrEnum):
     # Leadership roles
     LEAD_DEVELOPER = "Lead Developer"
     TECH_LEAD = "Tech Lead"
+    SECURITY_LEAD = "Security Lead"
 
     # Contribution roles
     CORE_CONTRIBUTOR = "Core Contributor"
@@ -197,6 +198,11 @@ ROLE_METADATA: dict[ProjectRole, RoleMetadata] = {
         role=ProjectRole.TECH_LEAD,
         description="Technical leadership with focus on architecture and infrastructure",
         display_priority=4,
+    ),
+    ProjectRole.SECURITY_LEAD: RoleMetadata(
+        role=ProjectRole.SECURITY_LEAD,
+        description="Primary owner of application and infrastructure security hardening",
+        display_priority=11,
     ),
     ProjectRole.MAINTAINER: RoleMetadata(
         role=ProjectRole.MAINTAINER,

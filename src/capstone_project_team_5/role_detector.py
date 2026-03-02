@@ -154,6 +154,12 @@ def _detect_specialized_role(
             "high concentration of infrastructure and architecture changes",
         )
 
+    if _is_security_lead(project_path, current_user, user_contrib.commits, contribution_pct):
+        return (
+            ProjectRole.SECURITY_LEAD.value,
+            "security-focused changes dominate contribution profile",
+        )
+
     if _is_documentation_lead(project_path, current_user, user_contrib.commits, contribution_pct):
         return (
             ProjectRole.DOCUMENTATION_LEAD.value,
@@ -218,6 +224,50 @@ def _is_maintainer(project_path: Path, current_user: str, user_commits: int) -> 
 
     maintenance_commit_ratio = _get_maintenance_commit_ratio(project_path, current_user)
     return maintenance_commit_ratio >= 0.3
+
+
+def _is_security_lead(
+    project_path: Path,
+    current_user: str,
+    user_commits: int,
+    contribution_pct: float,
+) -> bool:
+    """Heuristic for security lead based on security-related path focus."""
+    if user_commits < 3 or contribution_pct < 12.0:
+        return False
+
+    files = _get_user_changed_files(project_path, current_user)
+    if not files:
+        return False
+
+    security_keywords: tuple[str, ...] = (
+        "security",
+        "vuln",
+        "cve",
+        "auth",
+        "oauth",
+        "jwt",
+        "rbac",
+        "permission",
+        "secret",
+        "tls",
+        "ssl",
+        "crypto",
+        "crypt",
+        "cert",
+        "dependabot",
+        "sast",
+        "bandit",
+    )
+
+    security_file_count = 0
+    for file_path in files:
+        normalized = file_path.replace("\\", "/").lower()
+        if any(keyword in normalized for keyword in security_keywords):
+            security_file_count += 1
+
+    security_ratio = security_file_count / len(files)
+    return security_file_count >= 3 and security_ratio >= 0.25
 
 
 def _is_documentation_lead(
