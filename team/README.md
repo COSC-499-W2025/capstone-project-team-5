@@ -3,7 +3,7 @@
   <summary><h3>T2 Week 6, 7, 8 | February 9 - March 1 </h3></summary>
 
   ### Burnup Chart
-<img width="700" height="350" alt="image" src="https://github.com/user-attachments/assets/a8f24f7e-50ba-41dd-a556-e7cb975969c0" />
+<img width="1200" height="864" alt="chart" src="https://github.com/user-attachments/assets/10f221ef-db0d-4e23-8c18-c00cbe85e9f1" />
 
 
   ### Past Work
