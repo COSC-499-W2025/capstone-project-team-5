@@ -7,6 +7,15 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, confloat
 
+from capstone_project_team_5.api.schemas.common import (
+    DEFAULT_LIMIT,
+    MAX_LIMIT,
+    PaginationMeta,
+)
+
+# Re-export for backwards compatibility
+__all__ = ["DEFAULT_LIMIT", "MAX_LIMIT", "PaginationMeta"]
+
 
 class ProjectSummary(BaseModel):
     """Public-facing project summary for API responses."""
@@ -37,6 +46,13 @@ class ProjectSummary(BaseModel):
     )
     created_at: datetime
     updated_at: datetime
+
+
+class PaginatedProjectsResponse(BaseModel):
+    """Paginated list of projects."""
+
+    items: list[ProjectSummary]
+    pagination: PaginationMeta
 
 
 class ProjectUploadResponse(BaseModel):
