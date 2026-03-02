@@ -2,7 +2,51 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-_Last Updated:_ February 8, 2026
+_Last Updated:_ March 1, 2026
+
+---
+
+## Week 8 | February 9 - March 1, 2026
+
+*Note: Weeks 6, 7, and 8 are combined into a single entry.*
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+  <img width="1366" height="807" alt="image" src="https://github.com/user-attachments/assets/23fb1c9d-f045-4fa9-9e77-f52c27e987b9" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| **Coding Tasks** | | |
+| Implemented work experience and education API endpoints | ✅ Done | Added GET/POST/PATCH/DELETE for `/api/users/{username}/work-experiences` and `/api/users/{username}/educations`, following existing endpoint patterns ([PR #312](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/312), closes [#288](https://github.com/COSC-499-W2025/capstone-project-team-5/issues/288), [#289](https://github.com/COSC-499-W2025/capstone-project-team-5/issues/289)) |
+| Implemented resume project CRUD and PDF generation endpoints | ✅ Done | Added 6 REST endpoints for managing resume project entries and generating PDF resumes ([PR #315](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/315), closes [#277](https://github.com/COSC-499-W2025/capstone-project-team-5/issues/277)) |
+| Added Rover and Modern resume templates | ✅ Done | Two new ATS-friendly LaTeX templates ([PR #317](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/317), closes [#319](https://github.com/COSC-499-W2025/capstone-project-team-5/issues/319)) |
+| Added global GET /skills endpoint | ✅ Done | `GET /api/skills` returns all skills across all projects with optional `skill_type` filtering and pagination ([PR #329](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/329)) |
+| **Testing/Debugging Tasks** | | |
+| Added tests for work experience and education endpoints | ✅ Done | 31 tests covering all 10 endpoints: success paths, auth/permission errors, not-found, validation failures, partial updates ([PR #313](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/313)) |
+| Added tests for resume API endpoints | ✅ Done | 28 tests across 6 test classes covering list, get, create/upsert, update, delete, and PDF generation ([PR #316](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/316)) |
+| Added tests for resume templates | ✅ Done | 24 tests covering heading rendering, section rendering, empty-section suppression, URL escaping, and template registry integration ([PR #318](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/318)) |
+| Added tests for skills endpoint | ✅ Done | 5 tests covering success paths, validation failures, pagination ([PR #329](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/329)) |
+| **Reviewing/Collaboration Tasks** | | |
+| Reviewed [PR #309](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/309) (resume generator service) | ✅ Done | Found invalid month validation bug in `_MONTH_ABBR` lookup; suggested try/except with range check |
+| Reviewed [PR #311](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/311) (user API endpoints) | ✅ Done | Noted duplicate test scenarios testing the same 401 case; suggested consolidating |
+| Reviewed [PR #322](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/322) (integrate personal info in TUI) | ✅ Done | Suggested extracting duplicate field definitions shared between `_render_profile_markdown` and `_prompt_edit_profile` |
+| Reviewed [PR #327](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/327) (integrate education into TUI) | ✅ Done | Noted GPA validation error message not surfacing to user; suggested blur validation for milestone 3 |
+| Reviewed [PR #310](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/310) (improve upload endpoint) | ✅ Done | Suggested consolidating API docs for merged endpoints with optional param |
+| Reviewed [PR #300](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/300) (project chronology tracking) | ✅ Done | |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Start milestone 3 dashboard implementation | ❌ Not Started | Build out the web dashboard frontend |
+| Continue code reviews | | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Work on resume export | ✅ Done | Implemented resume CRUD + PDF generation endpoints (PR #315), Rover and Modern templates (PR #317), and 83 total tests across PRs #313, #316, #318 |
+| Continue code reviews | ✅ Done | Ongoing task |
 
 ---
 
