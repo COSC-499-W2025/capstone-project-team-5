@@ -2,37 +2,49 @@
 
 **GitHub:** [@ojusharma](https://github.com/ojusharma)
 
-### This Week - 4,5
+### This Week - 6,7,8
 
-<img width="700" height="350" alt="image" src="https://github.com/user-attachments/assets/1c440737-39f8-4b7a-b01f-d97871ddb5e6" />
-
+<img width="700" height="350" alt="image" src="https://github.com/user-attachments/assets/a8f24f7e-50ba-41dd-a556-e7cb975969c0" />
 
 #### What Went Well
-- Completed Peer testing effectively, gathered feedback, discussed issues with team, implemented fixes.
-- Created and merged:
-  - [PR #295 - Implement Scroll on Side Panel](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/295): Changed the left panel container to VerticalScroll for better UX and to support future expansion of functionality.
-  - [PR #276 - Add UserProfile, WorkExperience & Education Tables to Schema](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/276): Added database models and schema (UserProfile, Education, WorkExperience tables) for storing user profile information to support the resume generator feature.
-  - [PR #292 - Resume Generator: Education CRUD](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/292): Implemented a complete Education CRUD service with validation for fields, dates, GPA range, and cross-user access prevention as part of the resume generation feature.
-  - [PR #291 - Resume Generator: Work Exp CRUD](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/291): Added full CRUD operations for managing user work experience entries (list, retrieve, add, modify, delete) to support resume generation.
-  - [PR #290 - Resume Generator: Add User Info CRUD](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/290): Introduced a UserProfileService with CRUD operations for managing user contact and personal information to support TUI and REST API resume generation endpoints.
- 
+- Succesfully gave the milestone 2 presentation
+- Successfully recorded the milestone demo video
+- [PR #309 - Create Resume Generator Service](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/309): Introduced the first iteration of the resume generation tool. It pulls user data (contact info, education, work experience, projects, skills) from existing DB services and renders it into a professionally formatted LaTeX resume using the Jake Gutierrez ATS-friendly template. Includes template-agnostic data contracts (`resume_data.py`), an abstract base class enabling a pluggable template architecture (`templates/base.py`), the full Jake template implementation (`templates/jake.py`), and a service layer (`resume_generator.py`) that aggregates all user data and exposes public APIs for `.tex` and `.pdf` generation.
+>[!IMPORTANT]
+> **Justification for PR size:**
+> The team was consulted and agreed that the resume generator is a foundational, tightly coupled feature - the data contracts, template engine, LaTeX rendering, and service layer are all interdependent. Splitting this across multiple PRs would have left the feature in an untestable, incomplete state where no single piece could be verified in isolation. Without the full pipeline (data fetching → template rendering → PDF compilation) present together, it would have been impossible to run meaningful end-to-end tests or validate that the generated resumes are correct.
+- [PR #339 - Implement Projects Pagination](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/339): Added pagination support to the `GET /api/projects` endpoint, replacing the previous plain list response with a structured `PaginatedProjectsResponse` containing `items` and `pagination` metadata (`total`, `limit`, `offset`, `has_more`). This is an important scalability improvement as the number of user projects grows, returning all projects in a single unbounded response becomes inefficient and degrades performance. Pagination ensures the API remains responsive by allowing clients to fetch projects in controlled chunks. The PR also refactored the shared `PaginationMeta` schema and related constants into a reusable `common.py` module, eliminating duplication that previously existed in `skills.py`. Comprehensive tests were added covering default pagination, custom `limit`/`offset` parameters, invalid parameter validation (422 errors), empty database handling, and offset-beyond-total edge cases.
 
 - Reviewed and approved:
-  - [PR #283 - feat: add /config/score endpoint](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/283): Suggested a future topic of converstation for the team - implementing thread-safe lagic if wanna move towards concurrency at some point.
-  - [PR #303 - FEAT: Project rerank](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/303): Suggested avoiding N extra SELECT queries in the rerank loop by mapping already-fetched projects to a dict for local lookup instead of doing database round-trips.
-  - [PR #270 - Aggregated skills display](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/270): Suggested a UI improvement where the skills view should take up the entire screen by removing the extra panel content in the red-boxed area, for a cleaner full-screen display. 
-  - [PR #275 - feat: added configuration + PT1 minor UX fixes](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/275): Suggested wrapping `apply_score_factors()` in a try-except to handle malformed data and logging a warning instead of silently skipping, to make debugging easier in the future.
-  - [PR #297 - feat: incremental uploads, content dedupe, fingerprint cache](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/297)
-  - [PR #298 - Expand R24](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/298): Suggested removal of unused param
-
- - Reviewed and approved Individual logs
+  - [PR #331 - Role type integration](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/331): 
+  My review: Praised the clean end-to-end integration and solid edge-case test coverage. Brownie points for using `nullable=True` on the JSON column for backward compatibility.
+  
+  - [PR #321 - User API endpoints Improvements](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/321): 
+  My review: Code follows current structure and the decided-upon sprint changes.
+  
+  - [PR #316 - test: Add tests for resume API endpoints](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/316): 
+  My review: Tests are holistic, follow codebase standards, and verified locally. Brownie points for breadth of coverage.
+  
+  - [PR #315 - feat(api): Add resume project CRUD and PDF generation endpoints](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/315): 
+  My review: Eendpoints follow existing patterns from work exp/education, keeping the codebase cohesive. Solid auth enforcement critical for real user data.
+  
+  - [PR #313 - test: work experience and education API endpoints](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/313): 
+  My review: Praised the comprehensive test coverage across all major workflows.
+  
+  - [PR #312 - feat(api): work exp and education endpoints](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/312): 
+  My review: Commended the simplified auth integration and confirmed the code follows codebase standards and patterns.
+  
+  - [PR #311 - User API endpoints](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/311): 
+  My review: Endpoints follow best practices, suggested exploring integration with resume generation next week. Verified locally.
+  
+   - Reviewed and approved Individual logs
   
 #### What Didn't Go Well
 - All good
 
 #### Planning for Next Week
-- Adding REST endpoints for the Education, Work Exp and User Info
-- Start creating the actual resume generator tool
+- Analyze mileston2 feedback
+- Speak to team about UI choices
 - Continue reviewing teammates' PRs to support code collaboration
 - Review more PRs :)
   
