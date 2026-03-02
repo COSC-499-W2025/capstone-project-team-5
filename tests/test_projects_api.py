@@ -84,11 +84,11 @@ def test_list_projects_pagination(api_db: None) -> None:
 
     assert "items" in data
     assert "pagination" in data
-    assert len(data["items"]) >= 3
-    assert data["pagination"]["total"] >= 3
+    assert len(data["items"]) == 3
+    assert data["pagination"]["total"] == 3
     assert data["pagination"]["limit"] == 50  # default
     assert data["pagination"]["offset"] == 0
-    assert isinstance(data["pagination"]["has_more"], bool)
+    assert data["pagination"]["has_more"] is False
 
     # Test custom pagination params
     response = client.get("/api/projects?limit=2&offset=0")
@@ -102,8 +102,9 @@ def test_list_projects_pagination(api_db: None) -> None:
     response = client.get("/api/projects?limit=2&offset=2")
     assert response.status_code == 200
     data = response.json()
-    assert len(data["items"]) >= 1
+    assert len(data["items"]) == 1
     assert data["pagination"]["offset"] == 2
+    assert data["pagination"]["has_more"] is False
 
 
 def test_list_projects_invalid_pagination_params(api_db: None) -> None:
