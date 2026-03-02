@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+from uuid import uuid4
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from fastapi.testclient import TestClient
@@ -18,6 +19,11 @@ def _create_zip_bytes(entries: list[tuple[str, bytes]]) -> bytes:
     return buffer.getvalue()
 
 
+def _unique_project_name(prefix: str) -> str:
+    """Generate a unique project directory name for ZIP uploads in tests."""
+    return f"{prefix}_{uuid4().hex[:8]}"
+
+
 def _create_user(username: str) -> None:
     with get_session() as session:
         user = session.query(User).filter(User.username == username).first()
@@ -31,9 +37,10 @@ def test_portfolio_edit_endpoint_creates_and_updates_item() -> None:
     client = TestClient(app)
 
     # Create a project via upload endpoint.
+    project_name = _unique_project_name("proj")
     zip_bytes = _create_zip_bytes(
         [
-            ("proj/main.py", b"print('hello')\n"),
+            (f"{project_name}/main.py", b"print('hello')\n"),
         ]
     )
 
@@ -101,9 +108,10 @@ def test_portfolio_edit_endpoint_creates_and_updates_item() -> None:
 def test_portfolio_edit_endpoint_missing_user_returns_404() -> None:
     client = TestClient(app)
 
+    project_name = _unique_project_name("proj2")
     zip_bytes = _create_zip_bytes(
         [
-            ("proj2/main.py", b"print('hello')\n"),
+            (f"{project_name}/main.py", b"print('hello')\n"),
         ]
     )
 
@@ -124,6 +132,48 @@ def test_portfolio_edit_endpoint_missing_user_returns_404() -> None:
         },
     )
     assert response.status_code == 404
+
+
+def test_portfolio_edit_endpoint_rejects_portfolio_from_other_user() -> None:
+    client = TestClient(app)
+
+    project_name = _unique_project_name("proj-ownership")
+    zip_bytes = _create_zip_bytes(
+        [
+            (f"{project_name}/main.py", b"print('hello')\n"),
+        ]
+    )
+    upload_response = client.post(
+        "/api/projects/upload",
+        files={"file": ("proj-ownership.zip", zip_bytes, "application/zip")},
+    )
+    assert upload_response.status_code == 201
+    project_id = upload_response.json()["projects"][0]["id"]
+
+    owner_username = "portfolio-owner"
+    editor_username = "portfolio-editor"
+    _create_user(owner_username)
+    _create_user(editor_username)
+
+    owner_portfolio_resp = client.post(
+        "/api/portfolio",
+        json={"username": owner_username, "name": "Owner Portfolio"},
+    )
+    assert owner_portfolio_resp.status_code == 200
+    owner_portfolio_id = owner_portfolio_resp.json()["id"]
+
+    response = client.post(
+        "/api/portfolio/items",
+        json={
+            "username": editor_username,
+            "project_id": project_id,
+            "title": "Should fail",
+            "markdown": "# Unauthorized portfolio assignment",
+            "portfolio_id": owner_portfolio_id,
+        },
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Portfolio not found for user."
 
 
 def test_create_and_list_portfolios() -> None:

@@ -205,7 +205,7 @@ def update_resume_endpoint(
     merged_bullets = update_fields.get("bullet_points", existing["bullet_points"])
     merged_snapshot = update_fields.get("analysis_snapshot", existing["analysis_snapshot"])
 
-    save_resume(
+    success = save_resume(
         username=username,
         project_id=project_id,
         title=merged_title,
@@ -213,6 +213,11 @@ def update_resume_endpoint(
         bullet_points=merged_bullets,
         analysis_snapshot=merged_snapshot,
     )
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to update resume. Check that the project_id is valid.",
+        )
 
     result = get_resume(username, project_id)
     if not result:

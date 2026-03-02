@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 from fastapi import APIRouter, HTTPException, Response, status
+from sqlalchemy.orm import Session
 
 from capstone_project_team_5.api.schemas.portfolio import (
     PortfolioAddItemRequest,
@@ -36,6 +37,76 @@ def _extract_markdown(content: str) -> str:
         return decoded
 
     return ""
+
+
+def _upsert_portfolio_item_for_user(
+    *,
+    session: Session,
+    user: User,
+    project: Project,
+    request: PortfolioEditRequest,
+    portfolio_id: int | None,
+) -> PortfolioItemResponse:
+    """Create or update a portfolio item for a user/project pair."""
+    if portfolio_id is not None:
+        portfolio = (
+            session.query(Portfolio)
+            .filter(Portfolio.id == portfolio_id, Portfolio.user_id == user.id)
+            .first()
+        )
+        if portfolio is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Portfolio not found for user.",
+            )
+
+    encoded_content = json.dumps({"markdown": request.markdown})
+
+    query = session.query(PortfolioItem).filter(
+        PortfolioItem.user_id == user.id,
+        PortfolioItem.project_id == request.project_id,
+        PortfolioItem.source_analysis_id == request.source_analysis_id,
+    )
+    if portfolio_id is None:
+        query = query.filter(PortfolioItem.portfolio_id.is_(None))
+    else:
+        query = query.filter(PortfolioItem.portfolio_id == portfolio_id)
+
+    item = query.order_by(PortfolioItem.updated_at.desc()).first()
+
+    if item is None:
+        item = PortfolioItem(
+            project_id=request.project_id,
+            portfolio_id=portfolio_id,
+            user_id=user.id,
+            title=request.title or project.name,
+            content=encoded_content,
+            is_user_edited=True,
+            source_analysis_id=request.source_analysis_id,
+        )
+        session.add(item)
+    else:
+        item.title = request.title or project.name
+        item.content = encoded_content
+        item.portfolio_id = portfolio_id
+        item.is_user_edited = True
+        item.source_analysis_id = request.source_analysis_id
+
+    session.flush()
+
+    markdown = _extract_markdown(item.content)
+
+    return PortfolioItemResponse(
+        id=item.id,
+        project_id=item.project_id,
+        title=item.title,
+        markdown=markdown,
+        is_user_edited=bool(item.is_user_edited),
+        source_analysis_id=getattr(item, "source_analysis_id", None),
+        portfolio_id=getattr(item, "portfolio_id", None),
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+    )
 
 
 @router.post(
@@ -279,50 +350,10 @@ def upsert_portfolio_item(request: PortfolioEditRequest) -> PortfolioItemRespons
                 detail="User not found.",
             )
 
-        encoded_content = json.dumps({"markdown": request.markdown})
-
-        query = session.query(PortfolioItem).filter(
-            PortfolioItem.user_id == user.id,
-            PortfolioItem.project_id == request.project_id,
-            PortfolioItem.source_analysis_id == request.source_analysis_id,
-        )
-        if request.portfolio_id is None:
-            query = query.filter(PortfolioItem.portfolio_id.is_(None))
-        else:
-            query = query.filter(PortfolioItem.portfolio_id == request.portfolio_id)
-
-        item = query.order_by(PortfolioItem.updated_at.desc()).first()
-
-        if item is None:
-            item = PortfolioItem(
-                project_id=request.project_id,
-                portfolio_id=request.portfolio_id,
-                user_id=user.id,
-                title=request.title or project.name,
-                content=encoded_content,
-                is_user_edited=True,
-                source_analysis_id=request.source_analysis_id,
-            )
-            session.add(item)
-        else:
-            item.title = request.title or project.name
-            item.content = encoded_content
-            item.portfolio_id = request.portfolio_id
-            item.is_user_edited = True
-            item.source_analysis_id = request.source_analysis_id
-
-        session.flush()
-
-        markdown = _extract_markdown(item.content)
-
-        return PortfolioItemResponse(
-            id=item.id,
-            project_id=item.project_id,
-            title=item.title,
-            markdown=markdown,
-            is_user_edited=bool(item.is_user_edited),
-            source_analysis_id=getattr(item, "source_analysis_id", None),
-            portfolio_id=getattr(item, "portfolio_id", None),
-            created_at=item.created_at,
-            updated_at=item.updated_at,
+        return _upsert_portfolio_item_for_user(
+            session=session,
+            user=user,
+            project=project,
+            request=request,
+            portfolio_id=request.portfolio_id,
         )
