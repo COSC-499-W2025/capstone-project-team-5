@@ -48,7 +48,7 @@ As we have yet to receive feedback for the System Architecture Diagram, we were 
 
 
 ### M2 System Architecture Diagram
-<img alt="M2 System Architecture Diagram" src="docs/design/SysArchV2.png" />
+<img alt="M2 System Architecture Diagram" src="docs/design/SysArchV2.jpeg" />
 
 
 ---
@@ -58,6 +58,9 @@ As we have yet to receive feedback for the System Architecture Diagram, we were 
 
 **Explanation of Changes:**
 As we have yet to receive feedback for the Data Flow Diagram, we were unable to make any meaningful changes.
+
+### M2 Data Flow Diagram
+<img alt="M2 Data Flow Diagram" src="docs/design/DFD-M2-FINAL.png" />
 
 ---
 
