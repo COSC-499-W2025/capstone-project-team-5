@@ -8,12 +8,16 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Annotated, Any
 
-from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, File, Form, HTTPException, Query, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from capstone_project_team_5.api.schemas.projects import (
+    DEFAULT_LIMIT,
+    MAX_LIMIT,
+    PaginatedProjectsResponse,
+    PaginationMeta,
     ProjectAnalysisResult,
     ProjectAnalysisSkipped,
     ProjectReRankRequest,
@@ -228,14 +232,36 @@ def _analysis_to_response(project_id: int, analysis: dict[str, Any]) -> ProjectA
 
 @router.get(
     "/",
-    response_model=list[ProjectSummary],
+    response_model=PaginatedProjectsResponse,
     summary="List projects",
     description="Return all persisted projects ordered by most recently updated.",
 )
-def list_projects() -> list[ProjectSummary]:
+def list_projects(
+    limit: int = Query(
+        default=DEFAULT_LIMIT,
+        ge=1,
+        le=MAX_LIMIT,
+        description=f"Maximum number of items to return (1-{MAX_LIMIT})",
+    ),
+    offset: int = Query(
+        default=0,
+        ge=0,
+        description="Number of items to skip",
+    ),
+) -> PaginatedProjectsResponse:
     with get_session() as session:
-        projects = session.query(Project).order_by(desc(Project.updated_at)).all()
-        return [_project_to_summary(project) for project in projects]
+        query = session.query(Project).order_by(desc(Project.updated_at))
+        total = query.count()
+        projects = query.offset(offset).limit(limit).all()
+        return PaginatedProjectsResponse(
+            items=[_project_to_summary(project) for project in projects],
+            pagination=PaginationMeta(
+                total=total,
+                limit=limit,
+                offset=offset,
+                has_more=(offset + len(projects)) < total,
+            ),
+        )
 
 
 @router.get(
