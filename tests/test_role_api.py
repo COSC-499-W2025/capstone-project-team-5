@@ -137,7 +137,9 @@ def test_list_projects_includes_role() -> None:
     # List all projects
     response = client.get("/api/projects")
     assert response.status_code == 200
-    projects = response.json()
+    data = response.json()
+    projects = data["items"]
+    assert "pagination" in data
 
     # Find our project
     project = next((p for p in projects if p["id"] == project_id), None)
