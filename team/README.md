@@ -1,4 +1,40 @@
 # Team Weekly Logs
+<details>
+  <summary><h3>T2 Week 6, 7, 8 | February 9 - March 1 </h3></summary>
+
+  ### Burnup Chart
+<img width="1200" height="864" alt="chart" src="https://github.com/user-attachments/assets/10f221ef-db0d-4e23-8c18-c00cbe85e9f1" />
+
+
+  ### Past Work
+- [PR #309 - Create Resume Generator Service](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/309): Introduced the first iteration of the resume generation tool, rendering user data (contact info, education, work experience, projects, and skills) into a professionally formatted LaTeX resume using the Jake Gutierrez ATS-friendly template.
+- [PR #311 - User API Endpoints](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/311): Added complete user and user profile API endpoints, including route handlers, Pydantic schemas for request/response validation, and a comprehensive test suite.
+- [PR #312 - feat(api): Work Experience and Education Endpoints](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/312): Added REST API endpoints for Work Experience and Education CRUD operations under `/api/users/{username}/work-experiences` and `/api/users/{username}/educations`.
+- [PR #313 - test: Work Experience and Education API Endpoints](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/313): Added 31 tests covering all Work Experience and Education endpoints, including success paths, auth/permission errors, validation failures, and edge cases.
+- [PR #315 - feat(api): Resume Project CRUD and PDF Generation Endpoints](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/315): Added 6 REST API endpoints for managing resume project entries and generating PDF resumes, including list, get, create, update, delete, and `POST /generate`.
+- [PR #316 - test: Resume API Endpoints](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/316): Added 28 tests across 6 test classes covering all resume API endpoints, including auth checks, edge cases, and PDF generation.
+- [PR #321 - User API Endpoints Improvements](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/321): Refactored user profile permission checks, consolidated validation into a shared helper, and added a new `DELETE /users/{username}/profile` endpoint.
+- [PR #330 - Consent API Cleanup](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/330): Refactored consent API routes, schemas, and tests; introduced a shared API dependencies module and added support for anonymous consent access.
+- [PR #331 - Role Type Integration](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/331): Full integration of role type analysis into the project analysis pipeline, updating models, analysis pipeline, persistence layer, and TUI rendering.
+- [PR #332 - User Role Expansion: Security Lead](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/332): Expanded the role-detection taxonomy with a new Security Lead role, including detection logic in `role_detector.py` and regression tests.
+- [PR #335 - M2 DFD and System Architecture Updates](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/335): Updated the project README with new M2 system architecture and data flow diagrams.
+
+- [PR #339 - Implement Projects Pagination](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/339): Add pagination support to the GET /api/projects endpoint. The response now returns a PaginatedProjectsResponse with items and pagination metadata (total, limit, offset, has_more) instead of a plain list. Also refactors PaginationMeta and related constants into a shared common.py schema module (previously duplicated in skills.py). Existing tests updated to handle the new response shape.
+
+- [PR #338 - ownership fix for portfolios + minor resume error handling](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/338): This PR contains small housekeeping fixes for API endpoint correctness and test reliability.
+
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Continue with Milestone 2 requirements | ✅ Done | Resume generator, user/work/education API endpoints, and role type detection all completed. |
+  | Discuss remaining endpoints to be implemented | ✅ Done | Remaining endpoints identified and implemented across weeks 6–8. |
+
+  ### Future Work
+  - Incorporate feedback from Milestone 2 presentation
+  - Continue addressing peer testing feedback items
+  - Begin planning for Milestone 3 requirements
+</details>
 
 <details>
   <summary><h3>T2 Week 4,5 | January 26 - Feb 8 </h3></summary>
@@ -35,8 +71,8 @@
   | Continue with Milestone #2 requirements| ✅ Done | Continuous process.|
   
   ### Future Work
-  - Continue with Milestone 2 requirements
-  - Discuss remaining endpoints to be implemented
+  - Begin milestone 3 requirements
+
 </details>
 
 
