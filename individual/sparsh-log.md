@@ -51,7 +51,13 @@ Collaborated with the team to prepare and deliver the M2 presentation.
 - tests/test_consent_api.py
 
 ### PRs Reviewed
-
+- [PR#331](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/331)
+- [PR#320](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/320)
+- [PR#318](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/318)
+- [PR#316](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/316)
+- [PR#314](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/314)
+- [PR#310](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/310)
+- [PR#298](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/298)
 
 ### Additional Details
 
