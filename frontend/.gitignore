@@ -1,0 +1,75 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.rpt2_cache/
+.rts2_cache/
+.eslintcache
+.stylelintcache
+.node-xmlhttprequest-cache
+
+# Dependency directories
+node_modules/
+/jspm_packages/
+
+# TypeScript cache files
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm/
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Production artifacts
+dist/
+build/
+*.bundle.js
+lib/
+es/
+esm/
+mjs/
+cjs/
+
+# Optional Haxe output directories
+# .haxe_cache/
+
+# Optional C++ build artifacts
+# build/Release/
+# build/Debug/
+
+# Optional Protobuf build artifacts
+# generated/sources/
+# generated/res/
+
+# Environment files
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging.local
+
+# Typescript definition files
+# *.d.ts
+
+# SBT build directory
+# .sbt/
+
+# Build log file
+npm-debug.log
+
+# Diagnostic report
+# .report-*.json
+
+# Windows temporary files
+# *.tmp
+# *.bak
+
+# Yarn Svelte-Kit artifacts
+# .svelte-kit/
