@@ -21,6 +21,8 @@ function setupApi(overrides = {}) {
     getAvailableServices: jest.fn().mockResolvedValue([]),
     giveConsent:          jest.fn().mockResolvedValue({ status: 'ok' }),
     getLLMConfig:         jest.fn().mockResolvedValue({ provider: 'openai' }),
+    setUsername:          jest.fn(),
+    getUsername:          jest.fn().mockReturnValue('alice'),
     getProjects:          jest.fn().mockResolvedValue([]),
     getSkills:            jest.fn().mockResolvedValue([]),
     getWorkExperiences:   jest.fn().mockResolvedValue([]),
@@ -29,7 +31,10 @@ function setupApi(overrides = {}) {
   }
 }
 
-beforeEach(() => jest.clearAllMocks())
+beforeEach(() => {
+  jest.clearAllMocks()
+  localStorage.clear()
+})
 
 // ── Boot splash ────────────────────────────────────────────────────────────
 test('shows loading splash while booting', () => {
@@ -44,13 +49,14 @@ test('shows ConsentSetup when getLatestConsent returns null', async () => {
   setupApi({ getLatestConsent: jest.fn().mockResolvedValue(null) })
   render(<App />)
   await waitFor(() =>
-    expect(screen.getByText(/choose an AI provider/i)).toBeInTheDocument()
+    expect(screen.getByText(/welcome back/i)).toBeInTheDocument()
   )
 })
 
 // ── Main shell ─────────────────────────────────────────────────────────────
 test('renders sidebar and topbar after successful boot with existing consent', async () => {
   setupApi()
+  localStorage.setItem('zip2job_username', 'alice')
   render(<App />)
   await waitFor(() => expect(screen.getByText('Portfolio Engine')).toBeInTheDocument())
   // Sidebar brand
@@ -61,8 +67,9 @@ test('renders sidebar and topbar after successful boot with existing consent', a
 
 test('renders all nav items in sidebar', async () => {
   setupApi()
+  localStorage.setItem('zip2job_username', 'alice')
   render(<App />)
-  const labels = ['Dashboard', 'Projects', 'Skills', 'Experience', 'Education', 'Portfolio', 'Resumes']
+  const labels = ['Dashboard', 'Projects', 'Skills', 'Experience', 'Education', 'Portfolio', 'Resumes', 'Consents']
   await waitFor(() => expect(screen.getByText('Portfolio Engine')).toBeInTheDocument())
   for (const label of labels) {
     expect(screen.getAllByText(label).length).toBeGreaterThan(0)
@@ -71,6 +78,7 @@ test('renders all nav items in sidebar', async () => {
 
 test('clicking a nav item updates the topbar title', async () => {
   setupApi()
+  localStorage.setItem('zip2job_username', 'alice')
   render(<App />)
   await waitFor(() => expect(screen.getByText('Portfolio Engine')).toBeInTheDocument())
 
@@ -89,6 +97,7 @@ test('clicking a nav item updates the topbar title', async () => {
 
 test('shows username in sidebar when user is loaded', async () => {
   setupApi()
+  localStorage.setItem('zip2job_username', 'alice')
   render(<App />)
   await waitFor(() => expect(screen.getByText('alice')).toBeInTheDocument())
 })

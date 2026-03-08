@@ -5,6 +5,8 @@ global.window = global.window ?? {};
 global.window.api = {
   health:               jest.fn().mockResolvedValue({ status: 'ok' }),
   getCurrentUser:       jest.fn().mockResolvedValue({ username: 'testuser' }),
+  setUsername:          jest.fn(),
+  getUsername:          jest.fn().mockReturnValue(null),
   getProjects:          jest.fn().mockResolvedValue([]),
   getSkills:            jest.fn().mockResolvedValue([]),
   getWorkExperiences:   jest.fn().mockResolvedValue([]),

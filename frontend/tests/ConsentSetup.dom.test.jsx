@@ -1,30 +1,31 @@
 /**
  * @jest-environment jsdom
  *
- * DOM tests for the ConsentSetup first-run wizard:
- *   - renders provider options from getAvailableServices
- *   - API key input appears only after a provider is selected
- *   - submit button is disabled until both provider + key are filled
- *   - successful submission calls giveConsent and triggers onDone
- *   - failed submission shows an error message
- *   - error from getAvailableServices shows a fallback message
+ * DOM tests for the ConsentSetup wizard (Login/Register → Consent).
+ * Consent step uses checkboxes for external services, not a provider picker.
  */
 
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-// We render App with consent = null so ConsentSetup is shown
+const AVAILABLE_SERVICES = {
+  external_services:     ['GitHub API', 'Gemini', 'LinkedIn API'],
+  ai_models:             ['Gemini 2.5 Flash (Google)'],
+  common_ignore_patterns: ['.git', 'node_modules'],
+}
+
 function setupApi(overrides = {}) {
   window.api = {
     health:               jest.fn().mockResolvedValue({ status: 'ok' }),
     getCurrentUser:       jest.fn().mockResolvedValue({ username: 'alice' }),
-    getLatestConsent:     jest.fn().mockResolvedValue(null),   // triggers ConsentSetup
-    getAvailableServices: jest.fn().mockResolvedValue([
-      { service_name: 'openai',    display_name: 'OpenAI',    description: 'GPT models'    },
-      { service_name: 'anthropic', display_name: 'Anthropic', description: 'Claude models' },
-    ]),
-    giveConsent:  jest.fn().mockResolvedValue({ status: 'ok' }),
-    getLLMConfig: jest.fn().mockResolvedValue({ provider: 'openai' }),
+    getLatestConsent:     jest.fn().mockResolvedValue(null),
+    getAvailableServices: jest.fn().mockResolvedValue(AVAILABLE_SERVICES),
+    giveConsent:          jest.fn().mockResolvedValue({ id: 1, consent_given: true }),
+    getLLMConfig:         jest.fn().mockResolvedValue({ is_allowed: true }),
+    login:                jest.fn().mockResolvedValue({ username: 'alice' }),
+    register:             jest.fn().mockResolvedValue({ username: 'alice' }),
+    setUsername:          jest.fn(),
+    getUsername:          jest.fn().mockReturnValue(null),
     getProjects:          jest.fn().mockResolvedValue([]),
     getSkills:            jest.fn().mockResolvedValue([]),
     getWorkExperiences:   jest.fn().mockResolvedValue([]),
@@ -33,11 +34,23 @@ function setupApi(overrides = {}) {
   }
 }
 
-// Helper: render App and wait for ConsentSetup to appear
-async function renderConsent(App) {
+async function renderWizard(App) {
   render(<App />)
   await waitFor(() =>
-    expect(screen.getByText(/choose an AI provider/i)).toBeInTheDocument()
+    expect(screen.getByText(/welcome back|create your account/i)).toBeInTheDocument()
+  )
+}
+
+async function submitAuth(username = 'alice', password = 'secret') {
+  await userEvent.type(screen.getByTestId('auth-username'), username)
+  await userEvent.type(screen.getByTestId('auth-password'), password)
+  fireEvent.click(screen.getByTestId('auth-submit'))
+}
+
+async function advanceToConsent() {
+  await submitAuth()
+  await waitFor(() =>
+    expect(screen.getByText(/review data permissions/i)).toBeInTheDocument()
   )
 }
 
@@ -45,108 +58,140 @@ let App
 beforeAll(async () => {
   App = (await import('../renderer/src/App.jsx')).default
 })
-
 beforeEach(() => jest.clearAllMocks())
 
-// ── Provider list ──────────────────────────────────────────────────────────
-test('renders available service options', async () => {
+// ── Step 1: auth tab UI ────────────────────────────────────────────────────
+test('shows Login tab by default with Welcome back subtitle', async () => {
   setupApi()
-  await renderConsent(App)
-  await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument())
-  expect(screen.getByText('Anthropic')).toBeInTheDocument()
-  expect(screen.getByText('GPT models')).toBeInTheDocument()
+  await renderWizard(App)
+  expect(screen.getByTestId('auth-tab-login')).toBeInTheDocument()
+  expect(screen.getByText(/welcome back/i)).toBeInTheDocument()
 })
 
-test('shows loading text while services are fetching', async () => {
-  setupApi({
-    getAvailableServices: jest.fn(() => new Promise(() => {})), // never resolves
-  })
-  await renderConsent(App)
-  expect(screen.getByText(/loading providers/i)).toBeInTheDocument()
+test('switching to Sign Up tab updates subtitle', async () => {
+  setupApi()
+  await renderWizard(App)
+  fireEvent.click(screen.getByTestId('auth-tab-register'))
+  expect(screen.getByText(/create your account/i)).toBeInTheDocument()
 })
 
-test('shows error when getAvailableServices rejects', async () => {
-  setupApi({
-    getAvailableServices: jest.fn().mockRejectedValue(new Error('network')),
-  })
-  await renderConsent(App)
+test('submit button disabled until username and password filled', async () => {
+  setupApi()
+  await renderWizard(App)
+  const btn = screen.getByTestId('auth-submit')
+  expect(btn).toBeDisabled()
+  await userEvent.type(screen.getByTestId('auth-username'), 'alice')
+  expect(btn).toBeDisabled()
+  await userEvent.type(screen.getByTestId('auth-password'), 'secret')
+  expect(btn).not.toBeDisabled()
+})
+
+// ── Step 1: login / register success ──────────────────────────────────────
+test('successful login calls window.api.login and advances to consent step', async () => {
+  setupApi()
+  await renderWizard(App)
+  await submitAuth()
+  expect(window.api.login).toHaveBeenCalledWith({ username: 'alice', password: 'secret' })
   await waitFor(() =>
-    expect(screen.getByText(/could not load available services/i)).toBeInTheDocument()
+    expect(screen.getByText(/review data permissions/i)).toBeInTheDocument()
   )
 })
 
-// ── API key field ──────────────────────────────────────────────────────────
-test('API key input is not shown before a provider is selected', async () => {
+test('setUsername is called with returned username after login', async () => {
   setupApi()
-  await renderConsent(App)
-  await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument())
-  expect(screen.queryByTestId('consent-api-key')).not.toBeInTheDocument()
+  await renderWizard(App)
+  await submitAuth()
+  await waitFor(() => expect(window.api.setUsername).toHaveBeenCalledWith('alice'))
 })
 
-test('API key input appears after selecting a provider', async () => {
+test('successful register calls window.api.register and advances to consent', async () => {
   setupApi()
-  await renderConsent(App)
-  await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument())
-
-  const openaiRadio = screen.getByDisplayValue('openai')
-  fireEvent.click(openaiRadio)
-
-  expect(screen.getByTestId('consent-api-key')).toBeInTheDocument()
+  await renderWizard(App)
+  fireEvent.click(screen.getByTestId('auth-tab-register'))
+  await submitAuth('newuser', 'password123')
+  expect(window.api.register).toHaveBeenCalledWith({ username: 'newuser', password: 'password123' })
+  await waitFor(() =>
+    expect(screen.getByText(/review data permissions/i)).toBeInTheDocument()
+  )
 })
 
-// ── Submit button state ────────────────────────────────────────────────────
-test('submit button is disabled until provider and key are both filled', async () => {
-  setupApi()
-  await renderConsent(App)
-  await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument())
-
-  const submitBtn = screen.getByTestId('consent-submit')
-  expect(submitBtn).toBeDisabled()
-
-  // Select provider
-  fireEvent.click(screen.getByDisplayValue('openai'))
-  expect(submitBtn).toBeDisabled()  // still disabled — no key
-
-  // Type a key
-  await userEvent.type(screen.getByTestId('consent-api-key'), 'sk-testkey')
-  expect(submitBtn).not.toBeDisabled()
+// ── Step 1: failed auth ────────────────────────────────────────────────────
+test('failed login shows error message', async () => {
+  setupApi({
+    login: jest.fn().mockRejectedValue(new Error('Invalid username or password.')),
+  })
+  await renderWizard(App)
+  await submitAuth()
+  await waitFor(() =>
+    expect(screen.getByTestId('consent-error')).toHaveTextContent('Invalid username or password.')
+  )
 })
 
-// ── Successful submission ──────────────────────────────────────────────────
-test('calls giveConsent with correct payload and shows success', async () => {
+// ── Step 2: consent UI ────────────────────────────────────────────────────
+test('shows external services checkboxes on consent step', async () => {
   setupApi()
-  await renderConsent(App)
-  await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument())
+  await renderWizard(App)
+  await advanceToConsent()
+  expect(screen.getByText('GitHub API')).toBeInTheDocument()
+  expect(screen.getByText('Gemini')).toBeInTheDocument()
+  expect(screen.getByText('LinkedIn API')).toBeInTheDocument()
+})
 
-  fireEvent.click(screen.getByDisplayValue('openai'))
-  await userEvent.type(screen.getByTestId('consent-api-key'), 'sk-mykey')
+test('shows signed-in username on consent step', async () => {
+  setupApi()
+  await renderWizard(App)
+  await advanceToConsent()
+  expect(screen.getByText('alice')).toBeInTheDocument()
+})
+
+test('master external toggle is checked by default', async () => {
+  setupApi()
+  await renderWizard(App)
+  await advanceToConsent()
+  expect(screen.getByTestId('consent-use-external')).toBeChecked()
+})
+
+test('unchecking master toggle hides per-service list', async () => {
+  setupApi()
+  await renderWizard(App)
+  await advanceToConsent()
+  fireEvent.click(screen.getByTestId('consent-use-external'))
+  expect(screen.queryByText('GitHub API')).not.toBeInTheDocument()
+})
+
+test('consent submit button is enabled by default (no required fields)', async () => {
+  setupApi()
+  await renderWizard(App)
+  await advanceToConsent()
+  expect(screen.getByTestId('consent-submit')).not.toBeDisabled()
+})
+
+// ── Step 2: successful consent ────────────────────────────────────────────
+test('calls giveConsent with correct payload and shows success splash', async () => {
+  setupApi()
+  await renderWizard(App)
+  await advanceToConsent()
   fireEvent.click(screen.getByTestId('consent-submit'))
-
   await waitFor(() =>
     expect(screen.getByTestId('consent-success')).toBeInTheDocument()
   )
-
   expect(window.api.giveConsent).toHaveBeenCalledWith(
     expect.objectContaining({
-      llm_provider: 'openai',
-      api_key: 'sk-mykey',
+      consent_given:         true,
+      use_external_services: true,
     })
   )
 })
 
-// ── Failed submission ──────────────────────────────────────────────────────
-test('shows error message when giveConsent rejects', async () => {
+// ── Step 2: failed consent ────────────────────────────────────────────────
+test('shows error when giveConsent rejects', async () => {
   setupApi({
-    giveConsent: jest.fn().mockRejectedValue(new Error('Invalid API key')),
+    giveConsent: jest.fn().mockRejectedValue(new Error('Server error')),
   })
-  await renderConsent(App)
-  await waitFor(() => expect(screen.getByText('OpenAI')).toBeInTheDocument())
-
-  fireEvent.click(screen.getByDisplayValue('openai'))
-  await userEvent.type(screen.getByTestId('consent-api-key'), 'bad-key')
+  await renderWizard(App)
+  await advanceToConsent()
   fireEvent.click(screen.getByTestId('consent-submit'))
-
   await waitFor(() =>
-    expect(screen.getByTestId('consent-error')).toHaveTextContent('Invalid API key')
+    expect(screen.getByTestId('consent-error')).toHaveTextContent('Server error')
   )
 })

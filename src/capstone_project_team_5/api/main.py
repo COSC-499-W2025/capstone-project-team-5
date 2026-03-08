@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from capstone_project_team_5.api.routes import (
+    auth,
     consent,
     educations,
     health,
@@ -49,6 +50,7 @@ app.add_middleware(
 )
 
 app.include_router(health.router)
+app.include_router(auth.router, prefix="/api")
 app.include_router(consent.router, prefix="/api")
 app.include_router(projects.router, prefix="/api")
 app.include_router(skills.router, prefix="/api")
