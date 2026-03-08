@@ -1,6 +1,15 @@
 const { contextBridge } = require('electron');
 
 const API_BASE = 'http://localhost:8000';
+let currentUsername = (process.env.ZIP2JOB_USERNAME || '').trim();
+
+function withAuthHeaders(headers = {}) {
+  if (!currentUsername) return headers;
+  return {
+    ...headers,
+    'X-Username': currentUsername,
+  };
+}
 
 async function parseResponseBody(res) {
   if (res.status === 204) return null;
@@ -35,7 +44,7 @@ function getErrorMessage(parsedBody, status) {
 async function request(method, path, body) {
   const opts = {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: withAuthHeaders({ 'Content-Type': 'application/json' }),
   };
 
   if (body) opts.body = JSON.stringify(body);
@@ -53,6 +62,7 @@ async function request(method, path, body) {
 async function requestWithForm(method, path, formData) {
   const res = await fetch(`${API_BASE}${path}`, {
     method,
+    headers: withAuthHeaders(),
     body: formData,
   });
   const parsedBody = await parseResponseBody(res);
@@ -65,6 +75,10 @@ async function requestWithForm(method, path, formData) {
 }
 
 contextBridge.exposeInMainWorld('api', {
+  setAuthUsername: (username) => {
+    currentUsername = (username || '').trim();
+  },
+  getAuthUsername: () => currentUsername,
 
   // Health
   health: () => request('GET', '/health'),
