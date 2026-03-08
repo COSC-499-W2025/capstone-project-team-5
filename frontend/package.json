@@ -1,0 +1,28 @@
+{
+  "name": "zip2job",
+  "version": "1.0.0",
+  "main": "src/main.js",
+  "scripts": {
+    "start:api": "cd .. && uv run uvicorn capstone_project_team_5.api.main:app --host 0.0.0.0 --port 8000 --reload",
+    "start:electron": "npx electron .",
+    "start:vite": "vite renderer",
+    "dev": "npx concurrently --kill-others \"npm run start:api\" \"npm run start:vite\" \"npm run start:electron\"",
+    "build:renderer": "vite build renderer",
+    "test": "npx jest"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.4.27",
+    "concurrently": "^9.2.1",
+    "electron": "^34.5.8",
+    "electron-builder": "^25.1.8",
+    "jest": "^29.7.0",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^3.4.19",
+    "vite": "^6.4.1"
+  },
+  "dependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  }
+}
