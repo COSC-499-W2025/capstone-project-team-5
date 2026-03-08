@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react'
+import { useState, useEffect, useRef, createContext, useContext } from 'react'
 
 // ── Context ────────────────────────────────────────────────────────────────
 const AppContext = createContext(null)
@@ -134,9 +134,15 @@ function PageRouter({ page }) {
 // ── Dashboard ──────────────────────────────────────────────────────────────
 function Dashboard() {
   const { user, apiOk } = useApp()
+  const fileInputRef = useRef(null)
 
   const [stats, setStats] = useState({
     projects: null, skills: null, experience: null, resumes: null,
+  })
+  const [uploadState, setUploadState] = useState({
+    loading: false,
+    message: '',
+    error: false,
   })
 
   useEffect(() => {
@@ -156,6 +162,72 @@ function Dashboard() {
       })
     })
   }, [apiOk, user])
+
+  async function refreshStats() {
+    if (!apiOk || !user?.username) return
+    const u = user.username
+
+    const [projects, skills, exp, resumes] = await Promise.allSettled([
+      window.api.getProjects(),
+      window.api.getSkills(),
+      window.api.getWorkExperiences(u),
+      window.api.getResumes(u),
+    ])
+
+    setStats({
+      projects: projects.status === 'fulfilled' ? (projects.value?.length ?? 0) : '—',
+      skills: skills.status === 'fulfilled' ? (skills.value?.length ?? 0) : '—',
+      experience: exp.status === 'fulfilled' ? (exp.value?.length ?? 0) : '—',
+      resumes: resumes.status === 'fulfilled' ? (resumes.value?.length ?? 0) : '—',
+    })
+  }
+
+  function startUploadFlow() {
+    if (uploadState.loading || !apiOk) return
+    fileInputRef.current?.click()
+  }
+
+  async function onUploadFileSelected(event) {
+    const [file] = event.target.files || []
+    event.target.value = ''
+    if (!file) return
+
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      setUploadState({
+        loading: false,
+        error: true,
+        message: 'Please select a .zip file.',
+      })
+      return
+    }
+
+    setUploadState({ loading: true, message: 'Uploading project archive...', error: false })
+
+    try {
+      const bytes = await file.arrayBuffer()
+      const result = await window.api.createProjectUpload({
+        name: file.name,
+        type: file.type || 'application/zip',
+        bytes,
+      })
+
+      await refreshStats()
+
+      const createdCount = result?.created_count ?? 0
+      const mergedCount = result?.merged_count ?? 0
+      setUploadState({
+        loading: false,
+        error: false,
+        message: `Upload complete. Created ${createdCount}, merged ${mergedCount}.`,
+      })
+    } catch (err) {
+      setUploadState({
+        loading: false,
+        error: true,
+        message: err?.message || 'Upload failed. Please try again.',
+      })
+    }
+  }
 
   const STAT_CARDS = [
     { label: 'Projects',   key: 'projects',   accent: true  },
@@ -195,21 +267,39 @@ function Dashboard() {
       {/* Quick actions */}
       <div>
         <div className="divider-label">Quick Actions</div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".zip,application/zip"
+          className="hidden"
+          onChange={onUploadFileSelected}
+        />
         <div className="grid grid-cols-3 gap-3">
           {[
             { icon: '◻', label: 'Upload Project',     desc: 'Analyze a new zip artifact'   },
             { icon: '⬡', label: 'Generate Portfolio',  desc: 'Build from analyzed projects' },
             { icon: '▤', label: 'Generate Resume',     desc: 'Tailor a resume to a job'     },
           ].map(a => (
-            <div key={a.label} className="card cursor-pointer group">
+            <button
+              key={a.label}
+              type="button"
+              className="card cursor-pointer group text-left disabled:opacity-60"
+              onClick={a.label === 'Upload Project' ? startUploadFlow : undefined}
+              disabled={a.label === 'Upload Project' ? (uploadState.loading || !apiOk) : true}
+            >
               <div className="text-2xl mb-3 opacity-40 group-hover:opacity-80 transition-opacity">
                 {a.icon}
               </div>
               <div className="font-bold text-sm mb-1">{a.label}</div>
               <div className="text-xs text-muted">{a.desc}</div>
-            </div>
+            </button>
           ))}
         </div>
+        {uploadState.message && (
+          <p className={`mt-3 text-xs ${uploadState.error ? 'text-red-400' : 'text-muted'}`}>
+            {uploadState.message}
+          </p>
+        )}
       </div>
     </div>
   )
