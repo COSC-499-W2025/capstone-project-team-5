@@ -41,10 +41,11 @@ function getErrorMessage(parsedBody, status) {
   return `HTTP ${status}`;
 }
 
-async function request(method, path, body) {
+async function request(method, path, body, signal) {
   const opts = {
     method,
     headers: withAuthHeaders({ 'Content-Type': 'application/json' }),
+    signal,
   };
 
   if (body) opts.body = JSON.stringify(body);
@@ -59,11 +60,12 @@ async function request(method, path, body) {
   return parsedBody;
 }
 
-async function requestWithForm(method, path, formData) {
+async function requestWithForm(method, path, formData, signal) {
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers: withAuthHeaders(),
     body: formData,
+    signal,
   });
   const parsedBody = await parseResponseBody(res);
 
@@ -146,7 +148,7 @@ contextBridge.exposeInMainWorld('api', {
       formData.append('project_mapping', JSON.stringify(payload.projectMapping));
     }
 
-    return requestWithForm('POST', '/api/projects/upload', formData);
+    return requestWithForm('POST', '/api/projects/upload', formData, payload?.signal);
   },
 
   updateProject: (projectId, data) =>
