@@ -4,6 +4,11 @@ import { useState, useEffect, useRef, createContext, useContext } from 'react'
 const AppContext = createContext(null)
 const useApp = () => useContext(AppContext)
 
+function getProjectItems(payload) {
+  if (Array.isArray(payload)) return payload
+  return payload?.items ?? []
+}
+
 // ── Nav ────────────────────────────────────────────────────────────────────
 const NAV = [
   { id: 'dashboard',  label: 'Dashboard',  icon: '◈' },
@@ -20,6 +25,10 @@ export default function App() {
   const [page, setPage]   = useState('dashboard')
   const [apiOk, setApiOk] = useState(false)
   const [user,  setUser]  = useState(null)
+  const [uploadHighlights, setUploadHighlights] = useState({
+    created: [],
+    merged: [],
+  })
 
   useEffect(() => {
     async function boot() {
@@ -54,7 +63,16 @@ export default function App() {
   const current = NAV.find(n => n.id === page)
 
   return (
-    <AppContext.Provider value={{ user, apiOk, page, setPage }}>
+    <AppContext.Provider
+      value={{
+        user,
+        apiOk,
+        page,
+        setPage,
+        uploadHighlights,
+        setUploadHighlights,
+      }}
+    >
       <div className="flex h-screen overflow-hidden bg-bg text-ink">
         <Sidebar current={page} onNav={setPage} apiOk={apiOk} user={user} />
         <div className="flex flex-col flex-1 overflow-hidden">
@@ -138,13 +156,100 @@ function Topbar({ title, apiOk }) {
 function PageRouter({ page }) {
   switch (page) {
     case 'dashboard': return <Dashboard />
+    case 'projects':  return <ProjectsPage />
     default:          return <ComingSoon label={page} />
   }
 }
 
+function ProjectsPage() {
+  const { apiOk, uploadHighlights } = useApp()
+  const [projects, setProjects] = useState([])
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!apiOk) return
+
+    let cancelled = false
+    async function loadProjects() {
+      try {
+        const payload = await window.api.getProjects()
+        if (!cancelled) {
+          setProjects(getProjectItems(payload))
+          setError('')
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || 'Failed to load projects.')
+          setProjects([])
+        }
+      }
+    }
+
+    loadProjects()
+    return () => {
+      cancelled = true
+    }
+  }, [apiOk])
+
+  const createdSet = new Set(uploadHighlights.created)
+  const mergedSet = new Set(uploadHighlights.merged)
+
+  return (
+    <div className="animate-fade-up space-y-6">
+      <div>
+        <h1 className="text-2xl font-extrabold tracking-tight">Projects</h1>
+        <p className="text-sm text-muted mt-1">Uploaded and analyzed projects.</p>
+      </div>
+
+      {error && <p className="text-xs text-red-400">{error}</p>}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {projects.map((project) => {
+          const isCreated = createdSet.has(project.id)
+          const isMerged = mergedSet.has(project.id)
+          const highlightClass = isCreated
+            ? 'border-emerald-400 bg-emerald-500/10'
+            : isMerged
+              ? 'border-amber-400 bg-amber-500/10'
+              : 'border-border'
+
+          return (
+            <div key={project.id} className={`card border ${highlightClass}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="font-bold text-sm">{project.name}</div>
+                  <div className="text-xs text-muted mt-1">{project.rel_path}</div>
+                </div>
+                {isCreated && (
+                  <span className="font-mono text-2xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
+                    NEW
+                  </span>
+                )}
+                {!isCreated && isMerged && (
+                  <span className="font-mono text-2xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-100 border border-amber-400/30">
+                    MERGED
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-3 font-mono text-2xs text-muted">
+                {project.file_count} files
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {!error && projects.length === 0 && (
+        <p className="text-xs text-muted">No projects yet. Upload a ZIP from the dashboard.</p>
+      )}
+    </div>
+  )
+}
+
 // ── Dashboard ──────────────────────────────────────────────────────────────
 function Dashboard() {
-  const { user, apiOk } = useApp()
+  const { user, apiOk, setPage, setUploadHighlights } = useApp()
   const fileInputRef = useRef(null)
 
   const [stats, setStats] = useState({
@@ -165,8 +270,9 @@ function Dashboard() {
       window.api.getWorkExperiences(u),
       window.api.getResumes(u),
     ]).then(([projects, skills, exp, resumes]) => {
+      const projectItems = projects.status === 'fulfilled' ? getProjectItems(projects.value) : []
       setStats({
-        projects:   projects.status === 'fulfilled'  ? (projects.value?.length  ?? 0) : '—',
+        projects:   projects.status === 'fulfilled'  ? projectItems.length : '—',
         skills:     skills.status   === 'fulfilled'  ? (skills.value?.length    ?? 0) : '—',
         experience: exp.status      === 'fulfilled'  ? (exp.value?.length       ?? 0) : '—',
         resumes:    resumes.status  === 'fulfilled'  ? (resumes.value?.length   ?? 0) : '—',
@@ -185,8 +291,10 @@ function Dashboard() {
       window.api.getResumes(u),
     ])
 
+    const projectItems = projects.status === 'fulfilled' ? getProjectItems(projects.value) : []
+
     setStats({
-      projects: projects.status === 'fulfilled' ? (projects.value?.length ?? 0) : '—',
+      projects: projects.status === 'fulfilled' ? projectItems.length : '—',
       skills: skills.status === 'fulfilled' ? (skills.value?.length ?? 0) : '—',
       experience: exp.status === 'fulfilled' ? (exp.value?.length ?? 0) : '—',
       resumes: resumes.status === 'fulfilled' ? (resumes.value?.length ?? 0) : '—',
@@ -222,6 +330,11 @@ function Dashboard() {
         bytes,
       })
 
+      const actions = result?.actions ?? []
+      const created = actions.filter((a) => a?.action === 'created').map((a) => a.project_id)
+      const merged = actions.filter((a) => a?.action === 'merged').map((a) => a.project_id)
+      setUploadHighlights({ created, merged })
+
       await refreshStats()
 
       const createdCount = result?.created_count ?? 0
@@ -231,6 +344,8 @@ function Dashboard() {
         error: false,
         message: `Upload complete. Created ${createdCount}, merged ${mergedCount}.`,
       })
+
+      setPage('projects')
     } catch (err) {
       setUploadState({
         loading: false,
