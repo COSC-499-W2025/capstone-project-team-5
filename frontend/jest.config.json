@@ -1,5 +1,25 @@
 {
-  "testEnvironment": "node",
-  "testMatch": ["**/tests/**/*.test.js"],
-  "setupFiles": ["./tests/setup.js"]
+  "projects": [
+    {
+      "displayName": "preload",
+      "testEnvironment": "node",
+      "testMatch": ["**/tests/api.test.js"],
+      "setupFiles": ["./tests/setup.js"]
+    },
+    {
+      "displayName": "dom",
+      "testEnvironment": "jsdom",
+      "testMatch": ["<rootDir>/tests/**/*.dom.test.{js,jsx}"],
+      "setupFilesAfterEnv": ["@testing-library/jest-dom"],
+      "setupFiles": ["<rootDir>/tests/setup.dom.js"],
+      "roots": ["<rootDir>"],
+      "modulePaths": ["<rootDir>"],
+      "moduleNameMapper": {
+        "\\.(css|less|scss)$": "<rootDir>/tests/__mocks__/styleMock.js"
+      },
+      "transform": {
+        "^.+\\.[jt]sx?$": "babel-jest"
+      }
+    }
+  ]
 }

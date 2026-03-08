@@ -3,6 +3,9 @@ const { contextBridge } = require('electron');
 const API_BASE = 'http://localhost:8000';
 let currentUsername = (process.env.ZIP2JOB_USERNAME || '').trim();
 
+// Username is set once during login/register and reused on every request
+let _username = null;
+
 function withAuthHeaders(headers = {}) {
   if (!currentUsername) return headers;
   return {
@@ -82,15 +85,22 @@ contextBridge.exposeInMainWorld('api', {
   },
   getAuthUsername: () => currentUsername,
 
+  // Internal username state (set after login/register)
+  setUsername: (username) => { _username = username; },
+  getUsername: () => _username,
+
   // Health
   health: () => request('GET', '/health'),
 
-  // Consent
+  // Auth
+  login:    (data) => request('POST', '/api/auth/login', data),
+  register: (data) => request('POST', '/api/auth/register', data),
 
+  // Consent
   getAvailableServices: () => request('GET', '/api/consent/available-services'),
-  giveConsent: (data) => request('POST', '/api/consent', data),
-  getLatestConsent: () => request('GET', '/api/consent/latest'),
-  getLLMConfig: () => request('GET', '/api/consent/llm/config'),
+  giveConsent:          (data) => request('POST', '/api/consent', data),
+  getLatestConsent:     () => request('GET', '/api/consent/latest'),
+  getLLMConfig:         () => request('GET', '/api/consent/llm/config'),
 
   // Users
   getCurrentUser: () => request('GET', '/api/users/me'),
@@ -186,7 +196,6 @@ contextBridge.exposeInMainWorld('api', {
 
   getSkills: () =>
     request('GET', '/api/skills/'),
-
 
   // Portfolio
   createPortfolio: (data) =>
