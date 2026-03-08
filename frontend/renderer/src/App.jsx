@@ -189,7 +189,7 @@ function ProjectsPage() {
     return () => {
       cancelled = true
     }
-  }, [apiOk])
+  }, [apiOk, uploadHighlights])
 
   const createdSet = new Set(uploadHighlights.created)
   const mergedSet = new Set(uploadHighlights.merged)
