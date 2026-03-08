@@ -162,7 +162,7 @@ function PageRouter({ page }) {
 }
 
 function ProjectsPage() {
-  const { apiOk, uploadHighlights } = useApp()
+  const { apiOk, uploadHighlights, setUploadHighlights } = useApp()
   const [projects, setProjects] = useState([])
   const [error, setError] = useState('')
 
@@ -194,6 +194,13 @@ function ProjectsPage() {
   const createdSet = new Set(uploadHighlights.created)
   const mergedSet = new Set(uploadHighlights.merged)
 
+  function clearProjectHighlight(projectId) {
+    setUploadHighlights((prev) => ({
+      created: prev.created.filter((id) => id !== projectId),
+      merged: prev.merged.filter((id) => id !== projectId),
+    }))
+  }
+
   return (
     <div className="animate-fade-up space-y-6">
       <div>
@@ -214,7 +221,13 @@ function ProjectsPage() {
               : 'border-border'
 
           return (
-            <div key={project.id} className={`card border ${highlightClass}`}>
+            <div
+              key={project.id}
+              className={`card border ${highlightClass}`}
+              onMouseEnter={() => {
+                if (isCreated || isMerged) clearProjectHighlight(project.id)
+              }}
+            >
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-bold text-sm">{project.name}</div>
