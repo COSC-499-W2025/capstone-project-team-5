@@ -147,3 +147,14 @@ Coding tasks involved assisting in role detection complimenting the existing rol
 | Final UI. | In Progress. | Will start this week. |   
 
 ![screenshot](Week9_checklist.png)
+
+## Term 2 - Week #9 (March 2 - 8)
+
+Coding tasks involved setting up the frontend. The frontend/ now houses an electron desktop app configured with react and tailwind css. Initial testing suite using Jest was configured. The pr also contains the backbone of the app with the dashboard fully setup awaiting individual features to be added. The frontend preloads the api and ensures connection before running. Plan going forward is to meet monday and assign UI tasks. PR: https://github.com/COSC-499-W2025/capstone-project-team-5/pull/349
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| Electron setup. | Done | Completed in whole and merged. | 
+| Final UI. | In Progress. | More to build. |   
+
+![screenshot](Week9_checklist.png)
