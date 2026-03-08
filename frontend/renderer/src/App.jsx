@@ -381,14 +381,20 @@ function Dashboard() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-3">
         {STAT_CARDS.map(({ label, key, accent }) => (
-          <div key={key} className="stat-card">
+          <button
+            key={key}
+            type="button"
+            className={`stat-card text-left disabled:opacity-100 ${key === 'projects' ? 'stat-card-clickable' : ''}`}
+            onClick={key === 'projects' ? () => setPage('projects') : undefined}
+            disabled={key !== 'projects'}
+          >
             <div className="font-mono text-2xs text-muted uppercase tracking-widest">
               {label}
             </div>
             <div className={`text-4xl font-extrabold tracking-tight mt-1 ${accent ? 'text-accent' : ''}`}>
               {stats[key] ?? <span className="text-muted text-2xl">—</span>}
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
