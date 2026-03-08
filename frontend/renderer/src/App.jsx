@@ -264,6 +264,7 @@ function ProjectsPage() {
 function Dashboard() {
   const { user, apiOk, setPage, setUploadHighlights } = useApp()
   const fileInputRef = useRef(null)
+  const isMountedRef = useRef(true)
 
   const [stats, setStats] = useState({
     projects: null, skills: null, experience: null, resumes: null,
@@ -273,6 +274,12 @@ function Dashboard() {
     message: '',
     error: false,
   })
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   async function loadDashboardStats() {
     if (!apiOk || !user?.username) return
@@ -286,6 +293,8 @@ function Dashboard() {
     ])
 
     const projectItems = projects.status === 'fulfilled' ? getProjectItems(projects.value) : []
+    if (!isMountedRef.current) return
+
     setStats({
       projects: projects.status === 'fulfilled' ? projectItems.length : '—',
       skills: skills.status === 'fulfilled' ? (skills.value?.length ?? 0) : '—',
@@ -335,9 +344,12 @@ function Dashboard() {
       const actions = result?.actions ?? []
       const created = actions.filter((a) => a?.action === 'created').map((a) => a.project_id)
       const merged = actions.filter((a) => a?.action === 'merged').map((a) => a.project_id)
+      if (!isMountedRef.current) return
+
       setUploadHighlights({ created, merged })
 
       await refreshStats()
+      if (!isMountedRef.current) return
 
       const createdCount = result?.created_count ?? 0
       const mergedCount = result?.merged_count ?? 0
@@ -349,6 +361,8 @@ function Dashboard() {
 
       setPage('projects')
     } catch (err) {
+      if (!isMountedRef.current) return
+
       setUploadState({
         loading: false,
         error: true,
