@@ -265,6 +265,7 @@ function Dashboard() {
   const { user, apiOk, setPage, setUploadHighlights } = useApp()
   const fileInputRef = useRef(null)
   const isMountedRef = useRef(true)
+  const uploadAbortControllerRef = useRef(null)
 
   const [stats, setStats] = useState({
     projects: null, skills: null, experience: null, resumes: null,
@@ -278,6 +279,7 @@ function Dashboard() {
   useEffect(() => {
     return () => {
       isMountedRef.current = false
+      uploadAbortControllerRef.current?.abort()
     }
   }, [])
 
@@ -334,11 +336,16 @@ function Dashboard() {
     setUploadState({ loading: true, message: 'Uploading project archive...', error: false })
 
     try {
+      uploadAbortControllerRef.current?.abort()
+      const controller = new AbortController()
+      uploadAbortControllerRef.current = controller
+
       const bytes = await file.arrayBuffer()
       const result = await window.api.createProjectUpload({
         name: file.name,
         type: file.type || 'application/zip',
         bytes,
+        signal: controller.signal,
       })
 
       const actions = result?.actions ?? []
@@ -361,6 +368,7 @@ function Dashboard() {
 
       setPage('projects')
     } catch (err) {
+      if (err?.name === 'AbortError') return
       if (!isMountedRef.current) return
 
       setUploadState({
@@ -368,6 +376,8 @@ function Dashboard() {
         error: true,
         message: err?.message || 'Upload failed. Please try again.',
       })
+    } finally {
+      uploadAbortControllerRef.current = null
     }
   }
 
