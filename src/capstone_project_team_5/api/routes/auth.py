@@ -25,6 +25,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 # ── Request / response schemas ────────────────────────────────────────────
 
+
 class AuthRequest(BaseModel):
     username: str
     password: str
@@ -35,6 +36,7 @@ class AuthResponse(BaseModel):
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/register",
