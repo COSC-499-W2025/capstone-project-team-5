@@ -24,19 +24,20 @@ export default function App() {
   useEffect(() => {
     async function boot() {
       try {
-        if (!window.api.getAuthUsername?.()) {
-          window.api.setAuthUsername?.('testuser')
-        }
-
         await window.api.health()
         setApiOk(true)
+
+        const authUsername = window.api.getAuthUsername?.()
+        if (!authUsername) {
+          setUser(null)
+          return
+        }
 
         try {
           const u = await window.api.getCurrentUser()
           setUser(u)
         } catch {
-          const fallbackUsername = window.api.getAuthUsername?.()
-          setUser(fallbackUsername ? { username: fallbackUsername } : null)
+          setUser(null)
         }
       } catch {
         setApiOk(false)
