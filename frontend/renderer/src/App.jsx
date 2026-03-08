@@ -411,7 +411,10 @@ function Dashboard() {
           ))}
         </div>
         {uploadState.message && (
-          <p className={`mt-3 text-xs ${uploadState.error ? 'text-red-400' : 'text-muted'}`}>
+          <p
+            className={`mt-3 text-xs ${uploadState.error ? 'text-red-400' : 'text-muted'}`}
+            onMouseEnter={() => setUploadState((prev) => ({ ...prev, message: '' }))}
+          >
             {uploadState.message}
           </p>
         )}
