@@ -39,19 +39,6 @@ export default function App() {
       try {
         await window.api.health()
         setApiOk(true)
-
-        const authUsername = window.api.getAuthUsername?.()
-        if (!authUsername) {
-          setUser(null)
-          return
-        }
-
-        try {
-          const u = await window.api.getCurrentUser()
-          setUser(u)
-        } catch {
-          setUser(null)
-        }
       } catch {
         setApiOk(false)
         setConsentReady(false)

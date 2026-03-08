@@ -6,9 +6,6 @@ let currentUsername = (process.env.ZIP2JOB_USERNAME || '').trim();
 // Username is set once during login/register and reused on every request
 let _username = null;
 
-async function request(method, path, body) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (_username) headers['X-Username'] = _username;
 function withAuthHeaders(headers = {}) {
   if (!currentUsername) return headers;
   return {
@@ -54,7 +51,6 @@ async function request(method, path, body, signal) {
     signal,
   };
 
-  const opts = { method, headers };
   if (body) opts.body = JSON.stringify(body);
 
   const res = await fetch(`${API_BASE}${path}`, opts);

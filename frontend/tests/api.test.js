@@ -1,6 +1,8 @@
 const mockJson = (data, ok = true) =>
   Promise.resolve({
     ok,
+    status: ok ? 200 : 400,
+    headers: { get: (key) => key === 'content-type' ? 'application/json' : null },
     json: () => Promise.resolve(data),
     text: () => Promise.resolve(JSON.stringify(data))
   });
@@ -107,6 +109,7 @@ describe('error handling', () => {
     fetch.mockResolvedValue({
       ok: false,
       status: 404,
+      headers: { get: (key) => key === 'content-type' ? null : null },
       text: () => Promise.resolve('Not found')
     });
 
