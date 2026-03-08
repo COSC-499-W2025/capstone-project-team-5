@@ -261,26 +261,7 @@ function Dashboard() {
     error: false,
   })
 
-  useEffect(() => {
-    if (!apiOk || !user?.username) return
-    const u = user.username
-    Promise.allSettled([
-      window.api.getProjects(),
-      window.api.getSkills(),
-      window.api.getWorkExperiences(u),
-      window.api.getResumes(u),
-    ]).then(([projects, skills, exp, resumes]) => {
-      const projectItems = projects.status === 'fulfilled' ? getProjectItems(projects.value) : []
-      setStats({
-        projects:   projects.status === 'fulfilled'  ? projectItems.length : '—',
-        skills:     skills.status   === 'fulfilled'  ? (skills.value?.length    ?? 0) : '—',
-        experience: exp.status      === 'fulfilled'  ? (exp.value?.length       ?? 0) : '—',
-        resumes:    resumes.status  === 'fulfilled'  ? (resumes.value?.length   ?? 0) : '—',
-      })
-    })
-  }, [apiOk, user])
-
-  async function refreshStats() {
+  async function loadDashboardStats() {
     if (!apiOk || !user?.username) return
     const u = user.username
 
@@ -292,13 +273,21 @@ function Dashboard() {
     ])
 
     const projectItems = projects.status === 'fulfilled' ? getProjectItems(projects.value) : []
-
     setStats({
       projects: projects.status === 'fulfilled' ? projectItems.length : '—',
       skills: skills.status === 'fulfilled' ? (skills.value?.length ?? 0) : '—',
       experience: exp.status === 'fulfilled' ? (exp.value?.length ?? 0) : '—',
       resumes: resumes.status === 'fulfilled' ? (resumes.value?.length ?? 0) : '—',
     })
+  }
+
+  useEffect(() => {
+    if (!apiOk || !user?.username) return
+    loadDashboardStats()
+  }, [apiOk, user])
+
+  async function refreshStats() {
+    await loadDashboardStats()
   }
 
   function startUploadFlow() {
