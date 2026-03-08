@@ -1,6 +1,7 @@
 const { contextBridge } = require('electron');
 
 const API_BASE = 'http://localhost:8000';
+let currentUsername = (process.env.ZIP2JOB_USERNAME || '').trim();
 
 // Username is set once during login/register and reused on every request
 let _username = null;
@@ -8,21 +9,85 @@ let _username = null;
 async function request(method, path, body) {
   const headers = { 'Content-Type': 'application/json' };
   if (_username) headers['X-Username'] = _username;
+function withAuthHeaders(headers = {}) {
+  if (!currentUsername) return headers;
+  return {
+    ...headers,
+    'X-Username': currentUsername,
+  };
+}
+
+async function parseResponseBody(res) {
+  if (res.status === 204) return null;
+
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return res.json();
+  }
+
+  const text = await res.text();
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+function getErrorMessage(parsedBody, status) {
+  if (typeof parsedBody === 'string' && parsedBody.trim()) {
+    return parsedBody;
+  }
+  if (parsedBody && typeof parsedBody === 'object' && 'detail' in parsedBody) {
+    return typeof parsedBody.detail === 'string'
+      ? parsedBody.detail
+      : JSON.stringify(parsedBody.detail);
+  }
+  return `HTTP ${status}`;
+}
+
+async function request(method, path, body, signal) {
+  const opts = {
+    method,
+    headers: withAuthHeaders({ 'Content-Type': 'application/json' }),
+    signal,
+  };
 
   const opts = { method, headers };
   if (body) opts.body = JSON.stringify(body);
 
   const res = await fetch(`${API_BASE}${path}`, opts);
+  const parsedBody = await parseResponseBody(res);
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(err || `HTTP ${res.status}`);
+    throw new Error(getErrorMessage(parsedBody, res.status));
   }
 
-  return res.json();
+  return parsedBody;
+}
+
+async function requestWithForm(method, path, formData, signal) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: withAuthHeaders(),
+    body: formData,
+    signal,
+  });
+  const parsedBody = await parseResponseBody(res);
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(parsedBody, res.status));
+  }
+
+  return parsedBody;
 }
 
 contextBridge.exposeInMainWorld('api', {
+  setAuthUsername: (username) => {
+    currentUsername = (username || '').trim();
+  },
+  getAuthUsername: () => currentUsername,
 
   // Internal username state (set after login/register)
   setUsername: (username) => { _username = username; },
@@ -86,8 +151,19 @@ contextBridge.exposeInMainWorld('api', {
   getProject: (projectId) =>
     request('GET', `/api/projects/${projectId}`),
 
-  createProjectUpload: (data) =>
-    request('POST', '/api/projects/upload', data),
+  createProjectUpload: (payload) => {
+    const fileName = payload?.name || 'upload.zip';
+    const contentType = payload?.type || 'application/zip';
+    const blob = new Blob([payload?.bytes], { type: contentType });
+    const formData = new FormData();
+    formData.append('file', blob, fileName);
+
+    if (payload?.projectMapping) {
+      formData.append('project_mapping', JSON.stringify(payload.projectMapping));
+    }
+
+    return requestWithForm('POST', '/api/projects/upload', formData, payload?.signal);
+  },
 
   updateProject: (projectId, data) =>
     request('PATCH', `/api/projects/${projectId}`, data),

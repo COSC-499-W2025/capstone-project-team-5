@@ -1,8 +1,13 @@
-import { useState, useEffect, createContext, useContext } from 'react'
+import { useState, useEffect, useRef, createContext, useContext } from 'react'
 
 // ── Context ────────────────────────────────────────────────────────────────
 const AppContext = createContext(null)
 const useApp = () => useContext(AppContext)
+
+function getProjectItems(payload) {
+  if (Array.isArray(payload)) return payload
+  return payload?.items ?? []
+}
 
 // ── Nav ────────────────────────────────────────────────────────────────────
 const NAV = [
@@ -18,11 +23,15 @@ const NAV = [
 
 // ── Root ───────────────────────────────────────────────────────────────────
 export default function App() {
-  const [page, setPage]         = useState('dashboard')
-  const [apiOk, setApiOk]       = useState(false)
-  const [user,  setUser]        = useState(null)
   // null = loading, false = needs setup, true = ready
   const [consentReady, setConsentReady] = useState(null)
+  const [page, setPage]   = useState('dashboard')
+  const [apiOk, setApiOk] = useState(false)
+  const [user,  setUser]  = useState(null)
+  const [uploadHighlights, setUploadHighlights] = useState({
+    created: [],
+    merged: [],
+  })
 
   useEffect(() => {
     async function boot() {
@@ -30,6 +39,19 @@ export default function App() {
       try {
         await window.api.health()
         setApiOk(true)
+
+        const authUsername = window.api.getAuthUsername?.()
+        if (!authUsername) {
+          setUser(null)
+          return
+        }
+
+        try {
+          const u = await window.api.getCurrentUser()
+          setUser(u)
+        } catch {
+          setUser(null)
+        }
       } catch {
         setApiOk(false)
         setConsentReady(false)
@@ -94,7 +116,16 @@ export default function App() {
   const current = NAV.find(n => n.id === page)
 
   return (
-    <AppContext.Provider value={{ user, apiOk, page, setPage }}>
+    <AppContext.Provider
+      value={{
+        user,
+        apiOk,
+        page,
+        setPage,
+        uploadHighlights,
+        setUploadHighlights,
+      }}
+    >
       <div className="flex h-screen overflow-hidden bg-bg text-ink">
         <Sidebar current={page} onNav={setPage} apiOk={apiOk} user={user} />
         <div className="flex flex-col flex-1 overflow-hidden">
@@ -418,35 +449,230 @@ function Topbar({ title, apiOk }) {
 function PageRouter({ page }) {
   switch (page) {
     case 'dashboard': return <Dashboard />
+    case 'projects':  return <ProjectsPage />
     default:          return <ComingSoon label={page} />
   }
 }
 
+function ProjectsPage() {
+  const { apiOk, uploadHighlights, setUploadHighlights } = useApp()
+  const [projects, setProjects] = useState([])
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!apiOk) return
+
+    let cancelled = false
+    async function loadProjects() {
+      try {
+        const payload = await window.api.getProjects()
+        if (!cancelled) {
+          setProjects(getProjectItems(payload))
+          setError('')
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || 'Failed to load projects.')
+          setProjects([])
+        }
+      }
+    }
+
+    loadProjects()
+    return () => {
+      cancelled = true
+    }
+  }, [apiOk, uploadHighlights])
+
+  const createdSet = new Set(uploadHighlights.created)
+  const mergedSet = new Set(uploadHighlights.merged)
+
+  function clearProjectHighlight(projectId) {
+    setUploadHighlights((prev) => ({
+      created: prev.created.filter((id) => id !== projectId),
+      merged: prev.merged.filter((id) => id !== projectId),
+    }))
+  }
+
+  return (
+    <div className="animate-fade-up space-y-6">
+      <div>
+        <h1 className="text-2xl font-extrabold tracking-tight">Projects</h1>
+        <p className="text-sm text-muted mt-1">Uploaded and analyzed projects.</p>
+      </div>
+
+      {error && <p className="text-xs text-red-400">{error}</p>}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {projects.map((project) => {
+          const isCreated = createdSet.has(project.id)
+          const isMerged = mergedSet.has(project.id)
+          const highlightClass = isCreated
+            ? 'border-emerald-400 bg-emerald-500/10'
+            : isMerged
+              ? 'border-amber-400 bg-amber-500/10'
+              : 'border-border'
+
+          return (
+            <div
+              key={project.id}
+              className={`card border ${highlightClass}`}
+              onMouseEnter={() => {
+                if (isCreated || isMerged) clearProjectHighlight(project.id)
+              }}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="font-bold text-sm">{project.name}</div>
+                  <div className="text-xs text-muted mt-1">{project.rel_path}</div>
+                </div>
+                {isCreated && (
+                  <span className="font-mono text-2xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
+                    NEW
+                  </span>
+                )}
+                {!isCreated && isMerged && (
+                  <span className="font-mono text-2xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-100 border border-amber-400/30">
+                    MERGED
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-3 font-mono text-2xs text-muted">
+                {project.file_count} files
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {!error && projects.length === 0 && (
+        <p className="text-xs text-muted">No projects yet. Upload a ZIP from the dashboard.</p>
+      )}
+    </div>
+  )
+}
+
 // ── Dashboard ──────────────────────────────────────────────────────────────
 function Dashboard() {
-  const { user, apiOk } = useApp()
+  const { user, apiOk, setPage, setUploadHighlights } = useApp()
+  const fileInputRef = useRef(null)
+  const isMountedRef = useRef(true)
+  const uploadAbortControllerRef = useRef(null)
 
   const [stats, setStats] = useState({
     projects: null, skills: null, experience: null, resumes: null,
   })
+  const [uploadState, setUploadState] = useState({
+    loading: false,
+    message: '',
+    error: false,
+  })
 
   useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+      uploadAbortControllerRef.current?.abort()
+    }
+  }, [])
+
+  async function loadDashboardStats() {
     if (!apiOk || !user?.username) return
     const u = user.username
-    Promise.allSettled([
+
+    const [projects, skills, exp, resumes] = await Promise.allSettled([
       window.api.getProjects(),
       window.api.getSkills(),
       window.api.getWorkExperiences(u),
       window.api.getResumes(u),
-    ]).then(([projects, skills, exp, resumes]) => {
-      setStats({
-        projects:   projects.status === 'fulfilled'  ? (projects.value?.length  ?? 0) : '—',
-        skills:     skills.status   === 'fulfilled'  ? (skills.value?.length    ?? 0) : '—',
-        experience: exp.status      === 'fulfilled'  ? (exp.value?.length       ?? 0) : '—',
-        resumes:    resumes.status  === 'fulfilled'  ? (resumes.value?.length   ?? 0) : '—',
-      })
+    ])
+
+    const projectItems = projects.status === 'fulfilled' ? getProjectItems(projects.value) : []
+    if (!isMountedRef.current) return
+
+    setStats({
+      projects: projects.status === 'fulfilled' ? projectItems.length : '—',
+      skills: skills.status === 'fulfilled' ? (skills.value?.length ?? 0) : '—',
+      experience: exp.status === 'fulfilled' ? (exp.value?.length ?? 0) : '—',
+      resumes: resumes.status === 'fulfilled' ? (resumes.value?.length ?? 0) : '—',
     })
+  }
+
+  useEffect(() => {
+    if (!apiOk || !user?.username) return
+    loadDashboardStats()
   }, [apiOk, user])
+
+  async function refreshStats() {
+    await loadDashboardStats()
+  }
+
+  function startUploadFlow() {
+    if (uploadState.loading || !apiOk) return
+    fileInputRef.current?.click()
+  }
+
+  async function onUploadFileSelected(event) {
+    const [file] = event.target.files || []
+    event.target.value = ''
+    if (!file) return
+
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      setUploadState({
+        loading: false,
+        error: true,
+        message: 'Please select a .zip file.',
+      })
+      return
+    }
+
+    setUploadState({ loading: true, message: 'Uploading project archive...', error: false })
+
+    try {
+      uploadAbortControllerRef.current?.abort()
+      const controller = new AbortController()
+      uploadAbortControllerRef.current = controller
+
+      const bytes = await file.arrayBuffer()
+      const result = await window.api.createProjectUpload({
+        name: file.name,
+        type: file.type || 'application/zip',
+        bytes,
+        signal: controller.signal,
+      })
+
+      const actions = result?.actions ?? []
+      const created = actions.filter((a) => a?.action === 'created').map((a) => a.project_id)
+      const merged = actions.filter((a) => a?.action === 'merged').map((a) => a.project_id)
+      if (!isMountedRef.current) return
+
+      setUploadHighlights({ created, merged })
+
+      await refreshStats()
+      if (!isMountedRef.current) return
+
+      const createdCount = result?.created_count ?? 0
+      const mergedCount = result?.merged_count ?? 0
+      setUploadState({
+        loading: false,
+        error: false,
+        message: `Upload complete. Created ${createdCount}, merged ${mergedCount}.`,
+      })
+
+      setPage('projects')
+    } catch (err) {
+      if (err?.name === 'AbortError') return
+      if (!isMountedRef.current) return
+
+      setUploadState({
+        loading: false,
+        error: true,
+        message: err?.message || 'Upload failed. Please try again.',
+      })
+    } finally {
+      uploadAbortControllerRef.current = null
+    }
+  }
 
   const STAT_CARDS = [
     { label: 'Projects',   key: 'projects',   accent: true  },
@@ -486,21 +712,45 @@ function Dashboard() {
       {/* Quick actions */}
       <div>
         <div className="divider-label">Quick Actions</div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".zip,application/zip"
+          className="hidden"
+          onChange={onUploadFileSelected}
+        />
         <div className="grid grid-cols-3 gap-3">
           {[
             { icon: '◻', label: 'Upload Project',     desc: 'Analyze a new zip artifact'   },
             { icon: '⬡', label: 'Generate Portfolio',  desc: 'Build from analyzed projects' },
             { icon: '▤', label: 'Generate Resume',     desc: 'Tailor a resume to a job'     },
           ].map(a => (
-            <div key={a.label} className="card cursor-pointer group">
+            <button
+              key={a.label}
+              type="button"
+              className="card cursor-pointer group text-left disabled:opacity-60"
+              onClick={a.label === 'Upload Project' ? startUploadFlow : undefined}
+              disabled={a.label === 'Upload Project' ? (uploadState.loading || !apiOk) : true}
+            >
               <div className="text-2xl mb-3 opacity-40 group-hover:opacity-80 transition-opacity">
                 {a.icon}
               </div>
               <div className="font-bold text-sm mb-1">{a.label}</div>
               <div className="text-xs text-muted">{a.desc}</div>
-            </div>
+            </button>
           ))}
         </div>
+        {uploadState.message && (
+          <p
+            className={`mt-3 text-xs ${uploadState.error ? 'text-red-400' : 'text-muted'}`}
+            onMouseEnter={() => {
+              if (uploadState.loading) return
+              setUploadState((prev) => ({ ...prev, message: '' }))
+            }}
+          >
+            {uploadState.message}
+          </p>
+        )}
       </div>
     </div>
   )
