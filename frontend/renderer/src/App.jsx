@@ -47,7 +47,10 @@ export default function App() {
 
       // 2. Restore persisted username (may be absent on first run)
       const savedUsername = localStorage.getItem('zip2job_username')
-      if (savedUsername) window.api.setUsername(savedUsername)
+      if (savedUsername) {
+        window.api.setAuthUsername(savedUsername)
+        window.api.setUsername(savedUsername)
+      }
 
       // 3. If no saved username → definitely first-run, skip auth'd calls
       if (!savedUsername) {
@@ -152,6 +155,7 @@ function ConsentSetup({ onDone }) {
     try {
       const fn = authMode === 'register' ? window.api.register : window.api.login
       const res = await fn({ username: username.trim(), password })
+      window.api.setAuthUsername(res.username)
       window.api.setUsername(res.username)
       // Load available services list for the consent step
       const data = await window.api.getAvailableServices()
@@ -625,7 +629,6 @@ function Dashboard() {
         name: file.name,
         type: file.type || 'application/zip',
         bytes,
-        signal: controller.signal,
       })
 
       const actions = result?.actions ?? []
