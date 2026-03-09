@@ -2,7 +2,41 @@
 
 **GitHub:** [@ojusharma](https://github.com/ojusharma)
 
-### This Week - 6,7,8
+<!-- <details> -->
+  <summary><h3>T2 Week 9</h3></summary>
+
+<img width="750" height="300" alt="image" src="https://github.com/user-attachments/assets/922323eb-829c-4878-8322-80ec9adf817a" />
+
+
+#### What Went Well
+- Pivoted to frontend development this week, building out the resume-related UI pages in the Electron app
+  - [PR #362 - Create Work Experience UI](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/362): Built a full CRUD `ExperiencePage` component for managing work experience entries in the frontend. Supports creating, editing, and deleting entries via an inline form with fields for company, title, location, date range, an "I currently work here" toggle, and description. Includes loading/empty/error states and a two-step delete confirmation to prevent accidental data loss. Added router integration (`'experience'` case in `PageRouter` in `App.jsx`), mock API stubs (`createWorkExperience`, `updateWorkExperience`, `deleteWorkExperience`), and 10 DOM tests covering navigation, empty state, card rendering, form open/cancel, create/edit/delete flows, validation, and API error handling.
+  - [PR #364 - Create Education UI](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/364): Added a new `EducationPage` component following the same pattern as the Experience page. Education cards display degree, institution, field of study, GPA, date range, and a "Current" tag for ongoing entries. Includes inline delete confirmation (Yes/No), registration in `App.jsx` (import + route in `PageRouter`), and 12 DOM tests in `Education.dom.test.jsx` covering empty state, card rendering, form open/close, create, edit, delete, and validation errors.
+
+- Reviewed and approved:
+  - [PR #359 - feat: (frontend) add portfolio functionality](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/359):
+  My review:  The PortfolioPage follows the exact same patterns as ProjectsPage with cancelled refs, useApp(), and Tailwind classes, making the codebase easy for the team to navigate. Highlighted the massive test coverage. Brownie points for the `bootToPortfolioPage` helper. Also pointed out a code chunck that could lead api spams due to re-rendering.
+
+  - [PR #358 - fix: set auth username header on login and restore from localStorage](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/358):
+  My review: Reviewed the bug fix for file upload and auth username header population using `setAuthUsername`. Quick targeted fix that unblocked the upload workflow.
+
+  - Reviewed and approved Individual logs
+
+#### What Didn't Go Well
+- All good
+
+#### Planning for Next Week
+- Continue building out remaining frontend UI pages (skills, projects detail views)
+- Confirm Milestone req
+- Continue reviewing teammates' PRs to support code collaboration
+- Coordinate with team on integration testing across the full frontend-backend pipeline
+
+<!-- </details> -->
+
+
+
+<details>
+  <summary><h3>T2 Week 6,7,8</h3></summary>
 
 <img width="700" height="350" alt="image" src="https://github.com/user-attachments/assets/a8f24f7e-50ba-41dd-a556-e7cb975969c0" />
 
