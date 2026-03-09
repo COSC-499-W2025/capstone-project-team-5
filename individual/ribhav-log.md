@@ -4,13 +4,42 @@
 ---
 
 
+## **Term 2 – Week 9 | March 7 – March 13, 2026**
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+![WhatsApp Image 2026-03-08 at 8 52 37 PM](https://github.com/user-attachments/assets/f49f2dd9-fb62-484d-9df9-19b291cb2f84)
+
+</details>
+
+## **Task Progress**
+
+### **Coding Tasks**
+- Opened **PR [#fix-auth-and-upload – fix: auth header not set on boot + upload signal crash](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/)**, fixing two bugs introduced during Electron integration: `X-Username` header was never set when restoring a saved session from localStorage, and passing `AbortSignal` through the contextBridge caused a silent `DataCloneError` that broke all project uploads.
+- Opened **PR [#feat-portfolio-page – feat: Portfolio page](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/)**, implementing the full Portfolio management UI in the Electron frontend: list view, detail view, create form, delete with confirmation, and add-project flow. Wired to existing backend APIs.
+- Added DOM test suite (`Portfolio.dom.test.jsx`) covering navigation, empty state, create, delete, detail view, and error handling.
+- Identified and prepared a fix for upload cancellation regression caused by `AbortSignal` not being structured-cloneable across Electron's contextBridge. Fix moves the `AbortController` entirely into `preload.js` and exposes an `abortUpload()` method. PR to follow early next week.
+
+### **Testing / Debugging**
+- Debugged silent upload failure caused by `DataCloneError` when passing `AbortSignal` through contextBridge.
+- Traced `Cannot read properties of null (reading 'username')` crash to missing `setAuthUsername` call on session restore.
+- Fixed CI/CD test failures across three test suites (`App.dom`, `ConsentSetup.dom`, `Portfolio.dom`) caused by missing `setAuthUsername` and `abortUpload` mocks in `setupApi()` helpers.
+
+### **Reviewing / Collaboration**
+- Coordinated with teammates on the upload cancellation regression and documented the root cause and fix approach.
+
+### **Issues / Blockers**
+- Hit the 500-line PR limit for the week; upload cancellation fix is ready but will be submitted as a separate PR next week.
+
+### **Next Steps**
+- Open PR for the `abortUpload` contextBridge fix.
+- Continue expanding frontend pages and integrating with backend APIs.
 
 ## **Term 2 – Weeks 6–8 | February 16 – March 6, 2026**
 <details>
   <summary><h3>Evaluation</h3></summary>
 
 <img width="1035" height="621" alt="image" src="https://github.com/user-attachments/assets/922fb752-b13a-4baa-99f8-7b34c389a621" />
-
 <!-- Add evaluation image here -->
 
 </details>
