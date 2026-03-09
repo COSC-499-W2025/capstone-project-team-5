@@ -5,7 +5,7 @@
  * Consent step uses checkboxes for external services, not a provider picker.
  */
 
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 const AVAILABLE_SERVICES = {
@@ -45,7 +45,7 @@ async function renderWizard(App) {
 async function submitAuth(username = 'alice', password = 'secret') {
   await userEvent.type(screen.getByTestId('auth-username'), username)
   await userEvent.type(screen.getByTestId('auth-password'), password)
-  fireEvent.click(screen.getByTestId('auth-submit'))
+  await userEvent.click(screen.getByTestId('auth-submit'))
 }
 
 async function advanceToConsent() {
@@ -72,7 +72,7 @@ test('shows Login tab by default with Welcome back subtitle', async () => {
 test('switching to Sign Up tab updates subtitle', async () => {
   setupApi()
   await renderWizard(App)
-  fireEvent.click(screen.getByTestId('auth-tab-register'))
+  await userEvent.click(screen.getByTestId('auth-tab-register'))
   expect(screen.getByText(/create your account/i)).toBeInTheDocument()
 })
 
@@ -105,10 +105,17 @@ test('setUsername is called with returned username after login', async () => {
   await waitFor(() => expect(window.api.setUsername).toHaveBeenCalledWith('alice'))
 })
 
+test('setAuthUsername is called with returned username after login', async () => {
+  setupApi()
+  await renderWizard(App)
+  await submitAuth()
+  await waitFor(() => expect(window.api.setAuthUsername).toHaveBeenCalledWith('alice'))
+})
+
 test('successful register calls window.api.register and advances to consent', async () => {
   setupApi()
   await renderWizard(App)
-  fireEvent.click(screen.getByTestId('auth-tab-register'))
+  await userEvent.click(screen.getByTestId('auth-tab-register'))
   await submitAuth('newuser', 'password123')
   expect(window.api.register).toHaveBeenCalledWith({ username: 'newuser', password: 'password123' })
   await waitFor(() =>
@@ -156,7 +163,7 @@ test('unchecking master toggle hides per-service list', async () => {
   setupApi()
   await renderWizard(App)
   await advanceToConsent()
-  fireEvent.click(screen.getByTestId('consent-use-external'))
+  await userEvent.click(screen.getByTestId('consent-use-external'))
   expect(screen.queryByText('GitHub API')).not.toBeInTheDocument()
 })
 
@@ -172,7 +179,7 @@ test('calls giveConsent with correct payload and shows success splash', async ()
   setupApi()
   await renderWizard(App)
   await advanceToConsent()
-  fireEvent.click(screen.getByTestId('consent-submit'))
+  await userEvent.click(screen.getByTestId('consent-submit'))
   await waitFor(() =>
     expect(screen.getByTestId('consent-success')).toBeInTheDocument()
   )
@@ -191,7 +198,7 @@ test('shows error when giveConsent rejects', async () => {
   })
   await renderWizard(App)
   await advanceToConsent()
-  fireEvent.click(screen.getByTestId('consent-submit'))
+  await userEvent.click(screen.getByTestId('consent-submit'))
   await waitFor(() =>
     expect(screen.getByTestId('consent-error')).toHaveTextContent('Server error')
   )

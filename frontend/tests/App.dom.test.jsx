@@ -10,7 +10,7 @@
  *   - api-offline indicator when health check fails
  */
 
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import App from '../renderer/src/App.jsx'
 
 function setupApi(overrides = {}) {
@@ -101,6 +101,15 @@ test('shows username in sidebar when user is loaded', async () => {
   localStorage.setItem('zip2job_username', 'alice')
   render(<App />)
   await waitFor(() => expect(screen.getByText('alice')).toBeInTheDocument())
+})
+
+test('restores saved username into the Electron bridge during boot', async () => {
+  setupApi()
+  localStorage.setItem('zip2job_username', 'alice')
+  render(<App />)
+
+  await waitFor(() => expect(window.api.setAuthUsername).toHaveBeenCalledWith('alice'))
+  expect(window.api.setUsername).toHaveBeenCalledWith('alice')
 })
 
 // ── API offline indicator ──────────────────────────────────────────────────
