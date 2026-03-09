@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, createContext, useContext } from 'react'
 import ExperiencePage from './components/ExperiencePage'
+import EducationPage from './components/EducationPage'
 
 // ── Context ────────────────────────────────────────────────────────────────
 const AppContext = createContext(null)
@@ -443,6 +444,7 @@ function PageRouter({ page }) {
     case 'dashboard':  return <Dashboard />
     case 'projects':   return <ProjectsPage />
     case 'experience': return <ExperiencePage />
+    case 'education':  return <EducationPage />
     case 'portfolio':  return <PortfolioPage />
     default:           return <ComingSoon label={page} />
   }
