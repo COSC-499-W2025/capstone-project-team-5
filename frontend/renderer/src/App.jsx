@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, createContext, useContext } from 'react'
+import ExperiencePage from './components/ExperiencePage'
 
 // ── Context ────────────────────────────────────────────────────────────────
 const AppContext = createContext(null)
-const useApp = () => useContext(AppContext)
+export const useApp = () => useContext(AppContext)
 
 function getProjectItems(payload) {
   if (Array.isArray(payload)) return payload
@@ -439,10 +440,11 @@ function Topbar({ title, apiOk }) {
 // ── Router ─────────────────────────────────────────────────────────────────
 function PageRouter({ page }) {
   switch (page) {
-    case 'dashboard': return <Dashboard />
-    case 'projects':  return <ProjectsPage />
-    case 'portfolio': return <PortfolioPage />
-    default:          return <ComingSoon label={page} />
+    case 'dashboard':  return <Dashboard />
+    case 'projects':   return <ProjectsPage />
+    case 'experience': return <ExperiencePage />
+    case 'portfolio':  return <PortfolioPage />
+    default:           return <ComingSoon label={page} />
   }
 }
 

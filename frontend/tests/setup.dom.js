@@ -10,6 +10,9 @@ global.window.api = {
   getProjects:          jest.fn().mockResolvedValue([]),
   getSkills:            jest.fn().mockResolvedValue([]),
   getWorkExperiences:   jest.fn().mockResolvedValue([]),
+  createWorkExperience:  jest.fn().mockResolvedValue({}),
+  updateWorkExperience:  jest.fn().mockResolvedValue({}),
+  deleteWorkExperience:  jest.fn().mockResolvedValue(null),
   getResumes:           jest.fn().mockResolvedValue([]),
 
   // Consent
