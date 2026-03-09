@@ -21,6 +21,7 @@ function setupApi(overrides = {}) {
     getAvailableServices: jest.fn().mockResolvedValue([]),
     giveConsent:          jest.fn().mockResolvedValue({ status: 'ok' }),
     getLLMConfig:         jest.fn().mockResolvedValue({ provider: 'openai' }),
+    setAuthUsername:      jest.fn(),
     setUsername:          jest.fn(),
     getUsername:          jest.fn().mockReturnValue('alice'),
     getProjects:          jest.fn().mockResolvedValue([]),

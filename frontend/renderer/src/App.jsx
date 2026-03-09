@@ -47,7 +47,10 @@ export default function App() {
 
       // 2. Restore persisted username (may be absent on first run)
       const savedUsername = localStorage.getItem('zip2job_username')
-      if (savedUsername) window.api.setUsername(savedUsername)
+      if (savedUsername) {
+        window.api.setAuthUsername(savedUsername)
+        window.api.setUsername(savedUsername)
+      }
 
       // 3. If no saved username → definitely first-run, skip auth'd calls
       if (!savedUsername) {
@@ -152,6 +155,7 @@ function ConsentSetup({ onDone }) {
     try {
       const fn = authMode === 'register' ? window.api.register : window.api.login
       const res = await fn({ username: username.trim(), password })
+      window.api.setAuthUsername(res.username)
       window.api.setUsername(res.username)
       // Load available services list for the consent step
       const data = await window.api.getAvailableServices()
@@ -437,6 +441,7 @@ function PageRouter({ page }) {
   switch (page) {
     case 'dashboard': return <Dashboard />
     case 'projects':  return <ProjectsPage />
+    case 'portfolio': return <PortfolioPage />
     default:          return <ComingSoon label={page} />
   }
 }
@@ -625,7 +630,6 @@ function Dashboard() {
         name: file.name,
         type: file.type || 'application/zip',
         bytes,
-        signal: controller.signal,
       })
 
       const actions = result?.actions ?? []
@@ -739,6 +743,322 @@ function Dashboard() {
           </p>
         )}
       </div>
+    </div>
+  )
+}
+
+// ── Portfolio ───────────────────────────────────────────────────────────────
+function PortfolioPage() {
+  const { user, apiOk } = useApp()
+
+  // 'list' | 'detail'
+  const [view, setView] = useState('list')
+  const [portfolios, setPortfolios] = useState([])
+  const [selectedPortfolio, setSelectedPortfolio] = useState(null) // { id, name }
+  const [items, setItems] = useState([])
+  const [projects, setProjects] = useState([])
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  // New portfolio form
+  const [showForm, setShowForm] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [formLoading, setFormLoading] = useState(false)
+  const [formError, setFormError] = useState('')
+
+  // Add project to portfolio
+  const [addProjectId, setAddProjectId] = useState('')
+  const [addLoading, setAddLoading] = useState(false)
+  const [addError, setAddError] = useState('')
+
+  // Delete confirmation state: portfolioId pending delete, or null
+  const [pendingDelete, setPendingDelete] = useState(null)
+
+  // ── Load portfolio list ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!apiOk || !user?.username) return
+    let cancelled = false
+
+    async function load() {
+      setLoading(true)
+      setError('')
+      try {
+        const data = await window.api.getPortfolioByUser(user.username)
+        if (!cancelled) setPortfolios(data ?? [])
+      } catch (err) {
+        if (!cancelled) setError(err?.message || 'Failed to load portfolios.')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, [apiOk, user])
+
+  // ── Load detail view ─────────────────────────────────────────────────────
+  useEffect(() => {
+    if (view !== 'detail' || !selectedPortfolio) return
+    let cancelled = false
+
+    async function loadDetail() {
+      setLoading(true)
+      setError('')
+      setItems([])
+      try {
+        const [itemData, projectData] = await Promise.all([
+          window.api.getPortfolio(selectedPortfolio.id),
+          window.api.getProjects(),
+        ])
+        if (!cancelled) {
+          setItems(itemData ?? [])
+          setProjects(getProjectItems(projectData))
+        }
+      } catch (err) {
+        if (!cancelled) setError(err?.message || 'Failed to load portfolio.')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadDetail()
+    return () => { cancelled = true }
+  }, [view, selectedPortfolio])
+
+  // ── Create portfolio ─────────────────────────────────────────────────────
+  async function handleCreatePortfolio(e) {
+    e.preventDefault()
+    if (!newName.trim()) return
+    setFormLoading(true)
+    setFormError('')
+    try {
+      const created = await window.api.createPortfolio({
+        username: user.username,
+        name: newName.trim(),
+      })
+      setPortfolios(prev => [created, ...prev])
+      setNewName('')
+      setShowForm(false)
+    } catch (err) {
+      setFormError(err?.message || 'Failed to create portfolio.')
+    } finally {
+      setFormLoading(false)
+    }
+  }
+
+  // ── Delete portfolio ─────────────────────────────────────────────────────
+  async function handleDelete(portfolioId) {
+    try {
+      await window.api.deletePortfolio(portfolioId)
+      setPortfolios(prev => prev.filter(p => p.id !== portfolioId))
+    } catch (err) {
+      setError(err?.message || 'Failed to delete portfolio.')
+    } finally {
+      setPendingDelete(null)
+    }
+  }
+
+  // ── Add project to portfolio ─────────────────────────────────────────────
+  async function handleAddProject(e) {
+    e.preventDefault()
+    if (!addProjectId) return
+    setAddLoading(true)
+    setAddError('')
+    try {
+      const item = await window.api.addPortfolioItem(selectedPortfolio.id, {
+        username: user.username,
+        project_id: parseInt(addProjectId, 10),
+      })
+      setItems(prev => {
+        const exists = prev.some(i => i.id === item.id)
+        return exists ? prev : [item, ...prev]
+      })
+      setAddProjectId('')
+    } catch (err) {
+      setAddError(err?.message || 'Failed to add project.')
+    } finally {
+      setAddLoading(false)
+    }
+  }
+
+  // ── Open detail view ─────────────────────────────────────────────────────
+  function openPortfolio(portfolio) {
+    setSelectedPortfolio(portfolio)
+    setAddProjectId('')
+    setAddError('')
+    setError('')
+    setView('detail')
+  }
+
+  function goBack() {
+    setView('list')
+    setSelectedPortfolio(null)
+    setItems([])
+    setError('')
+  }
+
+  // ── Detail view ──────────────────────────────────────────────────────────
+  if (view === 'detail' && selectedPortfolio) {
+    const addableProjects = projects.filter(
+      p => !items.some(i => i.project_id === p.id)
+    )
+
+    return (
+      <div className="animate-fade-up space-y-6">
+        <div className="flex items-center gap-3">
+          <button onClick={goBack} className="btn-ghost text-xs px-3 py-1.5">
+            ← Back
+          </button>
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight">{selectedPortfolio.name}</h1>
+            <p className="text-sm text-muted mt-0.5">{items.length} item{items.length !== 1 ? 's' : ''}</p>
+          </div>
+        </div>
+
+        {error && <p className="text-xs text-red-400">{error}</p>}
+
+        {/* Add project */}
+        {addableProjects.length > 0 && (
+          <form onSubmit={handleAddProject} className="flex items-center gap-2">
+            <select
+              value={addProjectId}
+              onChange={e => setAddProjectId(e.target.value)}
+              className="input text-sm flex-1 max-w-xs"
+            >
+              <option value="">Add a project…</option>
+              {addableProjects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              disabled={!addProjectId || addLoading}
+              className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed text-xs px-4 py-2"
+            >
+              {addLoading ? 'Adding…' : 'Add'}
+            </button>
+          </form>
+        )}
+        {addError && <p className="text-xs text-red-400">{addError}</p>}
+
+        {loading && <p className="text-xs text-muted">Loading…</p>}
+
+        {/* Items grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {items.map(item => {
+            const preview = item.markdown?.slice(0, 150)
+            const truncated = (item.markdown?.length ?? 0) > 150
+            return (
+              <div key={item.id} className="card space-y-2">
+                <div className="font-bold text-sm">{item.title}</div>
+                {preview && (
+                  <p className="font-mono text-2xs text-muted leading-relaxed line-clamp-3">
+                    {preview}{truncated ? '…' : ''}
+                  </p>
+                )}
+                <div className="font-mono text-2xs text-muted pt-1 border-t border-border">
+                  project #{item.project_id}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {!loading && items.length === 0 && (
+          <p className="text-xs text-muted">No items yet. Add a project above.</p>
+        )}
+      </div>
+    )
+  }
+
+  // ── List view ────────────────────────────────────────────────────────────
+  return (
+    <div className="animate-fade-up space-y-6">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight">Portfolio</h1>
+          <p className="text-sm text-muted mt-1">Curate and share your best work.</p>
+        </div>
+        <button
+          onClick={() => { setShowForm(v => !v); setFormError('') }}
+          className="btn-primary text-xs px-4 py-2"
+        >
+          {showForm ? 'Cancel' : '+ New Portfolio'}
+        </button>
+      </div>
+
+      {/* Inline create form */}
+      {showForm && (
+        <form onSubmit={handleCreatePortfolio} className="flex items-center gap-2">
+          <input
+            type="text"
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            placeholder="Portfolio name…"
+            required
+            autoFocus
+            className="input text-sm flex-1 max-w-xs"
+          />
+          <button
+            type="submit"
+            disabled={!newName.trim() || formLoading}
+            className="btn-primary text-xs px-4 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {formLoading ? 'Creating…' : 'Create'}
+          </button>
+          {formError && <p className="text-xs text-red-400">{formError}</p>}
+        </form>
+      )}
+
+      {error && <p className="text-xs text-red-400">{error}</p>}
+      {loading && <p className="text-xs text-muted">Loading…</p>}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {portfolios.map(p => (
+          <div key={p.id} className="card space-y-3">
+            <div className="font-bold text-sm">{p.name}</div>
+            <div className="font-mono text-2xs text-muted">
+              {new Date(p.created_at).toLocaleDateString()}
+            </div>
+            <div className="flex items-center gap-2 pt-1 border-t border-border">
+              <button
+                onClick={() => openPortfolio(p)}
+                className="btn-ghost text-xs px-3 py-1"
+              >
+                View →
+              </button>
+              {pendingDelete === p.id ? (
+                <>
+                  <span className="text-xs text-muted">Delete?</span>
+                  <button
+                    onClick={() => handleDelete(p.id)}
+                    className="text-xs text-red-400 hover:text-red-300 font-semibold"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => setPendingDelete(null)}
+                    className="text-xs text-muted hover:text-ink"
+                  >
+                    No
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setPendingDelete(p.id)}
+                  className="text-xs text-muted hover:text-red-400 ml-auto"
+                >
+                  Delete
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {!loading && portfolios.length === 0 && (
+        <p className="text-xs text-muted">No portfolios yet. Create one to get started.</p>
+      )}
     </div>
   )
 }
