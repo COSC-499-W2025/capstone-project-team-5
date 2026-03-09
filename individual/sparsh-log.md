@@ -7,6 +7,39 @@
 
 # TERM2 Logs - Sparsh Khanna
 ---
+## Week 9 | March 1 - March 8, 2026
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+<img width="2940" height="1912" alt="image" src="https://github.com/user-attachments/assets/e9dfb405-bcb5-4a9c-8814-cd9214775863" />
+
+
+</details>
+
+### Tasks worked on
+
+- DOM Environment Setup, CI/CD & Consent Tool Integration [PR#351](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/351)
+- Wrote DOM tests to ensure correctness of the consent flow in the frontend.
+- Reviewed teammates' code.
+
+### Personal Contributions
+
+- DOM Environment Setup, CI/CD & Consent Tool Integration
+In this pull request I set up the DOM testing environment for the frontend, configured CI/CD to run frontend tests, and integrated the consent tool into the Electron frontend. This involved wiring up the consent flow so that on first launch the app prompts the user to authenticate and set their LLM provider consent before reaching the main dashboard. I also added `setAuthUsername` to the preload API so that the auth header is correctly set after login/register and restored from `localStorage` on subsequent launches.
+
+### Tests Added
+- [PR#351](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/351)
+  - DOM tests covering the consent flow setup and authentication integration
+
+### PRs Reviewed
+- [PR#352](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/352) *(Frontend upload button)*
+- [PR#ribhav/feat-portfolio-page](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/351) *(ribhav's Portfolio page PR)*
+
+### Additional Details
+
+This week's work was focused on the frontend — specifically getting the DOM testing infrastructure in place, hooking up CI/CD for automated frontend test runs, and integrating the consent tool so the full auth + consent flow works end-to-end in the Electron app.
+
+---
 ## Week 6-8 | February 8 - March 1, 2026
 
 <details>
