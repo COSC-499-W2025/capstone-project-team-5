@@ -347,3 +347,30 @@ Over the past few weeks, I focused on continuing enhancements to Requirement 24 
 | Team Meetings | Not Yet Started | Discuss next steps. |
 | Code Contributions | Not Yet Started | Complete code contributions based on team meeting. |
 </details>
+
+## T2 - Week 9 | 01  March 2026 - 08 March 2026
+
+<details>
+  <summary><h3></h3></summary>
+<img alt="Screenshot 2026-03-08 180740" src="https://github.com/user-attachments/assets/f84a5077-d4f0-4ae7-a29d-9b1c2daba1ce" />
+
+
+This past week I focused mainly on frontend upload work. I connected the upload flow in the dashboard to the backend, fixed request/response issues in the frontend API layer, and worked through review feedback to make the upload experience more stable and predictable. I also improved the Projects page behavior after uploads (including created/merged highlighting and dismissal behavior), and handled a race-condition concern by adding safer handling during uploads. Next week I plan to continue with follow-up frontend fixes, start adding UI tests for the upload flow, and align with the team on what feature work should be prioritized next.
+
+### Previous Weeks:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Quiz | Completed | Wrote quiz. |
+| Team Meetings  | Completed | Agreed on frontend priorities and PR feedback. |
+| Upload Button Integration | Completed | Wired UI upload flow to backend and verified persistence. |
+| Frontend Bug Fixes | Completed | Fixed request parsing/auth-header issues and refined Projects highlights. |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Upload Flow UI Tests | Not Yet Started | Add tests for upload flow. |
+| PR Follow-up Fixes | In Progress | Address remaining frontend issues. |
+| Team Meeting | Not Yet Started | Review and align on Milestone priorities. |
+| Further Code Contribution | Not Yet Started | Write code for new feature based on team meeting. |
+</details>
