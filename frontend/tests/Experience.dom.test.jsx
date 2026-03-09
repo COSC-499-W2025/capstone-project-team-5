@@ -33,6 +33,10 @@ const BASE_API = {
   createWorkExperience: jest.fn().mockResolvedValue(MOCK_EXP),
   updateWorkExperience: jest.fn().mockResolvedValue({ ...MOCK_EXP, title: 'Lead Engineer' }),
   deleteWorkExperience: jest.fn().mockResolvedValue(null),
+  getEducations: jest.fn().mockResolvedValue([]),
+  createEducation: jest.fn().mockResolvedValue({}),
+  updateEducation: jest.fn().mockResolvedValue({}),
+  deleteEducation: jest.fn().mockResolvedValue(null),
   getResumes: jest.fn().mockResolvedValue([]),
 }
 
