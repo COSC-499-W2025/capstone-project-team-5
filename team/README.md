@@ -1,5 +1,36 @@
 # Team Weekly Logs
 <details>
+  <summary><h3>T2 Week 9 | March 1 - March 8 </h3></summary>
+
+  ### Burnup Chart
+<img width="1311" height="754" alt="image" src="https://github.com/user-attachments/assets/9f76c23d-358a-4c87-813a-a60992c62c4e" />
+
+
+  ### Past Work
+- [PR #349 - Electron Frontend Setup](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/349): Set up the Electron desktop app with React and Tailwind CSS, configured the initial Jest testing suite, and built the dashboard backbone with preloaded API connection handling.
+- [PR #351 - DOM Environment Setup, CI/CD & Consent Tool Integration](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/351): Set up the DOM testing environment for the frontend, configured CI/CD to run frontend tests, and integrated the consent tool into the Electron frontend with full auth + consent flow. Added `setAuthUsername` to the preload API for correct auth header handling.
+- [PR #352 - Frontend Upload Button Integration](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/352): Connected the upload flow in the dashboard to the backend, fixed request/response issues in the frontend API layer, and improved Projects page behavior after uploads including created/merged highlighting and dismissal behavior.
+- [PR #358 - fix: set auth username header on login and restore from localStorage](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/358): Fixed a bug where `X-Username` header was never set when restoring a saved session from localStorage, and resolved a silent `DataCloneError` caused by passing `AbortSignal` through the contextBridge that broke project uploads.
+- [PR #359 - feat: (frontend) add portfolio functionality](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/359): Implemented the full Portfolio management UI in the Electron frontend including list view, detail view, create form, delete with confirmation, and add-project flow. Wired to existing backend APIs. Added DOM test suite covering navigation, empty state, create, delete, detail view, and error handling.
+- [PR #362 - Create Work Experience UI](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/362): Built a full CRUD `ExperiencePage` component for managing work experience entries. Supports creating, editing, and deleting entries via an inline form with fields for company, title, location, date range, "I currently work here" toggle, and description. Includes loading/empty/error states and a two-step delete confirmation. Added 10 DOM tests.
+- [PR #364 - Create Education UI](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/364): Added a new `EducationPage` component with education cards displaying degree, institution, field of study, GPA, date range, and a "Current" tag. Includes inline delete confirmation, router integration, and 12 DOM tests.
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Start milestone 3 dashboard implementation | ✅ In Progress | Electron frontend scaffolded with dashboard, upload flow, and multiple UI pages built out. |
+  | Continue code reviews | ✅ Done | Ongoing task across team members. |
+  | Incorporate feedback from Milestone 2 presentation | ✅ In Progress | Frontend development addressing feedback items. |
+
+  ### Future Work
+  - Continue building out remaining frontend UI pages (skills, projects detail views)
+  - Add UI tests for the upload flow
+  - Open PR for the `abortUpload` contextBridge fix
+  - Continue expanding frontend pages and integrating with backend APIs
+  - Coordinate on integration testing across the full frontend-backend pipeline
+  - Confirm Milestone 3 requirements and align on priorities
+</details>
+<details>
   <summary><h3>T2 Week 6, 7, 8 | February 9 - March 1 </h3></summary>
 
   ### Burnup Chart
