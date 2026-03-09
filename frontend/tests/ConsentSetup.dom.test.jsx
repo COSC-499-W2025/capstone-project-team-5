@@ -24,6 +24,7 @@ function setupApi(overrides = {}) {
     getLLMConfig:         jest.fn().mockResolvedValue({ is_allowed: true }),
     login:                jest.fn().mockResolvedValue({ username: 'alice' }),
     register:             jest.fn().mockResolvedValue({ username: 'alice' }),
+    setAuthUsername:      jest.fn(),
     setUsername:          jest.fn(),
     getUsername:          jest.fn().mockReturnValue(null),
     getProjects:          jest.fn().mockResolvedValue([]),
