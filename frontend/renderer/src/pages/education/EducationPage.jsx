@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
-import { useApp } from '../../app/context/AppContext'
 import EmptyState from '../../components/EmptyState'
 import InlineError from '../../components/InlineError'
 import PageHeader from '../../components/PageHeader'
+import useCrudList from '../../hooks/useCrudList'
 import { formatDateRange } from '../../lib/dates'
 
 const EMPTY_FORM = {
@@ -16,139 +15,44 @@ const EMPTY_FORM = {
   is_current: false,
 }
 
+const API = {
+  list: (username) => window.api.getEducations(username),
+  create: (username, data) => window.api.createEducation(username, data),
+  update: (username, id, data) => window.api.updateEducation(username, id, data),
+  remove: (username, id) => window.api.deleteEducation(username, id),
+}
+
+function validate(form) {
+  if (!form.institution.trim() || !form.degree.trim()) {
+    return 'Institution and degree are required.'
+  }
+  const gpaValue = form.gpa.trim() ? parseFloat(form.gpa) : null
+  if (gpaValue !== null && (Number.isNaN(gpaValue) || gpaValue < 0 || gpaValue > 5)) {
+    return 'GPA must be between 0.0 and 5.0.'
+  }
+  return null
+}
+
+function buildPayload(form) {
+  const gpaValue = form.gpa.trim() ? parseFloat(form.gpa) : null
+  return {
+    institution: form.institution.trim(),
+    degree: form.degree.trim(),
+    field_of_study: form.field_of_study.trim() || null,
+    gpa: gpaValue,
+    start_date: form.start_date || null,
+    end_date: form.is_current ? null : form.end_date || null,
+    achievements: form.achievements.trim() || null,
+    is_current: form.is_current,
+  }
+}
+
 export default function EducationPage() {
-  const { user, apiOk } = useApp()
-  const [items, setItems] = useState([])
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState(null)
-  const [form, setForm] = useState(EMPTY_FORM)
-  const [formError, setFormError] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [confirmId, setConfirmId] = useState(null)
-
-  useEffect(() => {
-    if (!apiOk || !user?.username) {
-      return
-    }
-
-    let cancelled = false
-
-    async function load() {
-      setLoading(true)
-
-      try {
-        const data = await window.api.getEducations(user.username)
-        if (!cancelled) {
-          setItems(data ?? [])
-          setError('')
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setError(error?.message || 'Failed to load')
-          setItems([])
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
-      }
-    }
-
-    load()
-
-    return () => {
-      cancelled = true
-    }
-  }, [apiOk, user?.username])
-
-  function openCreate() {
-    setForm(EMPTY_FORM)
-    setEditingId(null)
-    setFormError('')
-    setShowForm(true)
-  }
-
-  function openEdit(item) {
-    setForm({
-      institution: item.institution ?? '',
-      degree: item.degree ?? '',
-      field_of_study: item.field_of_study ?? '',
-      gpa: item.gpa != null ? String(item.gpa) : '',
-      start_date: item.start_date ?? '',
-      end_date: item.end_date ?? '',
-      achievements: item.achievements ?? '',
-      is_current: item.is_current ?? false,
-    })
-    setEditingId(item.id)
-    setFormError('')
-    setShowForm(true)
-  }
-
-  function cancelForm() {
-    setShowForm(false)
-    setEditingId(null)
-    setFormError('')
-  }
-
-  async function handleSave(event) {
-    event.preventDefault()
-    if (!form.institution.trim() || !form.degree.trim()) {
-      setFormError('Institution and degree are required.')
-      return
-    }
-
-    const gpaValue = form.gpa.trim() ? parseFloat(form.gpa) : null
-    if (gpaValue !== null && (Number.isNaN(gpaValue) || gpaValue < 0 || gpaValue > 5)) {
-      setFormError('GPA must be between 0.0 and 5.0.')
-      return
-    }
-
-    setSaving(true)
-    setFormError('')
-
-    const payload = {
-      institution: form.institution.trim(),
-      degree: form.degree.trim(),
-      field_of_study: form.field_of_study.trim() || null,
-      gpa: gpaValue,
-      start_date: form.start_date || null,
-      end_date: form.is_current ? null : form.end_date || null,
-      achievements: form.achievements.trim() || null,
-      is_current: form.is_current,
-    }
-
-    try {
-      if (editingId) {
-        const updated = await window.api.updateEducation(user.username, editingId, payload)
-        setItems((current) => current.map((item) => (item.id === editingId ? updated : item)))
-      } else {
-        const created = await window.api.createEducation(user.username, payload)
-        setItems((current) => [...current, created])
-      }
-
-      cancelForm()
-    } catch (error) {
-      setFormError(error?.message || 'Save failed')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function handleDelete(id) {
-    try {
-      await window.api.deleteEducation(user.username, id)
-      setItems((current) => current.filter((item) => item.id !== id))
-      setConfirmId(null)
-    } catch (error) {
-      setError(error?.message || 'Delete failed')
-    }
-  }
-
-  function setField(key, value) {
-    setForm((current) => ({ ...current, [key]: value }))
-  }
+  const {
+    items, error, loading, showForm, editingId, form,
+    formError, saving, confirmId, setConfirmId,
+    openCreate, openEdit, cancelForm, setField, handleSave, handleDelete,
+  } = useCrudList({ emptyForm: EMPTY_FORM, api: API, validate, buildPayload })
 
   return (
     <div className="animate-fade-up space-y-6">
