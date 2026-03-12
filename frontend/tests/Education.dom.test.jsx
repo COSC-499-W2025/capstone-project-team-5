@@ -131,21 +131,22 @@ test('edit populates form and save calls updateEducation', async () => {
   )
 })
 
-test('delete confirmation: Yes removes the card', async () => {
+test('delete confirmation: confirm removes the card', async () => {
   await boot({ getEducations: jest.fn().mockResolvedValue([MOCK_EDU]) })
   await waitFor(() => expect(screen.getByText('Bachelor of Science')).toBeInTheDocument())
   fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
-  expect(screen.getByText(/delete\?/i)).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: /^yes$/i }))
+  expect(screen.getByText(/are you sure/i)).toBeInTheDocument()
+  const deleteButtons = screen.getAllByRole('button', { name: /^delete$/i })
+  fireEvent.click(deleteButtons[deleteButtons.length - 1])
   await waitFor(() => expect(window.api.deleteEducation).toHaveBeenCalledWith('alice', MOCK_EDU.id))
   await waitFor(() => expect(screen.queryByText('Bachelor of Science')).not.toBeInTheDocument())
 })
 
-test('delete confirmation: No cancels without deleting', async () => {
+test('delete confirmation: Cancel cancels without deleting', async () => {
   await boot({ getEducations: jest.fn().mockResolvedValue([MOCK_EDU]) })
   await waitFor(() => expect(screen.getByText('Bachelor of Science')).toBeInTheDocument())
   fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
-  fireEvent.click(screen.getByRole('button', { name: /^no$/i }))
+  fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
   expect(window.api.deleteEducation).not.toHaveBeenCalled()
   expect(screen.getByText('Bachelor of Science')).toBeInTheDocument()
 })
