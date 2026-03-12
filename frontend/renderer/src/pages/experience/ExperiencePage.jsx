@@ -144,7 +144,7 @@ export default function ExperiencePage() {
 
       {!loading && items.length > 0 && (
         <div className="grid grid-cols-1 gap-3">
-          {items.map((item) => (
+          {items.filter((item) => item.id !== editingId).map((item) => (
             <div key={item.id} className="card space-y-2 p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -155,35 +155,37 @@ export default function ExperiencePage() {
                   <button type="button" className="btn-ghost text-xs" onClick={() => openEdit(item)}>
                     Edit
                   </button>
-                  {confirmId === item.id ? (
-                    <>
-                      <span className="text-xs text-red-400">Delete?</span>
-                      <button
-                        type="button"
-                        className="btn-ghost text-xs text-red-400"
-                        onClick={() => handleDelete(item.id)}
-                      >
-                        Yes
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost text-xs"
-                        onClick={() => setConfirmId(null)}
-                      >
-                        No
-                      </button>
-                    </>
-                  ) : (
+                  <button
+                    type="button"
+                    className="btn-ghost text-xs"
+                    onClick={() => setConfirmId(confirmId === item.id ? null : item.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              {confirmId === item.id && (
+                <div className="flex items-center justify-between rounded-md border border-red-500/30 bg-red-500/10 px-4 py-2">
+                  <span className="text-xs text-red-400">Are you sure you want to delete this entry?</span>
+                  <div className="flex gap-2">
                     <button
                       type="button"
-                      className="btn-ghost text-xs"
-                      onClick={() => setConfirmId(item.id)}
+                      className="rounded bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700"
+                      onClick={() => handleDelete(item.id)}
                     >
                       Delete
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      className="btn-ghost text-xs"
+                      onClick={() => setConfirmId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {(item.location || item.start_date) && (
                 <div className="flex items-center gap-3 font-mono text-2xs text-muted">
