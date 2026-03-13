@@ -1,3 +1,11 @@
+export const RESUME_TEMPLATE_OPTIONS = [
+  { value: 'jake', label: "Jake's Resume" },
+  { value: 'modern', label: 'Modern Resume' },
+  { value: 'rover', label: 'Rover Resume' },
+]
+
+export const DEFAULT_RESUME_TEMPLATE = RESUME_TEMPLATE_OPTIONS[0].value
+
 export const EMPTY_RESUME_FORM = {
   project_id: '',
   project_name: '',
@@ -66,10 +74,7 @@ export function getAvailableResumeProjects(projects, resumes, currentProjectId =
   const usedProjectIds = new Set(
     resumes
       .map((resume) => resume?.project_id)
-      .filter(
-        (projectId) =>
-          projectId !== null && projectId !== undefined && projectId !== currentProjectId
-      )
+      .filter((projectId) => projectId !== null && projectId !== undefined && projectId !== currentProjectId)
   )
 
   return projects.filter((project) => !usedProjectIds.has(project.id))
