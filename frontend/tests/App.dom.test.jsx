@@ -27,7 +27,19 @@ function setupApi(overrides = {}) {
     getProjects:          jest.fn().mockResolvedValue([]),
     getSkills:            jest.fn().mockResolvedValue([]),
     getWorkExperiences:   jest.fn().mockResolvedValue([]),
+    getEducations:        jest.fn().mockResolvedValue([]),
+    getProfile:           jest.fn().mockResolvedValue(null),
     getResumes:           jest.fn().mockResolvedValue([]),
+    getLLMConfig:         jest.fn().mockResolvedValue({ is_allowed: false, model_preferences: [] }),
+    analyzeProject:       jest.fn().mockResolvedValue({}),
+    createResume:         jest.fn().mockResolvedValue({}),
+    updateResume:         jest.fn().mockResolvedValue({}),
+    deleteResume:         jest.fn().mockResolvedValue(null),
+    downloadResumePdf:    jest.fn().mockResolvedValue({
+      bytes: new ArrayBuffer(8),
+      contentType: 'application/pdf',
+      filename: 'resume.pdf',
+    }),
     ...overrides,
   }
 }
@@ -94,6 +106,21 @@ test('clicking a nav item updates the topbar title', async () => {
     const header = document.querySelector('header')
     expect(header.textContent).toMatch(/Projects/)
   })
+})
+
+test('dashboard quick action opens the resumes workspace', async () => {
+  setupApi()
+  localStorage.setItem('zip2job_username', 'alice')
+  render(<App />)
+  await waitFor(() => expect(screen.getByText('Portfolio Engine')).toBeInTheDocument())
+
+  fireEvent.click(screen.getByRole('button', { name: /generate resume/i }))
+
+  await waitFor(() => {
+    const header = document.querySelector('header')
+    expect(header.textContent).toMatch(/Resumes/)
+  })
+  expect(screen.getByRole('heading', { name: /^resumes$/i })).toBeInTheDocument()
 })
 
 test('shows username in sidebar when user is loaded', async () => {
