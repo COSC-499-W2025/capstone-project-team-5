@@ -16,6 +16,12 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import App from '../renderer/src/App.jsx'
 
+/** Mirrors the `httpError()` helper in preload.js — attaches a numeric `status`. */
+function httpError(status, message) {
+  const err = new Error(message ?? `HTTP ${status}`)
+  err.status = status
+  return err
+}
 function setupApi(overrides = {}) {
   window.api = {
     health:               jest.fn().mockResolvedValue({ status: 'ok' }),
@@ -137,8 +143,8 @@ test('shows api offline when health check throws', async () => {
 test('transient boot error (5xx) does NOT clear localStorage', async () => {
   localStorage.setItem('zip2job_username', 'alice')
   setupApi({
-    getCurrentUser:   jest.fn().mockRejectedValue(new Error('HTTP 503')),
-    getLatestConsent: jest.fn().mockRejectedValue(new Error('HTTP 503')),
+    getCurrentUser:   jest.fn().mockRejectedValue(httpError(503)),
+    getLatestConsent: jest.fn().mockRejectedValue(httpError(503)),
   })
   render(<App />)
   await waitFor(() =>
@@ -166,8 +172,8 @@ test('network error during boot does NOT clear localStorage', async () => {
 test('401 auth error during boot DOES clear localStorage', async () => {
   localStorage.setItem('zip2job_username', 'alice')
   setupApi({
-    getCurrentUser:   jest.fn().mockRejectedValue(new Error('HTTP 401')),
-    getLatestConsent: jest.fn().mockRejectedValue(new Error('HTTP 401')),
+    getCurrentUser:   jest.fn().mockRejectedValue(httpError(401)),
+    getLatestConsent: jest.fn().mockRejectedValue(httpError(401)),
   })
   render(<App />)
   await waitFor(() =>
@@ -180,8 +186,8 @@ test('401 auth error during boot DOES clear localStorage', async () => {
 test('403 auth error during boot DOES clear localStorage', async () => {
   localStorage.setItem('zip2job_username', 'alice')
   setupApi({
-    getCurrentUser:   jest.fn().mockRejectedValue(new Error('HTTP 403')),
-    getLatestConsent: jest.fn().mockRejectedValue(new Error('HTTP 403')),
+    getCurrentUser:   jest.fn().mockRejectedValue(httpError(403)),
+    getLatestConsent: jest.fn().mockRejectedValue(httpError(403)),
   })
   render(<App />)
   await waitFor(() =>

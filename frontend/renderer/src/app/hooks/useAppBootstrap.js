@@ -5,13 +5,18 @@ import { useCallback, useEffect, useState } from 'react'
  * credentials are no longer valid (401 Unauthorized / 403 Forbidden).
  * Network errors, 5xx, timeouts, etc. are treated as transient and must NOT
  * clear the persisted login.
+ *
+ * Relies on the numeric `status` property that preload's `httpError()` helper
+ * attaches to every API error — no string parsing required.
  */
 function isAuthError(err) {
-  if (!err || typeof err.message !== 'string') return false
-  const msg = err.message.trim()
-  // The preload request() helper throws with the message "HTTP <status>" when
-  // no detail field is available, so we match on the status code prefix.
-  return /^HTTP (401|403)\b/.test(msg) || /unauthorized|forbidden/i.test(msg)
+  return err?.status === 401 || err?.status === 403
+}
+
+/** Clears all persisted credentials from both localStorage and the preload bridge. */
+function clearSession() {
+  localStorage.removeItem('zip2job_username')
+  window.api.clearCredentials()
 }
 
 export function useAppBootstrap() {
@@ -21,8 +26,7 @@ export function useAppBootstrap() {
 
   /** Imperatively clear credentials and return to the consent/login gate. */
   const logout = useCallback(() => {
-    localStorage.removeItem('zip2job_username')
-    window.api.clearCredentials()
+    clearSession()
     setUser(null)
     setConsentReady(false)
   }, [])
@@ -72,8 +76,7 @@ export function useAppBootstrap() {
         // credentials (401/403).  Transient errors (network down, 5xx, timeout)
         // must not log the user out.
         if (isAuthError(err)) {
-          localStorage.removeItem('zip2job_username')
-          window.api.clearCredentials()
+          clearSession()
 
           if (!cancelled) {
             setUser(null)

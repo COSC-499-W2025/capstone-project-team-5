@@ -44,6 +44,13 @@ function getErrorMessage(parsedBody, status) {
   return `HTTP ${status}`;
 }
 
+/** Creates an Error that carries the raw HTTP status code as a numeric property. */
+function httpError(parsedBody, status) {
+  const err = new Error(getErrorMessage(parsedBody, status));
+  err.status = status;
+  return err;
+}
+
 async function request(method, path, body, signal) {
   const opts = {
     method,
@@ -57,7 +64,7 @@ async function request(method, path, body, signal) {
   const parsedBody = await parseResponseBody(res);
 
   if (!res.ok) {
-    throw new Error(getErrorMessage(parsedBody, res.status));
+    throw httpError(parsedBody, res.status);
   }
 
   return parsedBody;
@@ -73,7 +80,7 @@ async function requestWithForm(method, path, formData, signal) {
   const parsedBody = await parseResponseBody(res);
 
   if (!res.ok) {
-    throw new Error(getErrorMessage(parsedBody, res.status));
+    throw httpError(parsedBody, res.status);
   }
 
   return parsedBody;
