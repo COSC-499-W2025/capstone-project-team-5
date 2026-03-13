@@ -118,21 +118,22 @@ test('edit populates form and save calls updateWorkExperience', async () => {
   )
 })
 
-test('delete confirmation: Yes removes the card', async () => {
+test('delete confirmation: confirm removes the card', async () => {
   await boot({ getWorkExperiences: jest.fn().mockResolvedValue([MOCK_EXP]) })
   await waitFor(() => expect(screen.getByText('Software Engineer')).toBeInTheDocument())
   fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
-  expect(screen.getByText(/delete\?/i)).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: /^yes$/i }))
+  expect(screen.getByText(/are you sure/i)).toBeInTheDocument()
+  const deleteButtons = screen.getAllByRole('button', { name: /^delete$/i })
+  fireEvent.click(deleteButtons[deleteButtons.length - 1])
   await waitFor(() => expect(window.api.deleteWorkExperience).toHaveBeenCalledWith('alice', MOCK_EXP.id))
   await waitFor(() => expect(screen.queryByText('Software Engineer')).not.toBeInTheDocument())
 })
 
-test('delete confirmation: No cancels without deleting', async () => {
+test('delete confirmation: Cancel cancels without deleting', async () => {
   await boot({ getWorkExperiences: jest.fn().mockResolvedValue([MOCK_EXP]) })
   await waitFor(() => expect(screen.getByText('Software Engineer')).toBeInTheDocument())
   fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
-  fireEvent.click(screen.getByRole('button', { name: /^no$/i }))
+  fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
   expect(window.api.deleteWorkExperience).not.toHaveBeenCalled()
   expect(screen.getByText('Software Engineer')).toBeInTheDocument()
 })
@@ -140,4 +141,49 @@ test('delete confirmation: No cancels without deleting', async () => {
 test('shows error when getWorkExperiences fails', async () => {
   await boot({ getWorkExperiences: jest.fn().mockRejectedValue(new Error('Network error')) })
   await waitFor(() => expect(screen.getByText('Network error')).toBeInTheDocument())
+})
+
+test('displays bullet points on experience card', async () => {
+  const withBullets = {
+    ...MOCK_EXP,
+    bullets: JSON.stringify(['Led team of 5', 'Shipped v2.0']),
+  }
+  await boot({ getWorkExperiences: jest.fn().mockResolvedValue([withBullets]) })
+  await waitFor(() => expect(screen.getByText('Software Engineer')).toBeInTheDocument())
+  expect(screen.getByText('Led team of 5')).toBeInTheDocument()
+  expect(screen.getByText('Shipped v2.0')).toBeInTheDocument()
+})
+
+test('bullet points form: add and remove bullets', async () => {
+  await boot()
+  fireEvent.click(screen.getByRole('button', { name: /add experience/i }))
+  expect(screen.getByPlaceholderText('Bullet point 1')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /add bullet/i }))
+  expect(screen.getByPlaceholderText('Bullet point 2')).toBeInTheDocument()
+})
+
+test('create payload includes bullets as JSON string', async () => {
+  await boot()
+  fireEvent.click(screen.getByRole('button', { name: /add experience/i }))
+  fireEvent.change(screen.getByPlaceholderText(/company/i), { target: { value: 'Acme' } })
+  fireEvent.change(screen.getByPlaceholderText(/title/i), { target: { value: 'Dev' } })
+  fireEvent.change(screen.getByPlaceholderText('Bullet point 1'), { target: { value: 'Did stuff' } })
+  fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+  await waitFor(() =>
+    expect(window.api.createWorkExperience).toHaveBeenCalledWith('alice', expect.objectContaining({
+      bullets: JSON.stringify(['Did stuff']),
+    }))
+  )
+})
+
+test('edit populates bullet points from JSON', async () => {
+  const withBullets = {
+    ...MOCK_EXP,
+    bullets: JSON.stringify(['Built APIs', 'Wrote tests']),
+  }
+  await boot({ getWorkExperiences: jest.fn().mockResolvedValue([withBullets]) })
+  await waitFor(() => expect(screen.getByText('Software Engineer')).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: /^edit$/i }))
+  expect(screen.getByDisplayValue('Built APIs')).toBeInTheDocument()
+  expect(screen.getByDisplayValue('Wrote tests')).toBeInTheDocument()
 })
