@@ -89,6 +89,16 @@ contextBridge.exposeInMainWorld('api', {
   setUsername: (username) => { _username = username; },
   getUsername: () => _username,
 
+  /**
+   * Clear all credential state in the preload bridge.
+   * The React layer is responsible for clearing localStorage and
+   * resetting its own state; this keeps the two in sync.
+   */
+  clearCredentials: () => {
+    currentUsername = '';
+    _username = null;
+  },
+
   // Health
   health: () => request('GET', '/health'),
 

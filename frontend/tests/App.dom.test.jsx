@@ -8,6 +8,9 @@
  *   - sidebar nav items are all rendered
  *   - clicking a nav item updates the topbar title
  *   - api-offline indicator when health check fails
+ *   - transient boot errors do NOT clear localStorage (no unexpected logout)
+ *   - 401/403 boot errors DO clear localStorage (auth failure)
+ *   - Log Out button clears credentials and returns to ConsentSetup
  */
 
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
@@ -23,6 +26,7 @@ function setupApi(overrides = {}) {
     getLLMConfig:         jest.fn().mockResolvedValue({ provider: 'openai' }),
     setAuthUsername:      jest.fn(),
     setUsername:          jest.fn(),
+    clearCredentials:     jest.fn(),
     getUsername:          jest.fn().mockReturnValue('alice'),
     getProjects:          jest.fn().mockResolvedValue([]),
     getSkills:            jest.fn().mockResolvedValue([]),
@@ -127,4 +131,86 @@ test('shows api offline when health check throws', async () => {
   await waitFor(() =>
     expect(screen.queryByText('Starting…')).not.toBeInTheDocument()
   )
+})
+
+// ── Boot error handling ────────────────────────────────────────────────────
+test('transient boot error (5xx) does NOT clear localStorage', async () => {
+  localStorage.setItem('zip2job_username', 'alice')
+  setupApi({
+    getCurrentUser:   jest.fn().mockRejectedValue(new Error('HTTP 503')),
+    getLatestConsent: jest.fn().mockRejectedValue(new Error('HTTP 503')),
+  })
+  render(<App />)
+  await waitFor(() =>
+    expect(screen.queryByText('Starting…')).not.toBeInTheDocument()
+  )
+  // Credentials must still be in localStorage — user was NOT logged out
+  expect(localStorage.getItem('zip2job_username')).toBe('alice')
+  expect(window.api.clearCredentials).not.toHaveBeenCalled()
+})
+
+test('network error during boot does NOT clear localStorage', async () => {
+  localStorage.setItem('zip2job_username', 'alice')
+  setupApi({
+    getCurrentUser:   jest.fn().mockRejectedValue(new Error('ECONNREFUSED')),
+    getLatestConsent: jest.fn().mockRejectedValue(new Error('ECONNREFUSED')),
+  })
+  render(<App />)
+  await waitFor(() =>
+    expect(screen.queryByText('Starting…')).not.toBeInTheDocument()
+  )
+  expect(localStorage.getItem('zip2job_username')).toBe('alice')
+  expect(window.api.clearCredentials).not.toHaveBeenCalled()
+})
+
+test('401 auth error during boot DOES clear localStorage', async () => {
+  localStorage.setItem('zip2job_username', 'alice')
+  setupApi({
+    getCurrentUser:   jest.fn().mockRejectedValue(new Error('HTTP 401')),
+    getLatestConsent: jest.fn().mockRejectedValue(new Error('HTTP 401')),
+  })
+  render(<App />)
+  await waitFor(() =>
+    expect(screen.queryByText('Starting…')).not.toBeInTheDocument()
+  )
+  expect(localStorage.getItem('zip2job_username')).toBeNull()
+  expect(window.api.clearCredentials).toHaveBeenCalled()
+})
+
+test('403 auth error during boot DOES clear localStorage', async () => {
+  localStorage.setItem('zip2job_username', 'alice')
+  setupApi({
+    getCurrentUser:   jest.fn().mockRejectedValue(new Error('HTTP 403')),
+    getLatestConsent: jest.fn().mockRejectedValue(new Error('HTTP 403')),
+  })
+  render(<App />)
+  await waitFor(() =>
+    expect(screen.queryByText('Starting…')).not.toBeInTheDocument()
+  )
+  expect(localStorage.getItem('zip2job_username')).toBeNull()
+  expect(window.api.clearCredentials).toHaveBeenCalled()
+})
+
+// ── Log Out ────────────────────────────────────────────────────────────────
+test('sidebar renders a Log Out button when the shell is shown', async () => {
+  setupApi()
+  localStorage.setItem('zip2job_username', 'alice')
+  render(<App />)
+  await waitFor(() => expect(screen.getByText('Portfolio Engine')).toBeInTheDocument())
+  expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument()
+})
+
+test('clicking Log Out clears localStorage and returns to ConsentSetup', async () => {
+  setupApi()
+  localStorage.setItem('zip2job_username', 'alice')
+  render(<App />)
+  await waitFor(() => expect(screen.getByText('Portfolio Engine')).toBeInTheDocument())
+
+  fireEvent.click(screen.getByRole('button', { name: /log out/i }))
+
+  await waitFor(() =>
+    expect(screen.getByText(/welcome back/i)).toBeInTheDocument()
+  )
+  expect(localStorage.getItem('zip2job_username')).toBeNull()
+  expect(window.api.clearCredentials).toHaveBeenCalled()
 })

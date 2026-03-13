@@ -42,6 +42,17 @@ export default function ConsentSetup({ onDone }) {
       window.api.setAuthUsername(response.username)
       window.api.setUsername(response.username)
 
+      // For returning users who already gave consent, skip the consent step
+      // entirely and go straight to the app.
+      if (authMode === 'login') {
+        const existingConsent = await window.api.getLatestConsent().catch(() => null)
+        if (existingConsent !== null) {
+          setStep('done')
+          doneTimeoutRef.current = setTimeout(() => onDone(response.username), 800)
+          return
+        }
+      }
+
       const data = await window.api.getAvailableServices()
       const initialCheckedServices = {}
 

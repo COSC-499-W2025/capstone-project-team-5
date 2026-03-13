@@ -122,3 +122,32 @@ describe('error handling', () => {
     await expect(global.api.getProjects()).rejects.toThrow('ECONNREFUSED');
   });
 });
+
+describe('api.clearCredentials', () => {
+  it('resets auth username to empty string', () => {
+    global.api.setAuthUsername('alice');
+    expect(global.api.getAuthUsername()).toBe('alice');
+
+    global.api.clearCredentials();
+    expect(global.api.getAuthUsername()).toBe('');
+  });
+
+  it('resets internal username to null', () => {
+    global.api.setUsername('alice');
+    expect(global.api.getUsername()).toBe('alice');
+
+    global.api.clearCredentials();
+    expect(global.api.getUsername()).toBeNull();
+  });
+
+  it('removes X-Username header from subsequent requests after clearing', async () => {
+    global.api.setAuthUsername('alice');
+    global.api.clearCredentials();
+
+    fetch.mockResolvedValue(mockJson({ status: 'ok' }));
+    await global.api.health();
+
+    const calledHeaders = fetch.mock.calls[0][1].headers;
+    expect(calledHeaders).not.toHaveProperty('X-Username');
+  });
+});

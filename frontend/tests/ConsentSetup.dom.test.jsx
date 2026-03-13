@@ -26,6 +26,7 @@ function setupApi(overrides = {}) {
     register:             jest.fn().mockResolvedValue({ username: 'alice' }),
     setAuthUsername:      jest.fn(),
     setUsername:          jest.fn(),
+    clearCredentials:     jest.fn(),
     getUsername:          jest.fn().mockReturnValue(null),
     getProjects:          jest.fn().mockResolvedValue([]),
     getSkills:            jest.fn().mockResolvedValue([]),
@@ -88,11 +89,47 @@ test('submit button disabled until username and password filled', async () => {
 })
 
 // ── Step 1: login / register success ──────────────────────────────────────
-test('successful login calls window.api.login and advances to consent step', async () => {
-  setupApi()
+test('successful login with NO existing consent advances to consent step', async () => {
+  // getLatestConsent returns null → no prior consent → must go through wizard
+  setupApi({ getLatestConsent: jest.fn().mockResolvedValue(null) })
   await renderWizard(App)
   await submitAuth()
   expect(window.api.login).toHaveBeenCalledWith({ username: 'alice', password: 'secret' })
+  await waitFor(() =>
+    expect(screen.getByText(/review data permissions/i)).toBeInTheDocument()
+  )
+})
+
+test('successful login with EXISTING consent skips consent step and goes to app', async () => {
+  // getLatestConsent returns a record → returning user → skip consent wizard
+  setupApi({ getLatestConsent: jest.fn().mockResolvedValue({ provider: 'openai' }) })
+  await renderWizard(App)
+  await submitAuth()
+  // Should jump straight to the success splash and never render the consent form
+  await waitFor(() =>
+    expect(screen.getByTestId('consent-success')).toBeInTheDocument()
+  )
+  // The consent form inputs should never have appeared
+  expect(screen.queryByTestId('consent-use-external')).not.toBeInTheDocument()
+  expect(screen.queryByTestId('consent-submit')).not.toBeInTheDocument()
+  expect(window.api.getAvailableServices).not.toHaveBeenCalled()
+})
+
+test('login with existing consent does NOT call giveConsent', async () => {
+  setupApi({ getLatestConsent: jest.fn().mockResolvedValue({ provider: 'openai' }) })
+  await renderWizard(App)
+  await submitAuth()
+  await waitFor(() => expect(screen.getByTestId('consent-success')).toBeInTheDocument())
+  expect(window.api.giveConsent).not.toHaveBeenCalled()
+})
+
+test('register always shows consent step regardless of existing consent', async () => {
+  // Even if there were somehow an existing consent, new registrations should
+  // always go through the consent wizard (they just created the account).
+  setupApi({ getLatestConsent: jest.fn().mockResolvedValue({ provider: 'openai' }) })
+  await renderWizard(App)
+  await userEvent.click(screen.getByTestId('auth-tab-register'))
+  await submitAuth('newuser', 'password123')
   await waitFor(() =>
     expect(screen.getByText(/review data permissions/i)).toBeInTheDocument()
   )
