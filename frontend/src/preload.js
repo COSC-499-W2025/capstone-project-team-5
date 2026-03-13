@@ -44,6 +44,44 @@ function getErrorMessage(parsedBody, status) {
   return `HTTP ${status}`;
 }
 
+function buildQueryString(params = {}) {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null) {
+      return;
+    }
+
+    searchParams.set(key, String(value));
+  });
+
+  const query = searchParams.toString();
+  return query ? `?${query}` : '';
+}
+
+function parseFilename(contentDisposition) {
+  if (!contentDisposition) {
+    return 'resume.pdf';
+  }
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1].trim());
+  }
+
+  const quotedMatch = contentDisposition.match(/filename="([^"]+)"/i);
+  if (quotedMatch?.[1]) {
+    return quotedMatch[1].trim();
+  }
+
+  const plainMatch = contentDisposition.match(/filename=([^;]+)/i);
+  if (plainMatch?.[1]) {
+    return plainMatch[1].trim().replace(/^"|"$/g, '');
+  }
+
+  return 'resume.pdf';
+}
+
 async function request(method, path, body, signal) {
   const opts = {
     method,
@@ -77,6 +115,29 @@ async function requestWithForm(method, path, formData, signal) {
   }
 
   return parsedBody;
+}
+
+async function requestBinary(method, path, body, signal) {
+  const opts = {
+    method,
+    headers: withAuthHeaders({ 'Content-Type': 'application/json' }),
+    signal,
+  };
+
+  if (body) opts.body = JSON.stringify(body);
+
+  const res = await fetch(`${API_BASE}${path}`, opts);
+
+  if (!res.ok) {
+    const parsedBody = await parseResponseBody(res);
+    throw new Error(getErrorMessage(parsedBody, res.status));
+  }
+
+  return {
+    bytes: await res.arrayBuffer(),
+    contentType: res.headers.get('content-type') || 'application/octet-stream',
+    filename: parseFilename(res.headers.get('content-disposition')),
+  };
 }
 
 contextBridge.exposeInMainWorld('api', {
@@ -168,8 +229,14 @@ contextBridge.exposeInMainWorld('api', {
     request('DELETE', `/api/projects/${projectId}`),
 
   // Project analysis
-  analyzeProject: (projectId) =>
-    request('POST', `/api/projects/${projectId}/analyze`),
+  analyzeProject: (projectId, options = {}) =>
+    request(
+      'POST',
+      `/api/projects/${projectId}/analyze${buildQueryString({
+        use_ai: options?.useAi,
+        force: options?.force,
+      })}`
+    ),
 
   analyzeProjects: (data) =>
     request('POST', '/api/projects/analyze', data),
@@ -222,6 +289,9 @@ contextBridge.exposeInMainWorld('api', {
 
   generateResume: (username, data) =>
     request('POST', `/api/users/${username}/resumes/generate`, data),
+
+  downloadResumePdf: (username, data) =>
+    requestBinary('POST', `/api/users/${username}/resumes/generate`, data),
 
   createResume: (username, data) =>
     request('POST', `/api/users/${username}/resumes`, data),
