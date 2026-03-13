@@ -87,6 +87,17 @@ export default function DashboardPage() {
     fileInputRef.current?.click()
   }
 
+  function handleQuickAction(actionLabel) {
+    if (actionLabel === 'Upload Project') {
+      startUploadFlow()
+      return
+    }
+
+    if (actionLabel === 'Generate Resume' && apiOk) {
+      setPage('resumes')
+    }
+  }
+
   async function onUploadFileSelected(event) {
     const [file] = event.target.files || []
     event.target.value = ''
@@ -193,8 +204,14 @@ export default function DashboardPage() {
               key={action.label}
               type="button"
               className="card group cursor-pointer text-left disabled:opacity-60"
-              onClick={action.label === 'Upload Project' ? startUploadFlow : undefined}
-              disabled={action.label === 'Upload Project' ? uploadState.loading || !apiOk : true}
+              onClick={() => handleQuickAction(action.label)}
+              disabled={
+                action.label === 'Upload Project'
+                  ? uploadState.loading || !apiOk
+                  : action.label === 'Generate Resume'
+                    ? !apiOk
+                    : true
+              }
             >
               <div className="mb-3 text-2xl opacity-40 transition-opacity group-hover:opacity-80">
                 {action.icon}
