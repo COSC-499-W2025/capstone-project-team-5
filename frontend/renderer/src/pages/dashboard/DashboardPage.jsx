@@ -16,6 +16,23 @@ const QUICK_ACTIONS = [
   { icon: '▤', label: 'Generate Resume', desc: 'Tailor a resume to a job' },
 ]
 
+function getProjectCount(payload) {
+  if (!payload) {
+    return 0
+  }
+
+  const total = payload?.pagination?.total
+  if (Number.isFinite(total)) {
+    return total
+  }
+
+  return getProjectItems(payload).length
+}
+
+function formatCardCount(count) {
+  return Number.isFinite(count) && count > 0 ? count : '—'
+}
+
 export default function DashboardPage() {
   const { user, apiOk, setPage, setUploadHighlights } = useApp()
   const fileInputRef = useRef(null)
@@ -23,10 +40,10 @@ export default function DashboardPage() {
   const uploadAbortControllerRef = useRef(null)
 
   const [stats, setStats] = useState({
-    projects: null,
-    skills: null,
-    experience: null,
-    resumes: null,
+    projects: '—',
+    skills: '—',
+    experience: '—',
+    resumes: '—',
   })
   const [uploadState, setUploadState] = useState({
     loading: false,
@@ -35,6 +52,8 @@ export default function DashboardPage() {
   })
 
   useEffect(() => {
+    isMountedRef.current = true
+
     return () => {
       isMountedRef.current = false
       uploadAbortControllerRef.current?.abort()
@@ -42,38 +61,81 @@ export default function DashboardPage() {
   }, [])
 
   async function loadDashboardStats() {
-    if (!apiOk || !user?.username) {
+    if (!apiOk) {
       return
     }
 
-    const username = user.username
-    const [projects, skills, experience, resumes] = await Promise.allSettled([
-      window.api.getProjects(),
-      window.api.getSkills(),
-      window.api.getWorkExperiences(username),
-      window.api.getResumes(username),
-    ])
+    const username =
+      user?.username ||
+      (typeof window.api.getUsername === 'function' ? window.api.getUsername() : null) ||
+      localStorage.getItem('zip2job_username')
 
-    const projectItems = projects.status === 'fulfilled' ? getProjectItems(projects.value) : []
-    if (!isMountedRef.current) {
+    const api = window.api
+    const defaultStats = {
+      projects: '—',
+      skills: '—',
+      experience: '—',
+      resumes: '—',
+    }
+
+    if (!api) {
+      if (isMountedRef.current) {
+        setStats(defaultStats)
+      }
       return
     }
 
-    setStats({
-      projects: projects.status === 'fulfilled' ? projectItems.length : '—',
-      skills: skills.status === 'fulfilled' ? (skills.value?.length ?? 0) : '—',
-      experience: experience.status === 'fulfilled' ? (experience.value?.length ?? 0) : '—',
-      resumes: resumes.status === 'fulfilled' ? (resumes.value?.length ?? 0) : '—',
-    })
+    try {
+      const projectsPromise =
+        typeof api.getProjects === 'function'
+          ? api.getProjects()
+          : Promise.reject(new Error('Projects API unavailable'))
+      const skillsPromise =
+        typeof api.getSkills === 'function'
+          ? api.getSkills()
+          : Promise.reject(new Error('Skills API unavailable'))
+      const experiencePromise =
+        username && typeof api.getWorkExperiences === 'function'
+          ? api.getWorkExperiences(username)
+          : Promise.resolve([])
+      const resumesPromise =
+        username && typeof api.getResumes === 'function'
+          ? api.getResumes(username)
+          : Promise.resolve([])
+
+      const [projects, skills, experience, resumes] = await Promise.allSettled([
+        projectsPromise,
+        skillsPromise,
+        experiencePromise,
+        resumesPromise,
+      ])
+
+      if (!isMountedRef.current) {
+        return
+      }
+
+      setStats({
+        projects:
+          projects.status === 'fulfilled' ? formatCardCount(getProjectCount(projects.value)) : '—',
+        skills: skills.status === 'fulfilled' ? formatCardCount(skills.value?.length ?? 0) : '—',
+        experience:
+          experience.status === 'fulfilled' ? formatCardCount(experience.value?.length ?? 0) : '—',
+        resumes: resumes.status === 'fulfilled' ? formatCardCount(resumes.value?.length ?? 0) : '—',
+      })
+    } catch {
+      if (isMountedRef.current) {
+        setStats(defaultStats)
+      }
+    }
   }
 
   useEffect(() => {
-    if (!apiOk || !user?.username) {
+    if (!apiOk) {
       return
     }
 
     loadDashboardStats()
-  }, [apiOk, user])
+  }, [apiOk, user?.username])
 
   async function refreshStats() {
     await loadDashboardStats()
@@ -182,8 +244,8 @@ export default function DashboardPage() {
         {STAT_CARDS.map(({ label, key, accent }) => (
           <div key={key} className="stat-card">
             <div className="font-mono text-2xs uppercase tracking-widest text-muted">{label}</div>
-            <div className={`mt-1 text-4xl font-extrabold tracking-tight ${accent ? 'text-accent' : ''}`}>
-              {stats[key] ?? <span className="text-2xl text-muted">—</span>}
+            <div className={`mt-1 text-3xl font-extrabold tracking-tight ${accent ? 'text-accent' : ''}`}>
+              {stats[key] ?? <span className="text-xl text-muted">—</span>}
             </div>
           </div>
         ))}
