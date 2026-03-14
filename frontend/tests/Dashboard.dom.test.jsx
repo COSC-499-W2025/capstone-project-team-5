@@ -117,6 +117,16 @@ test('shows experience card count from work experiences list', async () => {
   await waitFor(() => expect(screen.getByText('2')).toBeInTheDocument())
 })
 
+test('shows resumes card count from resumes list', async () => {
+  renderDashboard({
+    user: { username: 'alice' },
+    projectPayload: { items: [], pagination: { total: 0, limit: 50, offset: 0, has_more: false } },
+    resumesPayload: [{ project_id: 1 }],
+  })
+
+  await waitFor(() => expect(screen.getByText('1')).toBeInTheDocument())
+})
+
 test('falls back to dash when projects API fails', async () => {
   window.api = {
     getProjects: jest.fn().mockRejectedValue(new Error('boom')),
