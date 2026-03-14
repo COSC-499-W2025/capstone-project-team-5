@@ -435,11 +435,6 @@ function GitSection({ git }) {
             <MetaItem label="lines deleted" value={mine.deleted?.toLocaleString()} />
           </div>
         )}
-        {git.activity_chart?.length > 0 && (
-          <div className="font-mono text-xs tracking-widest text-muted leading-relaxed break-all">
-            {git.activity_chart.join('')}
-          </div>
-        )}
         {git.author_contributions?.length > 1 && (
           <div className="space-y-1">
             <div className="font-mono text-2xs text-muted mb-1">ALL CONTRIBUTORS</div>
