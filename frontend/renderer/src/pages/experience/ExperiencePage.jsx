@@ -9,6 +9,7 @@ const EMPTY_FORM = {
   title: '',
   location: '',
   description: '',
+  bullets: [''],
   start_date: '',
   end_date: '',
   is_current: false,
@@ -28,12 +29,38 @@ function validate(form) {
   return null
 }
 
+function parseBullets(raw) {
+  if (!raw) return ['']
+  if (Array.isArray(raw)) return raw.length ? raw : ['']
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) && parsed.length ? parsed.map(String) : ['']
+  } catch {
+    return [raw]
+  }
+}
+
+function itemToForm(item) {
+  return {
+    company: item.company ?? '',
+    title: item.title ?? '',
+    location: item.location ?? '',
+    description: item.description ?? '',
+    bullets: parseBullets(item.bullets),
+    start_date: item.start_date ?? '',
+    end_date: item.end_date ?? '',
+    is_current: item.is_current ?? false,
+  }
+}
+
 function buildPayload(form) {
+  const cleaned = form.bullets.map((b) => b.trim()).filter(Boolean)
   return {
     company: form.company.trim(),
     title: form.title.trim(),
     location: form.location.trim() || null,
     description: form.description.trim() || null,
+    bullets: cleaned.length ? JSON.stringify(cleaned) : null,
     start_date: form.start_date || null,
     end_date: form.is_current ? null : form.end_date || null,
     is_current: form.is_current,
@@ -45,7 +72,7 @@ export default function ExperiencePage() {
     items, error, loading, showForm, editingId, form,
     formError, saving, confirmId, setConfirmId,
     openCreate, openEdit, cancelForm, setField, handleSave, handleDelete,
-  } = useCrudList({ emptyForm: EMPTY_FORM, api: API, validate, buildPayload })
+  } = useCrudList({ emptyForm: EMPTY_FORM, api: API, itemToForm, validate, buildPayload })
 
   return (
     <div className="animate-fade-up space-y-6">
@@ -125,6 +152,41 @@ export default function ExperiencePage() {
             onChange={(event) => setField('description', event.target.value)}
           />
 
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-ink">Bullet Points</label>
+            {form.bullets.map((bullet, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <span className="text-xs text-muted">•</span>
+                <input
+                  className="input flex-1"
+                  placeholder={`Bullet point ${index + 1}`}
+                  value={bullet}
+                  onChange={(event) => {
+                    const updated = [...form.bullets]
+                    updated[index] = event.target.value
+                    setField('bullets', updated)
+                  }}
+                />
+                {form.bullets.length > 1 && (
+                  <button
+                    type="button"
+                    className="btn-ghost text-xs text-red-400"
+                    onClick={() => setField('bullets', form.bullets.filter((_, i) => i !== index))}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              className="btn-ghost text-xs"
+              onClick={() => setField('bullets', [...form.bullets, ''])}
+            >
+              + Add bullet
+            </button>
+          </div>
+
           <div className="flex gap-2">
             <button type="submit" className="btn-primary text-xs" disabled={saving}>
               {saving ? 'Saving…' : 'Save'}
@@ -198,6 +260,16 @@ export default function ExperiencePage() {
               {item.description && (
                 <p className="text-xs leading-relaxed text-ink/70">{item.description}</p>
               )}
+
+              {(() => {
+                const bullets = parseBullets(item.bullets)
+                const nonEmpty = bullets.filter((b) => b.trim())
+                return nonEmpty.length > 0 && (
+                  <ul className="list-disc pl-4 text-xs leading-relaxed text-ink/70">
+                    {nonEmpty.map((b, i) => <li key={i}>{b}</li>)}
+                  </ul>
+                )
+              })()}
             </div>
           ))}
         </div>
