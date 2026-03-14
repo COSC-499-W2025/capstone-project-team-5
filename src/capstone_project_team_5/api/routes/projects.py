@@ -50,6 +50,7 @@ from capstone_project_team_5.services.project_thumbnail import (
     has_project_thumbnail,
     set_project_thumbnail,
 )
+from capstone_project_team_5.services.skill_persistence import save_skills_to_db
 from capstone_project_team_5.services.upload import inspect_zip
 from capstone_project_team_5.services.upload_storage import get_upload_zip_path, store_upload_zip
 from capstone_project_team_5.workflows.analysis_pipeline import analyze_projects_structured
@@ -668,12 +669,21 @@ def analyze_project(
         if not force and cached and cached.get("fingerprint") == fingerprint:
             payload = cached.get("payload")
             if isinstance(payload, dict):
-                return ProjectAnalysisResult(**payload)
+                cached_response = ProjectAnalysisResult(**payload)
+                # Keep /api/skills synchronized even when serving from cache.
+                save_skills_to_db(
+                    session,
+                    project.id,
+                    cached_response.tools,
+                    cached_response.practices,
+                )
+                return cached_response
 
         response, fingerprint = _analyze_project_from_store(project, upload_ids, use_ai)
         project.importance_score = response.importance_score
         project.user_role = response.user_role
         project.user_contribution_percentage = response.user_contribution_percentage
+        save_skills_to_db(session, project.id, response.tools, response.practices)
         session.flush()
         write_analysis_cache(project.id, fingerprint, response.model_dump())
         return response
@@ -724,6 +734,15 @@ def analyze_all_projects(use_ai: bool = False, force: bool = False) -> ProjectsA
             fingerprint = compute_project_fingerprint(project.rel_path, upload_ids)
             cached = load_analysis_cache(project.id)
             if not force and cached and cached.get("fingerprint") == fingerprint:
+                payload = cached.get("payload")
+                if isinstance(payload, dict):
+                    cached_response = ProjectAnalysisResult(**payload)
+                    save_skills_to_db(
+                        session,
+                        project.id,
+                        cached_response.tools,
+                        cached_response.practices,
+                    )
                 skipped.append(
                     ProjectAnalysisSkipped(
                         project_id=project.id,
@@ -737,6 +756,7 @@ def analyze_all_projects(use_ai: bool = False, force: bool = False) -> ProjectsA
                 project.importance_score = response.importance_score
                 project.user_role = response.user_role
                 project.user_contribution_percentage = response.user_contribution_percentage
+                save_skills_to_db(session, project.id, response.tools, response.practices)
                 write_analysis_cache(project.id, fingerprint, response.model_dump())
                 analyzed.append(response)
             except HTTPException as exc:
