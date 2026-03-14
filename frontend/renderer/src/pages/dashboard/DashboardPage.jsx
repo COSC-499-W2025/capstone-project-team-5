@@ -123,18 +123,18 @@ export default function DashboardPage() {
 
     setUploadState({ loading: true, message: 'Reading file…', error: false, progress: 10, step: 'Reading' })
 
-    // Start ticking immediately so the bar moves during both file-read and upload.
-    // Ticks +1% every 600 ms, capped at 70% until the server responds.
+    // Tick +1% every 800 ms, capped at 90% — keeps the bar visibly moving
+    // for slow uploads without racing ahead of the server response.
     clearInterval(progressTickRef.current)
     progressTickRef.current = setInterval(() => {
       setUploadState((s) => {
-        if (!s.loading || s.progress >= 70) return s
+        if (!s.loading || s.progress >= 90) return s
         const next = s.progress + 1
         const step = next < 25 ? 'Reading' : 'Uploading'
         const message = next < 25 ? 'Reading file…' : `Uploading ${file.name}…`
         return { ...s, progress: next, step, message }
       })
-    }, 600)
+    }, 800)
 
     try {
       uploadAbortControllerRef.current?.abort()
@@ -185,6 +185,9 @@ export default function DashboardPage() {
         step: 'Done',
       })
 
+      // Small pause so the user can see 100% before navigating away.
+      await new Promise((r) => setTimeout(r, 1200))
+      if (!isMountedRef.current) return
       setPage('projects')
     } catch (error) {
       clearInterval(progressTickRef.current)
