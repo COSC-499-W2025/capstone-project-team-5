@@ -336,7 +336,6 @@ function ProjectMeta({ project }) {
     { label: 'files', value: project.file_count },
     project.language && { label: 'language', value: project.language },
     project.framework && { label: 'framework', value: project.framework },
-    project.duration && { label: 'duration', value: project.duration },
     project.created_at && {
       label: 'uploaded',
       value: new Date(project.created_at).toLocaleDateString(),
@@ -350,6 +349,12 @@ function ProjectMeta({ project }) {
           <MetaItem key={item.label} label={item.label} value={item.value} />
         ))}
       </div>
+      {project.duration && (
+        <div className="border-t border-border pt-3">
+          <div className="font-mono text-2xs text-muted mb-1">DURATION</div>
+          <div className="text-sm text-foreground leading-relaxed">{project.duration}</div>
+        </div>
+      )}
       {project.collaborators_display && (
         <div className="border-t border-border pt-3">
           <div className="font-mono text-2xs text-muted mb-1">COLLABORATORS</div>
