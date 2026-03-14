@@ -1,18 +1,10 @@
 const { contextBridge } = require('electron');
 
 const API_BASE = 'http://localhost:8000';
-let currentUsername = (process.env.ZIP2JOB_USERNAME || '').trim();
 
-// Username is set once during login/register and reused on every request
-let _username = null;
-
-function withAuthHeaders(headers = {}) {
-  if (!currentUsername) return headers;
-  return {
-    ...headers,
-    'X-Username': currentUsername,
-  };
-}
+// Single source of truth for the authenticated username.
+// Used both for the X-Username request header and the display username.
+let _username = (process.env.ZIP2JOB_USERNAME || '').trim() || null;
 
 async function parseResponseBody(res) {
   if (res.status === 204) return null;
@@ -52,12 +44,10 @@ function httpError(parsedBody, status) {
 }
 
 async function request(method, path, body, signal) {
-  const opts = {
-    method,
-    headers: withAuthHeaders({ 'Content-Type': 'application/json' }),
-    signal,
-  };
+  const headers = { 'Content-Type': 'application/json' };
+  if (_username) headers['X-Username'] = _username;
 
+  const opts = { method, headers, signal };
   if (body) opts.body = JSON.stringify(body);
 
   const res = await fetch(`${API_BASE}${path}`, opts);
@@ -71,9 +61,12 @@ async function request(method, path, body, signal) {
 }
 
 async function requestWithForm(method, path, formData, signal) {
+  const headers = {};
+  if (_username) headers['X-Username'] = _username;
+
   const res = await fetch(`${API_BASE}${path}`, {
     method,
-    headers: withAuthHeaders(),
+    headers,
     body: formData,
     signal,
   });
@@ -87,24 +80,18 @@ async function requestWithForm(method, path, formData, signal) {
 }
 
 contextBridge.exposeInMainWorld('api', {
-  setAuthUsername: (username) => {
-    currentUsername = (username || '').trim();
-  },
-  getAuthUsername: () => currentUsername,
-
-  // Internal username state (set after login/register)
-  setUsername: (username) => { _username = username; },
-  getUsername: () => _username,
+  // Both setters write the same variable so callers don't need to call both.
+  setAuthUsername: (username) => { _username = (username || '').trim() || null; },
+  getAuthUsername: () => _username,
+  setUsername:     (username) => { _username = username || null; },
+  getUsername:     () => _username,
 
   /**
    * Clear all credential state in the preload bridge.
    * The React layer is responsible for clearing localStorage and
    * resetting its own state; this keeps the two in sync.
    */
-  clearCredentials: () => {
-    currentUsername = '';
-    _username = null;
-  },
+  clearCredentials: () => { _username = null; },
 
   // Health
   health: () => request('GET', '/health'),
