@@ -170,12 +170,12 @@ function ProjectModal({ project, onClose, onAnalysisComplete }) {
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 pt-[75vh] backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 backdrop-blur-sm"
       onClick={(e) => e.target === overlayRef.current && onClose()}
     >
-      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border border-border bg-background shadow-2xl my-auto">
+      <div className="relative flex h-[75vh] w-full max-w-2xl flex-col rounded-lg border border-border bg-background shadow-2xl">
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-4">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-3">
           <div className="min-w-0">
             <div className="text-sm font-bold truncate">{project.name}</div>
             <div className="mt-0.5 font-mono text-2xs text-muted truncate">
@@ -195,7 +195,7 @@ function ProjectModal({ project, onClose, onAnalysisComplete }) {
         </div>
 
         {/* Scrollable body */}
-        <div className="overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">
           <ProjectDetail
             project={project}
             onAnalysisComplete={onAnalysisComplete}
@@ -246,7 +246,7 @@ function ProjectDetail({ project, onAnalysisComplete }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <ProjectMeta project={project} />
 
       <div className="flex items-center justify-between">
@@ -332,12 +332,11 @@ function AnalysisResults({ data }) {
 // ─── Section components ───────────────────────────────────────────────────────
 
 function ProjectMeta({ project }) {
-  const items = [
+  const gridItems = [
     { label: 'files', value: project.file_count },
     project.language && { label: 'language', value: project.language },
     project.framework && { label: 'framework', value: project.framework },
     project.duration && { label: 'duration', value: project.duration },
-    project.collaborators_display && { label: 'collaborators', value: project.collaborators_display },
     project.created_at && {
       label: 'uploaded',
       value: new Date(project.created_at).toLocaleDateString(),
@@ -345,10 +344,18 @@ function ProjectMeta({ project }) {
   ].filter(Boolean)
 
   return (
-    <div className="grid grid-cols-3 gap-3 rounded border border-border p-3">
-      {items.map((item) => (
-        <MetaItem key={item.label} label={item.label} value={item.value} />
-      ))}
+    <div className="rounded border border-border p-3 space-y-3">
+      <div className="grid grid-cols-3 gap-x-4 gap-y-3">
+        {gridItems.map((item) => (
+          <MetaItem key={item.label} label={item.label} value={item.value} />
+        ))}
+      </div>
+      {project.collaborators_display && (
+        <div className="border-t border-border pt-3">
+          <div className="font-mono text-2xs text-muted mb-1">COLLABORATORS</div>
+          <div className="text-sm text-foreground leading-relaxed">{project.collaborators_display}</div>
+        </div>
+      )}
     </div>
   )
 }
