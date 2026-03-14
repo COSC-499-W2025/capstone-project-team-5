@@ -118,21 +118,22 @@ test('edit populates form and save calls updateWorkExperience', async () => {
   )
 })
 
-test('delete confirmation: Yes removes the card', async () => {
+test('delete confirmation: confirm removes the card', async () => {
   await boot({ getWorkExperiences: jest.fn().mockResolvedValue([MOCK_EXP]) })
   await waitFor(() => expect(screen.getByText('Software Engineer')).toBeInTheDocument())
   fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
-  expect(screen.getByText(/delete\?/i)).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: /^yes$/i }))
+  expect(screen.getByText(/are you sure/i)).toBeInTheDocument()
+  const deleteButtons = screen.getAllByRole('button', { name: /^delete$/i })
+  fireEvent.click(deleteButtons[deleteButtons.length - 1])
   await waitFor(() => expect(window.api.deleteWorkExperience).toHaveBeenCalledWith('alice', MOCK_EXP.id))
   await waitFor(() => expect(screen.queryByText('Software Engineer')).not.toBeInTheDocument())
 })
 
-test('delete confirmation: No cancels without deleting', async () => {
+test('delete confirmation: Cancel cancels without deleting', async () => {
   await boot({ getWorkExperiences: jest.fn().mockResolvedValue([MOCK_EXP]) })
   await waitFor(() => expect(screen.getByText('Software Engineer')).toBeInTheDocument())
   fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
-  fireEvent.click(screen.getByRole('button', { name: /^no$/i }))
+  fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
   expect(window.api.deleteWorkExperience).not.toHaveBeenCalled()
   expect(screen.getByText('Software Engineer')).toBeInTheDocument()
 })

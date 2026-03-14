@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
-import { useApp } from '../../app/context/AppContext'
 import EmptyState from '../../components/EmptyState'
 import InlineError from '../../components/InlineError'
 import PageHeader from '../../components/PageHeader'
+import useCrudList from '../../hooks/useCrudList'
 import { formatDateRange } from '../../lib/dates'
 
 const EMPTY_FORM = {
@@ -15,131 +14,38 @@ const EMPTY_FORM = {
   is_current: false,
 }
 
+const API = {
+  list: (username) => window.api.getWorkExperiences(username),
+  create: (username, data) => window.api.createWorkExperience(username, data),
+  update: (username, id, data) => window.api.updateWorkExperience(username, id, data),
+  remove: (username, id) => window.api.deleteWorkExperience(username, id),
+}
+
+function validate(form) {
+  if (!form.company.trim() || !form.title.trim()) {
+    return 'Company and title are required.'
+  }
+  return null
+}
+
+function buildPayload(form) {
+  return {
+    company: form.company.trim(),
+    title: form.title.trim(),
+    location: form.location.trim() || null,
+    description: form.description.trim() || null,
+    start_date: form.start_date || null,
+    end_date: form.is_current ? null : form.end_date || null,
+    is_current: form.is_current,
+  }
+}
+
 export default function ExperiencePage() {
-  const { user, apiOk } = useApp()
-  const [items, setItems] = useState([])
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState(null)
-  const [form, setForm] = useState(EMPTY_FORM)
-  const [formError, setFormError] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [confirmId, setConfirmId] = useState(null)
-
-  useEffect(() => {
-    if (!apiOk || !user?.username) {
-      return
-    }
-
-    let cancelled = false
-
-    async function load() {
-      setLoading(true)
-
-      try {
-        const data = await window.api.getWorkExperiences(user.username)
-        if (!cancelled) {
-          setItems(data ?? [])
-          setError('')
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setError(error?.message || 'Failed to load')
-          setItems([])
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
-      }
-    }
-
-    load()
-
-    return () => {
-      cancelled = true
-    }
-  }, [apiOk, user?.username])
-
-  function openCreate() {
-    setForm(EMPTY_FORM)
-    setEditingId(null)
-    setFormError('')
-    setShowForm(true)
-  }
-
-  function openEdit(item) {
-    setForm({
-      company: item.company ?? '',
-      title: item.title ?? '',
-      location: item.location ?? '',
-      description: item.description ?? '',
-      start_date: item.start_date ?? '',
-      end_date: item.end_date ?? '',
-      is_current: item.is_current ?? false,
-    })
-    setEditingId(item.id)
-    setFormError('')
-    setShowForm(true)
-  }
-
-  function cancelForm() {
-    setShowForm(false)
-    setEditingId(null)
-    setFormError('')
-  }
-
-  async function handleSave(event) {
-    event.preventDefault()
-    if (!form.company.trim() || !form.title.trim()) {
-      setFormError('Company and title are required.')
-      return
-    }
-
-    setSaving(true)
-    setFormError('')
-
-    const payload = {
-      company: form.company.trim(),
-      title: form.title.trim(),
-      location: form.location.trim() || null,
-      description: form.description.trim() || null,
-      start_date: form.start_date || null,
-      end_date: form.is_current ? null : form.end_date || null,
-      is_current: form.is_current,
-    }
-
-    try {
-      if (editingId) {
-        const updated = await window.api.updateWorkExperience(user.username, editingId, payload)
-        setItems((current) => current.map((item) => (item.id === editingId ? updated : item)))
-      } else {
-        const created = await window.api.createWorkExperience(user.username, payload)
-        setItems((current) => [...current, created])
-      }
-
-      cancelForm()
-    } catch (error) {
-      setFormError(error?.message || 'Save failed')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function handleDelete(id) {
-    try {
-      await window.api.deleteWorkExperience(user.username, id)
-      setItems((current) => current.filter((item) => item.id !== id))
-      setConfirmId(null)
-    } catch (error) {
-      setError(error?.message || 'Delete failed')
-    }
-  }
-
-  function setField(key, value) {
-    setForm((current) => ({ ...current, [key]: value }))
-  }
+  const {
+    items, error, loading, showForm, editingId, form,
+    formError, saving, confirmId, setConfirmId,
+    openCreate, openEdit, cancelForm, setField, handleSave, handleDelete,
+  } = useCrudList({ emptyForm: EMPTY_FORM, api: API, validate, buildPayload })
 
   return (
     <div className="animate-fade-up space-y-6">
@@ -238,7 +144,7 @@ export default function ExperiencePage() {
 
       {!loading && items.length > 0 && (
         <div className="grid grid-cols-1 gap-3">
-          {items.map((item) => (
+          {items.filter((item) => item.id !== editingId).map((item) => (
             <div key={item.id} className="card space-y-2 p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -249,35 +155,37 @@ export default function ExperiencePage() {
                   <button type="button" className="btn-ghost text-xs" onClick={() => openEdit(item)}>
                     Edit
                   </button>
-                  {confirmId === item.id ? (
-                    <>
-                      <span className="text-xs text-red-400">Delete?</span>
-                      <button
-                        type="button"
-                        className="btn-ghost text-xs text-red-400"
-                        onClick={() => handleDelete(item.id)}
-                      >
-                        Yes
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost text-xs"
-                        onClick={() => setConfirmId(null)}
-                      >
-                        No
-                      </button>
-                    </>
-                  ) : (
+                  <button
+                    type="button"
+                    className="btn-ghost text-xs"
+                    onClick={() => setConfirmId(confirmId === item.id ? null : item.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              {confirmId === item.id && (
+                <div className="flex items-center justify-between rounded-md border border-red-500/30 bg-red-500/10 px-4 py-2">
+                  <span className="text-xs text-red-400">Are you sure you want to delete this entry?</span>
+                  <div className="flex gap-2">
                     <button
                       type="button"
-                      className="btn-ghost text-xs"
-                      onClick={() => setConfirmId(item.id)}
+                      className="rounded bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700"
+                      onClick={() => handleDelete(item.id)}
                     >
                       Delete
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      className="btn-ghost text-xs"
+                      onClick={() => setConfirmId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {(item.location || item.start_date) && (
                 <div className="flex items-center gap-3 font-mono text-2xs text-muted">
