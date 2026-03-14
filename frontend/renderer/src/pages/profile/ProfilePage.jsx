@@ -132,6 +132,7 @@ export default function ProfilePage() {
             <input
               className="input"
               placeholder="LinkedIn URL"
+              type="url"
               value={form.linkedin_url}
               onChange={(e) => setField('linkedin_url', e.target.value)}
             />
@@ -144,6 +145,7 @@ export default function ProfilePage() {
             <input
               className="input md:col-span-2"
               placeholder="Website"
+              type="url"
               value={form.website}
               onChange={(e) => setField('website', e.target.value)}
             />
