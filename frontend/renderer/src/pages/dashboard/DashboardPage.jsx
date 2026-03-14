@@ -21,6 +21,7 @@ export default function DashboardPage() {
   const fileInputRef = useRef(null)
   const isMountedRef = useRef(true)
   const uploadAbortControllerRef = useRef(null)
+  const progressTickRef = useRef(null)
 
   const [stats, setStats] = useState({
     projects: null,
@@ -32,12 +33,15 @@ export default function DashboardPage() {
     loading: false,
     message: '',
     error: false,
+    progress: 0,   // 0-100; -1 = indeterminate pulse
+    step: '',      // short label shown inside the bar
   })
 
   useEffect(() => {
     return () => {
       isMountedRef.current = false
       uploadAbortControllerRef.current?.abort()
+      clearInterval(progressTickRef.current)
     }
   }, [])
 
@@ -111,22 +115,49 @@ export default function DashboardPage() {
         loading: false,
         error: true,
         message: 'Please select a .zip file.',
+        progress: 0,
+        step: '',
       })
       return
     }
 
-    setUploadState({ loading: true, message: 'Uploading project archive...', error: false })
+    setUploadState({ loading: true, message: 'Reading file…', error: false, progress: 10, step: 'Reading' })
+
+    // Tick +1% every 800 ms, capped at 90% — keeps the bar visibly moving
+    // for slow uploads without racing ahead of the server response.
+    clearInterval(progressTickRef.current)
+    progressTickRef.current = setInterval(() => {
+      setUploadState((s) => {
+        if (!s.loading || s.progress >= 90) return s
+        const next = s.progress + 1
+        const step = next < 25 ? 'Reading' : 'Uploading'
+        const message = next < 25 ? 'Reading file…' : `Uploading ${file.name}…`
+        return { ...s, progress: next, step, message }
+      })
+    }, 800)
 
     try {
       uploadAbortControllerRef.current?.abort()
       uploadAbortControllerRef.current = new AbortController()
 
       const bytes = await file.arrayBuffer()
+
+      if (!isMountedRef.current) return
+
       const result = await window.api.createProjectUpload({
         name: file.name,
         type: file.type || 'application/zip',
         bytes,
       })
+
+      clearInterval(progressTickRef.current)
+
+      if (!isMountedRef.current) {
+        return
+      }
+
+      // Server has finished scanning; reflect that before we process the result
+      setUploadState((s) => ({ ...s, message: 'Processing projects…', progress: 75, step: 'Scanning' }))
 
       const actions = result?.actions ?? []
       const created = actions
@@ -136,12 +167,9 @@ export default function DashboardPage() {
         .filter((action) => action?.action === 'merged')
         .map((action) => action.project_id)
 
-      if (!isMountedRef.current) {
-        return
-      }
-
       setUploadHighlights({ created, merged })
 
+      setUploadState((s) => ({ ...s, message: 'Refreshing stats…', progress: 90, step: 'Finishing' }))
       await refreshStats()
       if (!isMountedRef.current) {
         return
@@ -153,10 +181,16 @@ export default function DashboardPage() {
         loading: false,
         error: false,
         message: `Upload complete. Created ${createdCount}, merged ${mergedCount}.`,
+        progress: 100,
+        step: 'Done',
       })
 
+      // Small pause so the user can see 100% before navigating away.
+      await new Promise((r) => setTimeout(r, 1200))
+      if (!isMountedRef.current) return
       setPage('projects')
     } catch (error) {
+      clearInterval(progressTickRef.current)
       if (error?.name === 'AbortError' || !isMountedRef.current) {
         return
       }
@@ -165,6 +199,8 @@ export default function DashboardPage() {
         loading: false,
         error: true,
         message: error?.message || 'Upload failed. Please try again.',
+        progress: 0,
+        step: '',
       })
     } finally {
       uploadAbortControllerRef.current = null
@@ -221,14 +257,25 @@ export default function DashboardPage() {
             </button>
           ))}
         </div>
-        {uploadState.message && (
+        {uploadState.loading && (
+          <div className="mt-4 space-y-1.5">
+            <div className="flex items-center justify-between font-mono text-2xs text-muted uppercase tracking-widest">
+              <span>{uploadState.step}</span>
+              <span>{uploadState.progress}%</span>
+            </div>
+            <div className="h-1 w-full overflow-hidden rounded-full bg-border">
+              <div
+                className="h-full rounded-full bg-accent transition-all duration-500 ease-out"
+                style={{ width: `${uploadState.progress}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted">{uploadState.message}</p>
+          </div>
+        )}
+        {!uploadState.loading && uploadState.message && (
           <p
             className={`mt-3 text-xs ${uploadState.error ? 'text-red-400' : 'text-muted'}`}
             onMouseEnter={() => {
-              if (uploadState.loading) {
-                return
-              }
-
               setUploadState((current) => ({ ...current, message: '' }))
             }}
           >
