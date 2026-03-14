@@ -7,12 +7,19 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { AppContext } from '../renderer/src/app/context/AppContext.jsx'
 import DashboardPage from '../renderer/src/pages/dashboard/DashboardPage.jsx'
 
-function renderDashboard({ user = null, apiOk = true, projectPayload = [] } = {}) {
+function renderDashboard({
+  user = null,
+  apiOk = true,
+  projectPayload = [],
+  skillsPayload = [],
+  experiencePayload = [],
+  resumesPayload = [],
+} = {}) {
   window.api = {
     getProjects: jest.fn().mockResolvedValue(projectPayload),
-    getSkills: jest.fn().mockResolvedValue([]),
-    getWorkExperiences: jest.fn().mockResolvedValue([]),
-    getResumes: jest.fn().mockResolvedValue([]),
+    getSkills: jest.fn().mockResolvedValue(skillsPayload),
+    getWorkExperiences: jest.fn().mockResolvedValue(experiencePayload),
+    getResumes: jest.fn().mockResolvedValue(resumesPayload),
     getUsername: jest.fn().mockReturnValue('alice'),
   }
 
@@ -85,6 +92,19 @@ test('uses pagination total for projects card count', async () => {
   })
 
   await waitFor(() => expect(screen.getByText('5')).toBeInTheDocument())
+})
+
+test('uses pagination total for skills card count', async () => {
+  renderDashboard({
+    user: { username: 'alice' },
+    projectPayload: { items: [], pagination: { total: 0, limit: 50, offset: 0, has_more: false } },
+    skillsPayload: {
+      items: [{ id: 1 }, { id: 2 }],
+      pagination: { total: 6, limit: 2, offset: 0, has_more: true },
+    },
+  })
+
+  await waitFor(() => expect(screen.getByText('6')).toBeInTheDocument())
 })
 
 test('falls back to dash when projects API fails', async () => {

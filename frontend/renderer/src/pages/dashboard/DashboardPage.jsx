@@ -5,9 +5,9 @@ import { getProjectItems } from '../../lib/projects'
 
 const STAT_CARDS = [
   { label: 'Projects', key: 'projects', accent: true },
-  { label: 'Skills', key: 'skills', accent: false },
-  { label: 'Experience', key: 'experience', accent: false },
-  { label: 'Resumes', key: 'resumes', accent: false },
+  { label: 'Skills', key: 'skills', accent: true },
+  { label: 'Experience', key: 'experience', accent: true },
+  { label: 'Resumes', key: 'resumes', accent: true },
 ]
 
 const QUICK_ACTIONS = [
@@ -29,6 +29,27 @@ function getProjectCount(payload) {
   return getProjectItems(payload).length
 }
 
+function getCollectionCount(payload) {
+  if (!payload) {
+    return 0
+  }
+
+  if (Array.isArray(payload)) {
+    return payload.length
+  }
+
+  const total = payload?.pagination?.total
+  if (Number.isFinite(total)) {
+    return total
+  }
+
+  if (Array.isArray(payload?.items)) {
+    return payload.items.length
+  }
+
+  return 0
+}
+
 function formatCardCount(count) {
   return Number.isFinite(count) && count > 0 ? count : '—'
 }
@@ -38,6 +59,7 @@ export default function DashboardPage() {
   const fileInputRef = useRef(null)
   const isMountedRef = useRef(true)
   const uploadAbortControllerRef = useRef(null)
+  const attemptedSkillsBackfillRef = useRef(false)
 
   const [stats, setStats] = useState({
     projects: '—',
@@ -114,14 +136,46 @@ export default function DashboardPage() {
         return
       }
 
+      const projectCount =
+        projects.status === 'fulfilled' ? getProjectCount(projects.value) : 0
+      const skillsCount =
+        skills.status === 'fulfilled' ? getCollectionCount(skills.value) : 0
+
       setStats({
         projects:
-          projects.status === 'fulfilled' ? formatCardCount(getProjectCount(projects.value)) : '—',
-        skills: skills.status === 'fulfilled' ? formatCardCount(skills.value?.length ?? 0) : '—',
+          projects.status === 'fulfilled' ? formatCardCount(projectCount) : '—',
+        skills: skills.status === 'fulfilled' ? formatCardCount(skillsCount) : '—',
         experience:
-          experience.status === 'fulfilled' ? formatCardCount(experience.value?.length ?? 0) : '—',
-        resumes: resumes.status === 'fulfilled' ? formatCardCount(resumes.value?.length ?? 0) : '—',
+          experience.status === 'fulfilled'
+            ? formatCardCount(getCollectionCount(experience.value))
+            : '—',
+        resumes:
+          resumes.status === 'fulfilled' ? formatCardCount(getCollectionCount(resumes.value)) : '—',
       })
+
+      if (
+        !attemptedSkillsBackfillRef.current &&
+        projectCount > 0 &&
+        skillsCount === 0 &&
+        projects.status === 'fulfilled' &&
+        typeof api.analyzeProject === 'function'
+      ) {
+        attemptedSkillsBackfillRef.current = true
+
+        const projectItems = getProjectItems(projects.value)
+        const analysisTasks = projectItems
+          .map((item) => item?.id)
+          .filter((id) => Number.isFinite(id))
+          .map((id) => api.analyzeProject(id))
+
+        if (analysisTasks.length > 0) {
+          Promise.allSettled(analysisTasks).then(() => {
+            if (isMountedRef.current) {
+              loadDashboardStats()
+            }
+          })
+        }
+      }
     } catch {
       if (isMountedRef.current) {
         setStats(defaultStats)
@@ -241,14 +295,19 @@ export default function DashboardPage() {
       />
 
       <div className="grid grid-cols-4 gap-3">
-        {STAT_CARDS.map(({ label, key, accent }) => (
-          <div key={key} className="stat-card">
-            <div className="font-mono text-2xs uppercase tracking-widest text-muted">{label}</div>
-            <div className={`mt-1 text-3xl font-extrabold tracking-tight ${accent ? 'text-accent' : ''}`}>
-              {stats[key] ?? <span className="text-xl text-muted">—</span>}
+        {STAT_CARDS.map(({ label, key, accent }) => {
+          const value = stats[key]
+          const shouldAccent = accent && value !== '—'
+
+          return (
+            <div key={key} className="stat-card">
+              <div className="font-mono text-2xs uppercase tracking-widest text-muted">{label}</div>
+              <div className={`mt-1 text-3xl font-extrabold tracking-tight ${shouldAccent ? 'text-accent' : ''}`}>
+                {value ?? <span className="text-xl text-muted">—</span>}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <div>
