@@ -15,6 +15,7 @@ function isAuthError(err) {
 
 /** Clears all persisted credentials from both localStorage and the preload bridge. */
 function clearSession() {
+  localStorage.removeItem('zip2job_token')
   localStorage.removeItem('zip2job_username')
   window.api.clearCredentials()
 }
@@ -48,13 +49,13 @@ export function useAppBootstrap() {
         return
       }
 
+      const savedToken    = localStorage.getItem('zip2job_token')
       const savedUsername = localStorage.getItem('zip2job_username')
-      if (savedUsername) {
-        window.api.setAuthUsername(savedUsername)
-        window.api.setUsername(savedUsername)
-      }
 
-      if (!savedUsername) {
+      if (savedToken)    window.api.setAuthToken(savedToken)
+      if (savedUsername) window.api.setUsername(savedUsername)
+
+      if (!savedToken) {
         if (!cancelled) {
           setConsentReady(false)
         }

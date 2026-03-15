@@ -2,8 +2,11 @@ const { contextBridge } = require('electron');
 
 const API_BASE = 'http://localhost:8000';
 
-// Single source of truth for the authenticated username.
-// Used both for the X-Username request header and the display username.
+// Signed JWT returned by /api/auth/login or /api/auth/register.
+// Sent as `Authorization: Bearer <token>` on every authenticated request.
+let _token = null;
+
+// Display username kept separately so the UI can show it without decoding the JWT.
 let _username = (process.env.ZIP2JOB_USERNAME || '').trim() || null;
 
 async function parseResponseBody(res) {
@@ -45,7 +48,7 @@ function httpError(parsedBody, status) {
 
 async function request(method, path, body, signal) {
   const headers = { 'Content-Type': 'application/json' };
-  if (_username) headers['X-Username'] = _username;
+  if (_token) headers['Authorization'] = `Bearer ${_token}`;
 
   const opts = { method, headers, signal };
   if (body) opts.body = JSON.stringify(body);
@@ -62,7 +65,7 @@ async function request(method, path, body, signal) {
 
 async function requestWithForm(method, path, formData, signal) {
   const headers = {};
-  if (_username) headers['X-Username'] = _username;
+  if (_token) headers['Authorization'] = `Bearer ${_token}`;
 
   const res = await fetch(`${API_BASE}${path}`, {
     method,
@@ -80,7 +83,11 @@ async function requestWithForm(method, path, formData, signal) {
 }
 
 contextBridge.exposeInMainWorld('api', {
-  // Both setters write the same variable so callers don't need to call both.
+  // Token management — the JWT returned by login/register.
+  setAuthToken:    (token)    => { _token = token || null; },
+  getAuthToken:    ()         => _token,
+
+  // Username management — kept for display purposes and URL building.
   setAuthUsername: (username) => { _username = (username || '').trim() || null; },
   getAuthUsername: () => _username,
   setUsername:     (username) => { _username = username || null; },
@@ -91,7 +98,7 @@ contextBridge.exposeInMainWorld('api', {
    * The React layer is responsible for clearing localStorage and
    * resetting its own state; this keeps the two in sync.
    */
-  clearCredentials: () => { _username = null; },
+  clearCredentials: () => { _token = null; _username = null; },
 
   // Health
   health: () => request('GET', '/health'),

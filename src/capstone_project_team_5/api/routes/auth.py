@@ -8,9 +8,9 @@ Endpoints
 POST /api/auth/register  — create a new account
 POST /api/auth/login     — verify credentials for an existing account
 
-Both endpoints return ``{"username": "<username>"}`` on success so the
-front-end can store the username and include it as ``X-Username`` on all
-subsequent requests.
+Both endpoints return ``{"username": "<username>", "token": "<jwt>"}`` on
+success.  The front-end must include the token on subsequent requests as:
+    Authorization: Bearer <token>
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from capstone_project_team_5.services.auth import authenticate_user, create_user
+from capstone_project_team_5.services.jwt_service import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -33,6 +34,7 @@ class AuthRequest(BaseModel):
 
 class AuthResponse(BaseModel):
     username: str
+    token: str
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────
@@ -51,7 +53,7 @@ def register(body: AuthRequest) -> AuthResponse:
         body: ``username`` and ``password`` fields.
 
     Returns:
-        AuthResponse: The created username.
+        AuthResponse: The created username and a signed JWT access token.
 
     Raises:
         HTTPException 400: Username already exists or invalid input.
@@ -59,7 +61,8 @@ def register(body: AuthRequest) -> AuthResponse:
     ok, error = create_user(body.username, body.password)
     if not ok:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
-    return AuthResponse(username=body.username.strip())
+    username = body.username.strip()
+    return AuthResponse(username=username, token=create_access_token(username))
 
 
 @router.post(
@@ -74,7 +77,7 @@ def login(body: AuthRequest) -> AuthResponse:
         body: ``username`` and ``password`` fields.
 
     Returns:
-        AuthResponse: The authenticated username.
+        AuthResponse: The authenticated username and a signed JWT access token.
 
     Raises:
         HTTPException 401: Invalid credentials.
@@ -85,4 +88,5 @@ def login(body: AuthRequest) -> AuthResponse:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=error or "Invalid username or password.",
         )
-    return AuthResponse(username=body.username.strip())
+    username = body.username.strip()
+    return AuthResponse(username=username, token=create_access_token(username))

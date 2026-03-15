@@ -29,8 +29,10 @@ export default function AppRoot() {
   if (!consentReady) {
     return (
       <ConsentSetup
-        onDone={(username) => {
+        onDone={(username, token) => {
+          localStorage.setItem('zip2job_token', token)
           localStorage.setItem('zip2job_username', username)
+          window.api.setAuthToken(token)
           window.api.setUsername(username)
           window.api.getCurrentUser().then(setUser).catch(() => {})
           setConsentReady(true)

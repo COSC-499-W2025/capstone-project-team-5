@@ -25,7 +25,8 @@ const BASE_API = {
   getAvailableServices: jest.fn().mockResolvedValue([]),
   giveConsent: jest.fn().mockResolvedValue({ status: 'ok' }),
   getLLMConfig: jest.fn().mockResolvedValue({ provider: 'openai' }),
-  setAuthUsername: jest.fn(), setUsername: jest.fn(),
+  setAuthToken: jest.fn(), setAuthUsername: jest.fn(), setUsername: jest.fn(),
+  clearCredentials: jest.fn(),
   getUsername: jest.fn().mockReturnValue('alice'),
   getProjects: jest.fn().mockResolvedValue([]),
   getSkills: jest.fn().mockResolvedValue([]),
@@ -38,6 +39,7 @@ const BASE_API = {
 
 async function boot(overrides = {}) {
   window.api = { ...BASE_API, ...overrides }
+  localStorage.setItem('zip2job_token', 'fake-token')
   localStorage.setItem('zip2job_username', 'alice')
   render(<App />)
   await waitFor(() => expect(screen.getByText('Portfolio Engine')).toBeInTheDocument())

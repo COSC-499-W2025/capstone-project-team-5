@@ -33,6 +33,7 @@ export default function ConsentSetup({ onDone }) {
   const [authMode, setAuthMode] = useState('login')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [authToken, setAuthToken] = useState(null)
   const [useExternal, setUseExternal] = useState(false)
   // step: 'auth' | 'file-consent' | 'ai-consent' | 'done'
   const [step, setStep] = useState('auth')
@@ -58,8 +59,10 @@ export default function ConsentSetup({ onDone }) {
       const authFn = authMode === 'register' ? window.api.register : window.api.login
       const response = await authFn({ username: username.trim(), password })
 
+      window.api.setAuthToken(response.token)
       window.api.setAuthUsername(response.username)
       window.api.setUsername(response.username)
+      setAuthToken(response.token)
 
       if (authMode === 'login') {
         setStatusMsg(`Logged in as ${response.username}.`)
@@ -68,7 +71,7 @@ export default function ConsentSetup({ onDone }) {
         const existingConsent = await window.api.getLatestConsent().catch(() => null)
         if (existingConsent !== null) {
           setStep('done')
-          doneTimeoutRef.current = setTimeout(() => onDone(response.username), 800)
+          doneTimeoutRef.current = setTimeout(() => onDone(response.username, response.token), 800)
           return
         }
       } else {
@@ -108,7 +111,7 @@ export default function ConsentSetup({ onDone }) {
       })
 
       setStep('done')
-      doneTimeoutRef.current = setTimeout(() => onDone(username.trim()), 800)
+      doneTimeoutRef.current = setTimeout(() => onDone(username.trim(), authToken), 800)
     } catch (err) {
       setError(getErrorMessage(err, 'Consent submission failed.'))
     } finally {

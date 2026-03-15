@@ -124,22 +124,44 @@ describe('error handling', () => {
 });
 
 describe('api.clearCredentials', () => {
-  it('resets both getAuthUsername and getUsername to null', () => {
+  it('resets token, getAuthUsername, and getUsername to null', () => {
+    global.api.setAuthToken('tok');
     global.api.setUsername('alice');
     global.api.clearCredentials();
+    expect(global.api.getAuthToken()).toBeNull();
     expect(global.api.getAuthUsername()).toBeNull();
     expect(global.api.getUsername()).toBeNull();
   });
 
-  it('removes X-Username header from subsequent requests after clearing', async () => {
-    global.api.setUsername('alice');
+  it('removes Authorization header from subsequent requests after clearing', async () => {
+    global.api.setAuthToken('tok');
     global.api.clearCredentials();
 
     fetch.mockResolvedValue(mockJson({ status: 'ok' }));
     await global.api.health();
 
     const calledHeaders = fetch.mock.calls[0][1].headers;
-    expect(calledHeaders).not.toHaveProperty('X-Username');
+    expect(calledHeaders).not.toHaveProperty('Authorization');
+  });
+});
+
+describe('api token - Authorization header', () => {
+  it('setAuthToken is reflected in the Authorization header', async () => {
+    global.api.setAuthToken('my-jwt');
+
+    fetch.mockResolvedValue(mockJson({ status: 'ok' }));
+    await global.api.health();
+
+    expect(fetch.mock.calls[0][1].headers['Authorization']).toBe('Bearer my-jwt');
+  });
+
+  it('no Authorization header when token is not set', async () => {
+    // token starts null after each beforeEach resetModules
+    fetch.mockResolvedValue(mockJson({ status: 'ok' }));
+    await global.api.health();
+
+    const calledHeaders = fetch.mock.calls[0][1].headers;
+    expect(calledHeaders).not.toHaveProperty('Authorization');
   });
 });
 
@@ -150,14 +172,5 @@ describe('api username - unified variable', () => {
 
     global.api.setAuthUsername('bob');
     expect(global.api.getUsername()).toBe('bob');
-  });
-
-  it('setUsername is reflected in the X-Username request header', async () => {
-    global.api.setUsername('alice');
-
-    fetch.mockResolvedValue(mockJson({ status: 'ok' }));
-    await global.api.health();
-
-    expect(fetch.mock.calls[0][1].headers['X-Username']).toBe('alice');
   });
 });

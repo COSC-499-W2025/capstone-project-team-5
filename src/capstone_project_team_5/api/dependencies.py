@@ -2,65 +2,78 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+import jwt
+from fastapi import HTTPException, Request, status
 
-from fastapi import Header, HTTPException, status
+from capstone_project_team_5.services.jwt_service import decode_access_token
 
 
-def get_current_username(
-    x_username: Annotated[
-        str | None,
-        Header(
-            description=(
-                "Current username. In production, this should be extracted "
-                "from authenticated session/JWT token."
-            )
-        ),
-    ] = None,
-) -> str:
-    """Get the current username from request context.
+def _extract_bearer_token(request: Request) -> str | None:
+    """Pull the raw token string out of the Authorization header, or return None."""
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+    token = auth.removeprefix("Bearer ").strip()
+    return token or None
 
-    NOTE: This is a simplified implementation using a header.
-    In production, this should extract from JWT/session.
 
-    Args:
-        x_username: Username from X-Username header (temporary mechanism).
+def get_current_username(request: Request) -> str:
+    """Get the current username from a verified JWT Bearer token.
+
+    Reads the ``Authorization: Bearer <token>`` header, verifies the
+    signature and expiry, and returns the ``sub`` claim (username).
 
     Returns:
         str: Authenticated username.
 
     Raises:
-        HTTPException: If authentication is missing (401).
+        HTTPException 401: Token is missing, expired, or invalid.
     """
-    if not x_username:
+    token = _extract_bearer_token(request)
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing authentication. Please provide X-Username header.",
+            detail="Missing authentication. Please provide a Bearer token.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-    return x_username
+    try:
+        payload = decode_access_token(token)
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired. Please log in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    username: str | None = payload.get("sub")
+    if not username:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload.",
+        )
+    return username
 
 
-def get_optional_username(
-    x_username: Annotated[
-        str | None,
-        Header(
-            description=(
-                "Current username. In production, this should be extracted "
-                "from authenticated session/JWT token."
-            )
-        ),
-    ] = None,
-) -> str | None:
-    """Get the current username if provided, or None for anonymous access.
+def get_optional_username(request: Request) -> str | None:
+    """Get the current username if a valid token is provided, else None.
 
     Unlike ``get_current_username`` this does **not** raise 401 when the
-    header is missing.  Use this for endpoints that support both
-    authenticated and anonymous callers (e.g. consent).
-
-    Args:
-        x_username: Username from X-Username header (temporary mechanism).
+    token is absent.  Use this for endpoints that support both authenticated
+    and anonymous callers (e.g. consent).
 
     Returns:
         str | None: Authenticated username, or None for anonymous access.
     """
-    return x_username
+    token = _extract_bearer_token(request)
+    if not token:
+        return None
+    try:
+        payload = decode_access_token(token)
+        return payload.get("sub") or None
+    except jwt.InvalidTokenError:
+        return None
