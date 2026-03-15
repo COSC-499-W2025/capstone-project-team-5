@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../../app/context/AppContext'
 import EmptyState from '../../components/EmptyState'
 import InlineError from '../../components/InlineError'
 import PageHeader from '../../components/PageHeader'
 import { getProjectItems } from '../../lib/projects'
 import {
+  DEFAULT_RESUME_TEMPLATE,
   EMPTY_RESUME_FORM,
+  RESUME_TEMPLATE_OPTIONS,
   buildResumeDraft,
   formatResumeDate,
   getAvailableResumeProjects,
@@ -36,8 +38,20 @@ function ReadinessItem({ label, ready, detail }) {
   )
 }
 
+function downloadBlobFile(bytes, contentType, filename) {
+  const url = URL.createObjectURL(new Blob([bytes], { type: contentType || 'application/pdf' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename || 'resume.pdf'
+  document.body.append(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
 export default function ResumesPage() {
   const { user, apiOk } = useApp()
+  const previewUrlRef = useRef('')
 
   const [resumes, setResumes] = useState([])
   const [projects, setProjects] = useState([])
@@ -57,6 +71,25 @@ export default function ResumesPage() {
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
   const [confirmId, setConfirmId] = useState(null)
+
+  const [templateName, setTemplateName] = useState(DEFAULT_RESUME_TEMPLATE)
+  const [previewState, setPreviewState] = useState({
+    url: '',
+    filename: '',
+    bytes: null,
+    contentType: 'application/pdf',
+    stale: false,
+  })
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState('')
+
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (!llmConfig?.is_allowed) {
@@ -129,6 +162,26 @@ export default function ResumesPage() {
     }
   }, [apiOk, user?.username])
 
+  function replacePreview(bytes, contentType, filename) {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+    }
+
+    const url = URL.createObjectURL(new Blob([bytes], { type: contentType || 'application/pdf' }))
+    previewUrlRef.current = url
+    setPreviewState({
+      url,
+      filename: filename || 'resume.pdf',
+      bytes,
+      contentType: contentType || 'application/pdf',
+      stale: false,
+    })
+  }
+
+  function markPreviewStale() {
+    setPreviewState((current) => (current.url ? { ...current, stale: true } : current))
+  }
+
   function openCreate() {
     setShowForm(true)
     setEditingProjectId(null)
@@ -195,6 +248,8 @@ export default function ResumesPage() {
 
   const availableProjects = getAvailableResumeProjects(projects, resumes, editingProjectId)
   const hasProfile = hasResumeProfile(profile)
+  const canGeneratePreview =
+    apiOk && Boolean(user?.username) && hasProfile && resumes.length > 0 && !previewLoading
 
   async function hydrateDraft(projectIdValue) {
     updateField('project_id', projectIdValue)
@@ -300,6 +355,7 @@ export default function ResumesPage() {
         setResumes((current) => sortResumesByUpdatedAt([savedItem, ...current]))
       }
 
+      markPreviewStale()
       cancelForm()
     } catch (saveError) {
       setFormError(saveError?.message || 'Failed to save the resume entry.')
@@ -313,16 +369,45 @@ export default function ResumesPage() {
       await window.api.deleteResume(user.username, projectId)
       setResumes((current) => current.filter((item) => item.project_id !== projectId))
       setConfirmId(null)
+      markPreviewStale()
     } catch (deleteError) {
       setError(deleteError?.message || 'Failed to delete the resume entry.')
     }
+  }
+
+  async function handlePreviewPdf() {
+    if (!canGeneratePreview) {
+      return
+    }
+
+    setPreviewLoading(true)
+    setPreviewError('')
+
+    try {
+      const result = await window.api.downloadResumePdf(user.username, {
+        template_name: templateName,
+      })
+      replacePreview(result.bytes, result.contentType, result.filename)
+    } catch (previewFailure) {
+      setPreviewError(previewFailure?.message || 'Failed to generate the PDF preview.')
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
+  function handleDownloadPreview() {
+    if (!previewState.bytes) {
+      return
+    }
+
+    downloadBlobFile(previewState.bytes, previewState.contentType, previewState.filename)
   }
 
   return (
     <div className="animate-fade-up space-y-6">
       <PageHeader
         title="Resumes"
-        description="Shape project analysis into saved resume entries. PDF preview and download are split into the next PR."
+        description="Shape project analysis into a final resume, preview the PDF, and export the finished version."
         action={!showForm && (
           <button
             type="button"
@@ -347,7 +432,7 @@ export default function ResumesPage() {
                     {editingProjectId ? 'Edit Resume Entry' : 'Build Resume Entry'}
                   </h2>
                   <p className="mt-1 text-xs text-muted">
-                    Save polished project bullets now. Preview and export arrive in the next stacked PR.
+                    Save polished project bullets now. The PDF preview uses every saved entry.
                   </p>
                 </div>
                 <button type="button" className="btn-ghost text-xs" onClick={cancelForm}>
@@ -510,6 +595,48 @@ export default function ResumesPage() {
             </form>
           )}
 
+          {(previewLoading || previewError || previewState.url) && (
+            <section className="card space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-bold">PDF Preview</h2>
+                  <p className="mt-1 text-xs text-muted">
+                    Review the full generated document before downloading it.
+                  </p>
+                </div>
+                {previewState.url && (
+                  <div className="flex items-center gap-2">
+                    {previewState.stale && (
+                      <span className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 font-mono text-2xs uppercase tracking-widest text-amber-100">
+                        Stale
+                      </span>
+                    )}
+                    <button type="button" className="btn-primary text-xs" onClick={handleDownloadPreview}>
+                      Download PDF
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <InlineError message={previewError} />
+
+              {previewLoading ? (
+                <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-border bg-elevated/50">
+                  <div className="flex items-center gap-3 text-xs text-muted">
+                    <span className="spinner" />
+                    Rendering PDF preview…
+                  </div>
+                </div>
+              ) : previewState.url ? (
+                <iframe
+                  title="Resume PDF preview"
+                  src={previewState.url}
+                  className="h-[640px] w-full rounded-lg border border-border bg-white"
+                />
+              ) : null}
+            </section>
+          )}
+
           {loading ? (
             <div className="flex justify-center py-12">
               <span className="spinner" />
@@ -602,6 +729,61 @@ export default function ResumesPage() {
         </div>
 
         <aside className="space-y-4 xl:sticky xl:top-6 xl:self-start">
+          <section className="card space-y-4">
+            <div>
+              <div className="font-mono text-2xs uppercase tracking-widest text-muted">
+                Generate Resume
+              </div>
+              <h2 className="mt-2 text-lg font-extrabold tracking-tight text-ink">
+                Preview the final PDF
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted">
+                The preview combines your profile, work experience, education, and every saved resume entry.
+              </p>
+            </div>
+
+            <label className="space-y-1">
+              <span className="font-mono text-2xs uppercase tracking-widest text-muted">
+                Template
+              </span>
+              <select
+                value={templateName}
+                onChange={(event) => {
+                  setTemplateName(event.target.value)
+                  markPreviewStale()
+                }}
+                className="input"
+              >
+                {RESUME_TEMPLATE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                className="btn-primary text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={handlePreviewPdf}
+                disabled={!canGeneratePreview}
+              >
+                {previewLoading ? 'Generating…' : previewState.url ? 'Refresh Preview' : 'Preview PDF'}
+              </button>
+              <button
+                type="button"
+                className="btn-ghost text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={handleDownloadPreview}
+                disabled={!previewState.bytes}
+              >
+                Download PDF
+              </button>
+            </div>
+
+            <InlineError message={previewError} />
+          </section>
+
           <section className="card space-y-2">
             <div className="font-mono text-2xs uppercase tracking-widest text-muted">
               Readiness Checklist
@@ -609,11 +791,7 @@ export default function ResumesPage() {
             <ReadinessItem
               label="Profile"
               ready={hasProfile}
-              detail={
-                hasProfile
-                  ? 'Profile data is available for the resume header.'
-                  : 'Create your profile before generating the PDF.'
-              }
+              detail={hasProfile ? 'Profile data is available for the resume header.' : 'Create your profile before generating the PDF.'}
             />
             <ReadinessItem
               label="Experience"
@@ -629,6 +807,11 @@ export default function ResumesPage() {
               label="Resume Entries"
               ready={resumes.length > 0}
               detail={`${resumes.length} saved project entr${resumes.length === 1 ? 'y' : 'ies'}`}
+            />
+            <ReadinessItem
+              label="Draft Assist"
+              ready={Boolean(llmConfig?.is_allowed)}
+              detail={llmConfig?.is_allowed ? 'AI-assisted analysis is available from the form toggle.' : 'Local analysis is available without AI consent.'}
             />
           </section>
         </aside>
