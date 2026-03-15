@@ -525,9 +525,9 @@ def test_analyze_all_ignores_invalid_cached_payload(
     )
     monkeypatch.setattr(
         "capstone_project_team_5.api.routes.projects.load_analysis_cache",
-        lambda pid: {"fingerprint": "same-fingerprint", "payload": "invalid"}
-        if pid == project_id
-        else None,
+        lambda pid: (
+            {"fingerprint": "same-fingerprint", "payload": "invalid"} if pid == project_id else None
+        ),
     )
 
     analyze_response = client.post("/api/projects/analyze")
@@ -537,9 +537,7 @@ def test_analyze_all_ignores_invalid_cached_payload(
     analyzed_ids = {item["id"] for item in payload["analyzed"]}
     assert project_id in analyzed_ids
 
-    skipped_for_project = [
-        item for item in payload["skipped"] if item["project_id"] == project_id
-    ]
+    skipped_for_project = [item for item in payload["skipped"] if item["project_id"] == project_id]
     assert not skipped_for_project
 
     with get_session() as session:
