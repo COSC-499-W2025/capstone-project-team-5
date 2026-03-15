@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { AppContext } from './context/AppContext'
 import { useAppBootstrap } from './hooks/useAppBootstrap'
 import ConsentSetup from '../pages/consents/ConsentSetup'
@@ -13,6 +13,9 @@ const INITIAL_UPLOAD_HIGHLIGHTS = {
 export default function AppRoot() {
   const [page, setPage] = useState('dashboard')
   const [uploadHighlights, setUploadHighlights] = useState(INITIAL_UPLOAD_HIGHLIGHTS)
+
+  const analysisCache = useRef({})
+
   const {
     consentReady,
     setConsentReady,
@@ -47,6 +50,7 @@ export default function AppRoot() {
         setPage,
         uploadHighlights,
         setUploadHighlights,
+        analysisCache,
       }}
     >
       <AppShell page={page} setPage={setPage} apiOk={apiOk} user={user} />
