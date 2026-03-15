@@ -470,8 +470,12 @@ async def upload_project_zip(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(exc),
             ) from exc
-        logger.info("[upload] ✔ inspect_zip  projects=%d  files=%d  (%.3fs)",
-                    len(result.projects), result.file_count, time.perf_counter() - t0)
+        logger.info(
+            "[upload] ✔ inspect_zip  projects=%d  files=%d  (%.3fs)",
+            len(result.projects),
+            result.file_count,
+            time.perf_counter() - t0,
+        )
 
         detected_names = [project.name for project in result.projects]
         matches = find_matching_projects(detected_names) if detected_names else {}
@@ -633,8 +637,12 @@ async def upload_project_zip(
             created_count = sum(1 for action in actions if action.action == "created")
             merged_count = sum(1 for action in actions if action.action == "merged")
 
-        logger.info("[upload] ✔ done  created=%d merged=%d  total=%.3fs",
-                    created_count, merged_count, time.perf_counter() - t_total)
+        logger.info(
+            "[upload] ✔ done  created=%d merged=%d  total=%.3fs",
+            created_count,
+            merged_count,
+            time.perf_counter() - t_total,
+        )
         return ProjectUploadResponse(
             upload_id=upload_record.id,
             filename=upload_record.filename,
