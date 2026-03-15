@@ -4,6 +4,7 @@ export const NAV_ITEMS = [
   { id: 'skills', label: 'Skills', icon: '◆' },
   { id: 'experience', label: 'Experience', icon: '◎' },
   { id: 'education', label: 'Education', icon: '▣' },
+  { id: 'profile', label: 'Profile', icon: '◉' },
   { id: 'portfolio', label: 'Portfolio', icon: '⬡' },
   { id: 'resumes', label: 'Resumes', icon: '▤' },
   { id: 'consents', label: 'Consents', icon: '◬' },

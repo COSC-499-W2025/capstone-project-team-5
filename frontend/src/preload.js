@@ -1,18 +1,10 @@
 const { contextBridge } = require('electron');
 
 const API_BASE = 'http://localhost:8000';
-let currentUsername = (process.env.ZIP2JOB_USERNAME || '').trim();
 
-// Username is set once during login/register and reused on every request
-let _username = null;
-
-function withAuthHeaders(headers = {}) {
-  if (!currentUsername) return headers;
-  return {
-    ...headers,
-    'X-Username': currentUsername,
-  };
-}
+// Single source of truth for the authenticated username.
+// Used both for the X-Username request header and the display username.
+let _username = (process.env.ZIP2JOB_USERNAME || '').trim() || null;
 
 async function parseResponseBody(res) {
   if (res.status === 204) return null;
@@ -44,50 +36,62 @@ function getErrorMessage(parsedBody, status) {
   return `HTTP ${status}`;
 }
 
-async function request(method, path, body, signal) {
-  const opts = {
-    method,
-    headers: withAuthHeaders({ 'Content-Type': 'application/json' }),
-    signal,
-  };
+/** Creates an Error that carries the raw HTTP status code as a numeric property. */
+function httpError(parsedBody, status) {
+  const err = new Error(getErrorMessage(parsedBody, status));
+  err.status = status;
+  return err;
+}
 
+async function request(method, path, body, signal) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (_username) headers['X-Username'] = _username;
+
+  const opts = { method, headers, signal };
   if (body) opts.body = JSON.stringify(body);
 
   const res = await fetch(`${API_BASE}${path}`, opts);
   const parsedBody = await parseResponseBody(res);
 
   if (!res.ok) {
-    throw new Error(getErrorMessage(parsedBody, res.status));
+    throw httpError(parsedBody, res.status);
   }
 
   return parsedBody;
 }
 
 async function requestWithForm(method, path, formData, signal) {
+  const headers = {};
+  if (_username) headers['X-Username'] = _username;
+
   const res = await fetch(`${API_BASE}${path}`, {
     method,
-    headers: withAuthHeaders(),
+    headers,
     body: formData,
     signal,
   });
   const parsedBody = await parseResponseBody(res);
 
   if (!res.ok) {
-    throw new Error(getErrorMessage(parsedBody, res.status));
+    throw httpError(parsedBody, res.status);
   }
 
   return parsedBody;
 }
 
 contextBridge.exposeInMainWorld('api', {
-  setAuthUsername: (username) => {
-    currentUsername = (username || '').trim();
-  },
-  getAuthUsername: () => currentUsername,
+  // Both setters write the same variable so callers don't need to call both.
+  setAuthUsername: (username) => { _username = (username || '').trim() || null; },
+  getAuthUsername: () => _username,
+  setUsername:     (username) => { _username = username || null; },
+  getUsername:     () => _username,
 
-  // Internal username state (set after login/register)
-  setUsername: (username) => { _username = username; },
-  getUsername: () => _username,
+  /**
+   * Clear all credential state in the preload bridge.
+   * The React layer is responsible for clearing localStorage and
+   * resetting its own state; this keeps the two in sync.
+   */
+  clearCredentials: () => { _username = null; },
 
   // Health
   health: () => request('GET', '/health'),

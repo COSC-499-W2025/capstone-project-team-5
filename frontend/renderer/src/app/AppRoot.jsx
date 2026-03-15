@@ -22,6 +22,7 @@ export default function AppRoot() {
     apiOk,
     user,
     setUser,
+    logout,
   } = useAppBootstrap()
 
   if (consentReady === null) {
@@ -51,9 +52,10 @@ export default function AppRoot() {
         uploadHighlights,
         setUploadHighlights,
         analysisCache,
+        logout,
       }}
     >
-      <AppShell page={page} setPage={setPage} apiOk={apiOk} user={user} />
+      <AppShell page={page} setPage={setPage} apiOk={apiOk} user={user} logout={logout} />
     </AppContext.Provider>
   )
 }
