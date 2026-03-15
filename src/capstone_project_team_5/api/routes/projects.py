@@ -736,20 +736,24 @@ def analyze_all_projects(use_ai: bool = False, force: bool = False) -> ProjectsA
             if not force and cached and cached.get("fingerprint") == fingerprint:
                 payload = cached.get("payload")
                 if isinstance(payload, dict):
-                    cached_response = ProjectAnalysisResult(**payload)
-                    save_skills_to_db(
-                        session,
-                        project.id,
-                        cached_response.tools,
-                        cached_response.practices,
-                    )
-                skipped.append(
-                    ProjectAnalysisSkipped(
-                        project_id=project.id,
-                        reason="Merged content fingerprint unchanged.",
-                    )
-                )
-                continue
+                    try:
+                        cached_response = ProjectAnalysisResult(**payload)
+                    except (TypeError, ValueError):
+                        cached_response = None
+                    if cached_response is not None:
+                        save_skills_to_db(
+                            session,
+                            project.id,
+                            cached_response.tools,
+                            cached_response.practices,
+                        )
+                        skipped.append(
+                            ProjectAnalysisSkipped(
+                                project_id=project.id,
+                                reason="Merged content fingerprint unchanged.",
+                            )
+                        )
+                        continue
 
             try:
                 response, fingerprint = _analyze_project_from_store(project, upload_ids, use_ai)
