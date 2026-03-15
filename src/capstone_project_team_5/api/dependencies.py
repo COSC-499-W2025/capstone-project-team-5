@@ -38,18 +38,18 @@ def get_current_username(request: Request) -> str:
         )
     try:
         payload = decode_access_token(token)
-    except jwt.ExpiredSignatureError:
+    except jwt.ExpiredSignatureError as err:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired. Please log in again.",
             headers={"WWW-Authenticate": "Bearer"},
-        )
-    except jwt.InvalidTokenError:
+        ) from err
+    except jwt.InvalidTokenError as err:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token.",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from err
     username: str | None = payload.get("sub")
     if not username:
         raise HTTPException(

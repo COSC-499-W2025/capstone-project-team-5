@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import jwt
 
@@ -25,7 +25,7 @@ def create_access_token(username: str) -> str:
 
     The token expires after ``_TOKEN_EXPIRE_DAYS`` days.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(datetime.UTC)
     payload = {
         "sub": username,
         "iat": now,
