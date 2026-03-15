@@ -19,7 +19,7 @@ function isAnalyzed(project) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ProjectsPage() {
-  const { apiOk, uploadHighlights, setUploadHighlights } = useApp()
+  const { apiOk, uploadHighlights, setUploadHighlights, analysisCache } = useApp()
   const [projects, setProjects] = useState([])
   const [error, setError] = useState('')
   const [selectedProject, setSelectedProject] = useState(null)
@@ -31,7 +31,10 @@ export default function ProjectsPage() {
       try {
         const payload = await window.api.getProjects()
         if (!cancelled) {
-          setProjects(getProjectItems(payload))
+          const items = getProjectItems(payload).map((p) =>
+            analysisCache?.current[p.id] ? { ...p, ...analysisCache.current[p.id] } : p
+          )
+          setProjects(items)
           setError('')
         }
       } catch (err) {
@@ -64,6 +67,7 @@ export default function ProjectsPage() {
 
   // Sync enriched analysis data back into the cards list
   function handleAnalysisComplete(projectId, result) {
+    if (analysisCache?.current) analysisCache.current[projectId] = result
     setProjects((prev) =>
       prev.map((p) => (p.id === projectId ? { ...p, ...result } : p))
     )
@@ -102,8 +106,8 @@ export default function ProjectsPage() {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="text-sm font-bold truncate">{project.name}</div>
-                  <div className="mt-1 text-xs text-muted truncate">{project.rel_path}</div>
+                  <div className="text-sm font-semibold text-slate-200 truncate">{project.name}</div>
+                  <div className="mt-1 text-xs text-slate-500 truncate">{project.rel_path}</div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   {isCreated && (
@@ -124,9 +128,9 @@ export default function ProjectsPage() {
                 </div>
               </div>
               <div className="mt-3 flex items-center justify-between">
-                <span className="font-mono text-2xs text-muted">{project.file_count} files</span>
+                <span className="font-mono text-sm text-slate-500">{project.file_count} files</span>
                 {project.user_role && (
-                  <span className="font-mono text-2xs text-muted">{project.user_role}</span>
+                  <span className="font-mono text-xs text-slate-400">{project.user_role}</span>
                 )}
               </div>
             </div>
@@ -170,20 +174,20 @@ function ProjectModal({ project, onClose, onAnalysisComplete }) {
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm p-4"
       onClick={(e) => e.target === overlayRef.current && onClose()}
     >
-      <div className="relative flex h-[75vh] w-full max-w-2xl flex-col rounded-lg border border-border bg-background shadow-2xl">
+      <div className="relative flex h-[75vh] w-full max-w-4xl flex-col rounded-lg border border-border bg-background shadow-2xl">
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-3">
           <div className="min-w-0">
-            <div className="text-sm font-bold truncate">{project.name}</div>
-            <div className="mt-0.5 font-mono text-2xs text-muted truncate">
+            <div className="text-lg font-semibold text-slate-200 truncate">{project.name}</div>
+            <div className="mt-0.5 font-mono text-base text-slate-500 truncate">
               Project Path: {project.rel_path}
             </div>
           </div>
           <button
-            className="shrink-0 rounded p-1 text-muted transition-colors hover:bg-border hover:text-foreground"
+            className="shrink-0 rounded p-1 text-slate-500 transition-colors hover:bg-border hover:text-slate-200"
             onClick={onClose}
             aria-label="Close"
           >
@@ -209,10 +213,11 @@ function ProjectModal({ project, onClose, onAnalysisComplete }) {
 // ─── Detail content ───────────────────────────────────────────────────────────
 
 function ProjectDetail({ project, onAnalysisComplete }) {
+  const alreadyAnalyzed = isAnalyzed(project)
   const [status, setStatus] = useState(
-    isAnalyzed(project) ? ANALYSIS_STATUS.COMPLETE : ANALYSIS_STATUS.IDLE
+    alreadyAnalyzed ? ANALYSIS_STATUS.COMPLETE : ANALYSIS_STATUS.IDLE
   )
-  const [data, setData] = useState(isAnalyzed(project) ? project : null)
+  const [data, setData] = useState(alreadyAnalyzed ? project : null)
   const [error, setError] = useState('')
   const isMountedRef = useRef(true)
 
@@ -221,7 +226,7 @@ function ProjectDetail({ project, onAnalysisComplete }) {
     return () => { isMountedRef.current = false }
   }, [])
 
-  // Auto-run if not yet analyzed
+  // Run once on mount — skip if the project already carries analysis data
   useEffect(() => {
     if (!isAnalyzed(project)) {
       runAnalysis()
@@ -250,9 +255,9 @@ function ProjectDetail({ project, onAnalysisComplete }) {
       <ProjectMeta project={project} />
 
       <div className="flex items-center justify-between">
-        <span className="font-mono text-2xs text-muted">ANALYSIS</span>
+        <span className="font-mono text-sm font-semibold text-slate-400">ANALYSIS</span>
         {status !== ANALYSIS_STATUS.RUNNING && (
-          <button className="btn btn-secondary text-xs" onClick={runAnalysis}>
+          <button className="btn btn-secondary text-sm" onClick={runAnalysis}>
             {status === ANALYSIS_STATUS.COMPLETE ? 'Re-analyze' : 'Run Analysis'}
           </button>
         )}
@@ -263,7 +268,7 @@ function ProjectDetail({ project, onAnalysisComplete }) {
       {(status === ANALYSIS_STATUS.IDLE || status === ANALYSIS_STATUS.RUNNING) && (
         <StatusCard>
           <Spinner />
-          <span className="text-sm text-muted">
+          <span className="text-sm text-slate-400">
             {status === ANALYSIS_STATUS.IDLE ? 'Starting analysis…' : 'Analyzing project…'}
           </span>
         </StatusCard>
@@ -271,7 +276,7 @@ function ProjectDetail({ project, onAnalysisComplete }) {
 
       {status === ANALYSIS_STATUS.ERROR && (
         <StatusCard>
-          <span className="text-sm text-muted">
+          <span className="text-sm text-slate-400">
             Analysis failed. Use the button above to retry.
           </span>
         </StatusCard>
@@ -351,14 +356,14 @@ function ProjectMeta({ project }) {
       </div>
       {project.duration && (
         <div className="border-t border-border pt-3">
-          <div className="font-mono text-2xs text-muted mb-1">DURATION</div>
-          <div className="text-sm text-foreground leading-relaxed">{project.duration}</div>
+          <div className="font-mono text-sm font-semibold text-slate-400 mb-1">DURATION</div>
+          <div className="text-base text-slate-300 leading-relaxed">{project.duration}</div>
         </div>
       )}
       {project.collaborators_display && (
         <div className="border-t border-border pt-3">
-          <div className="font-mono text-2xs text-muted mb-1">COLLABORATORS</div>
-          <div className="text-sm text-foreground leading-relaxed">{project.collaborators_display}</div>
+          <div className="font-mono text-sm font-semibold text-slate-400 mb-1">COLLABORATORS</div>
+          <div className="text-base text-slate-300 leading-relaxed">{project.collaborators_display}</div>
         </div>
       )}
     </div>
@@ -374,28 +379,28 @@ function RoleBanner({ data }) {
         <div className="min-w-0">
           {primaryRole && (
             <>
-              <div className="font-mono text-2xs text-muted">YOUR ROLE</div>
-              <div className="mt-0.5 text-sm font-bold">{primaryRole}</div>
+              <div className="font-mono text-base font-semibold text-slate-400">YOUR ROLE</div>
+              <div className="mt-0.5 text-sm font-semibold text-slate-200">{primaryRole}</div>
               {secondaryRoles && (
-                <div className="mt-0.5 font-mono text-2xs text-muted">{secondaryRoles}</div>
+                <div className="mt-0.5 font-mono text-sm text-slate-500">{secondaryRoles}</div>
               )}
             </>
           )}
           {data.role_justification && (
-            <p className="mt-2 text-xs text-muted leading-relaxed">{data.role_justification}</p>
+            <p className="mt-2 text-base text-slate-400 leading-relaxed">{data.role_justification}</p>
           )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2 text-right">
           {data.importance_score != null && (
             <div>
-              <div className="font-mono text-2xs text-muted">IMPORTANCE</div>
-              <div className="text-2xl font-bold tabular-nums">{Math.round(data.importance_score)}</div>
+              <div className="font-mono text-sm font-semibold text-slate-400">IMPORTANCE</div>
+              <div className="text-2xl font-bold tabular-nums text-slate-200">{Math.round(data.importance_score)}</div>
             </div>
           )}
           {data.user_contribution_percentage != null && (
             <div>
-              <div className="font-mono text-2xs text-muted">CONTRIBUTION</div>
-              <div className="text-lg font-semibold tabular-nums">
+              <div className="font-mono text-sm font-semibold text-slate-400">CONTRIBUTION</div>
+              <div className="text-lg font-semibold tabular-nums text-slate-200">
                 {Math.round(data.user_contribution_percentage)}%
               </div>
             </div>
@@ -416,7 +421,7 @@ function BulletSection({ title, bullets, accentClass, warning }) {
       )}
       <ul className="space-y-1.5">
         {bullets.map((b, i) => (
-          <li key={i} className={`border-l-2 pl-3 text-sm leading-relaxed text-muted ${accentClass}`}>
+          <li key={i} className={`border-l-2 pl-3 text-base leading-relaxed text-slate-300 ${accentClass}`}>
             {b}
           </li>
         ))}
@@ -431,7 +436,7 @@ function GitSection({ git }) {
     <Card label="GIT ACTIVITY">
       <div className="space-y-3">
         {git.current_author && (
-          <div className="font-mono text-2xs text-muted">{git.current_author}</div>
+          <div className="font-mono text-sm text-slate-400">Current Git Identity: {git.current_author}</div>
         )}
         {mine && (
           <div className="grid grid-cols-3 gap-3">
@@ -442,11 +447,11 @@ function GitSection({ git }) {
         )}
         {git.author_contributions?.length > 1 && (
           <div className="space-y-1">
-            <div className="font-mono text-2xs text-muted mb-1">ALL CONTRIBUTORS</div>
+            <div className="font-mono text-sm font-semibold text-slate-400 mb-1">ALL CONTRIBUTORS</div>
             {git.author_contributions.map((c, i) => (
-              <div key={i} className="flex items-center justify-between text-xs">
-                <span className="text-muted truncate max-w-[50%]">{c.author}</span>
-                <span className="font-mono text-muted shrink-0">
+              <div key={i} className="flex items-center justify-between text-sm">
+                <span className="text-slate-300 truncate max-w-[50%]">{c.author}</span>
+                <span className="font-mono text-slate-500 shrink-0">
                   {c.commits} commits · +{c.added?.toLocaleString()} / -{c.deleted?.toLocaleString()}
                 </span>
               </div>
@@ -470,12 +475,12 @@ function TechStack({ data }) {
       <div className="space-y-2">
         {rows.map(({ label, tags }) => (
           <div key={label}>
-            <div className="font-mono text-2xs text-muted mb-1">{label}</div>
+            <div className="font-mono text-sm font-semibold text-slate-400 mb-1">{label}</div>
             <div className="flex flex-wrap gap-1.5">
               {tags.map((t, i) => (
                 <span
                   key={i}
-                  className="rounded border border-border px-2 py-0.5 font-mono text-2xs text-muted"
+                  className="rounded border border-border px-2 py-0.5 font-mono text-sm text-slate-300"
                 >
                   {t}
                 </span>
@@ -494,14 +499,14 @@ function SkillTimeline({ timeline }) {
       <div className="space-y-2">
         {timeline.map((entry, i) => (
           <div key={i} className="flex items-start gap-3">
-            <span className="font-mono text-2xs text-muted shrink-0 pt-0.5 w-24">
+            <span className="font-mono text-sm text-slate-500 shrink-0 pt-0.5 w-24">
               {entry.date}
             </span>
             <div className="flex flex-wrap gap-1">
               {entry.skills.map((s, j) => (
                 <span
                   key={j}
-                  className="rounded border border-border px-1.5 py-0.5 font-mono text-2xs text-muted"
+                  className="rounded border border-border px-1.5 py-0.5 font-mono text-sm text-slate-300"
                 >
                   {s}
                 </span>
@@ -515,19 +520,10 @@ function SkillTimeline({ timeline }) {
 }
 
 function ScoreBar({ label, value }) {
-  const pct = Math.min(100, Math.round(value))
   return (
-    <div>
-      <div className="flex justify-between mb-0.5">
-        <span className="font-mono text-2xs text-muted capitalize">{label}</span>
-        <span className="font-mono text-2xs text-muted">{Math.round(value)}</span>
-      </div>
-      <div className="h-1 w-full rounded-full bg-border">
-        <div
-          className="h-1 rounded-full bg-foreground/40 transition-all"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+    <div className="flex items-center justify-between">
+      <span className="font-mono text-sm font-semibold text-slate-400 capitalize">{label}</span>
+      <span className="font-mono text-sm font-semibold tabular-nums text-slate-200">{Math.round(value)}</span>
     </div>
   )
 }
@@ -537,7 +533,7 @@ function ScoreBar({ label, value }) {
 function Card({ label, children }) {
   return (
     <div className="rounded border border-border p-3">
-      {label && <div className="font-mono text-2xs text-muted mb-2">{label}</div>}
+      {label && <div className="font-mono text-sm font-semibold text-slate-400 mb-2">{label}</div>}
       {children}
     </div>
   )
@@ -554,8 +550,8 @@ function StatusCard({ children }) {
 function MetaItem({ label, value }) {
   return (
     <div>
-      <div className="font-mono text-2xs text-muted capitalize">{label}</div>
-      <div className="mt-0.5 text-sm font-medium truncate">{value ?? '—'}</div>
+      <div className="font-mono text-base font-semibold text-slate-400 capitalize">{label}</div>
+      <div className="mt-0.5 text-base text-slate-200">{value ?? '—'}</div>
     </div>
   )
 }
@@ -563,7 +559,7 @@ function MetaItem({ label, value }) {
 function Spinner() {
   return (
     <svg
-      className="h-4 w-4 shrink-0 animate-spin text-muted"
+      className="h-4 w-4 shrink-0 animate-spin text-slate-500"
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
       viewBox="0 0 24 24"
