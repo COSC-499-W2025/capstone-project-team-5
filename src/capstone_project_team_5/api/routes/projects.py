@@ -35,8 +35,6 @@ from capstone_project_team_5.consent_tool import ConsentTool
 from capstone_project_team_5.data.db import get_session
 from capstone_project_team_5.data.models import ArtifactSource, Project, UploadRecord
 from capstone_project_team_5.models.upload import DetectedProject, InvalidZipError
-
-logger = logging.getLogger(__name__)
 from capstone_project_team_5.services.content_store import (
     compute_project_file_count,
     compute_project_fingerprint,
@@ -57,6 +55,8 @@ from capstone_project_team_5.services.project_thumbnail import (
 from capstone_project_team_5.services.upload import inspect_zip
 from capstone_project_team_5.services.upload_storage import get_upload_zip_path, store_upload_zip
 from capstone_project_team_5.workflows.analysis_pipeline import analyze_projects_structured
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -458,7 +458,9 @@ async def upload_project_zip(
                     break
                 f.write(chunk)
         size_kb = temp_path.stat().st_size / 1024
-        logger.info("[upload] ✔ streamed to disk  %.1f KB  (%.3fs)", size_kb, time.perf_counter() - t0)
+        logger.info(
+            "[upload] ✔ streamed to disk  %.1f KB  (%.3fs)", size_kb, time.perf_counter() - t0
+        )
 
         t0 = time.perf_counter()
         try:
