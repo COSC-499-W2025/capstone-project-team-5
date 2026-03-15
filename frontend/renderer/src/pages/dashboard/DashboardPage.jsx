@@ -16,12 +16,36 @@ const QUICK_ACTIONS = [
   { icon: '▤', label: 'Generate Resume', desc: 'Tailor a resume to a job' },
 ]
 
+// Messages shown during each upload phase, cycled at regular intervals.
+const UPLOAD_MESSAGES = {
+  reading: [
+    'Reading your file…',
+    'Checking archive integrity…',
+    'Unpacking file headers…',
+  ],
+  uploading: [
+    'Sending to server…',
+    'Upload in progress…',
+    'Transferring data…',
+    'Almost there…',
+  ],
+  scanning: [
+    'Scanning project structure…',
+    'Detecting repositories…',
+    'Identifying languages…',
+    'Mapping file tree…',
+    'Counting contributions…',
+  ],
+}
+
 export default function DashboardPage() {
   const { user, apiOk, setPage, setUploadHighlights } = useApp()
   const fileInputRef = useRef(null)
   const isMountedRef = useRef(true)
   const uploadAbortControllerRef = useRef(null)
   const progressTickRef = useRef(null)
+  const messageTickRef = useRef(null)
+  const messageIndexRef = useRef(0)
 
   const [stats, setStats] = useState({
     projects: null,
@@ -38,10 +62,12 @@ export default function DashboardPage() {
   })
 
   useEffect(() => {
+    isMountedRef.current = true
     return () => {
       isMountedRef.current = false
       uploadAbortControllerRef.current?.abort()
       clearInterval(progressTickRef.current)
+      clearInterval(messageTickRef.current)
     }
   }, [])
 
@@ -121,20 +147,45 @@ export default function DashboardPage() {
       return
     }
 
-    setUploadState({ loading: true, message: 'Reading file…', error: false, progress: 10, step: 'Reading' })
+    // Scale the progress tick interval based on file size so smaller zips feel
+    // snappier. 1 MB → ~600 ms/tick, 50 MB → ~1200 ms/tick, clamped to [400, 1500].
+    const sizeMB = file.size / (1024 * 1024)
+    const tickMs = Math.min(1500, Math.max(400, 400 + sizeMB * 16))
 
-    // Tick +1% every 800 ms, capped at 90% — keeps the bar visibly moving
-    // for slow uploads without racing ahead of the server response.
+    setUploadState({ loading: true, message: UPLOAD_MESSAGES.reading[0], error: false, progress: 10, step: 'Reading' })
+
+    // Progress tick: uses asymptotic easing toward 95% so the bar always keeps
+    // visibly moving while waiting for the server — no hard freeze at a cap.
+    // Each tick adds 18% of the remaining gap, so progress slows as it
+    // approaches 95% but never fully stops.
     clearInterval(progressTickRef.current)
     progressTickRef.current = setInterval(() => {
       setUploadState((s) => {
-        if (!s.loading || s.progress >= 90) return s
-        const next = s.progress + 1
-        const step = next < 25 ? 'Reading' : 'Uploading'
-        const message = next < 25 ? 'Reading file…' : `Uploading ${file.name}…`
-        return { ...s, progress: next, step, message }
+        if (!s.loading || s.progress >= 95) return s
+        const remaining = 95 - s.progress
+        const next = Math.min(95, s.progress + Math.max(0.5, remaining * 0.18))
+        const rounded = Math.round(next * 10) / 10   // 1 decimal place
+        const step = rounded < 25 ? 'Reading' : 'Uploading'
+        return { ...s, progress: rounded, step }
       })
-    }, 800)
+    }, tickMs)
+
+    // Message tick: cycle through phase-appropriate messages every 2.5 s.
+    clearInterval(messageTickRef.current)
+    messageIndexRef.current = 0
+    messageTickRef.current = setInterval(() => {
+      setUploadState((s) => {
+        if (!s.loading) return s
+        const pool =
+          s.progress < 25
+            ? UPLOAD_MESSAGES.reading
+            : s.step === 'Scanning'
+              ? UPLOAD_MESSAGES.scanning
+              : UPLOAD_MESSAGES.uploading
+        messageIndexRef.current = (messageIndexRef.current + 1) % pool.length
+        return { ...s, message: pool[messageIndexRef.current] }
+      })
+    }, 2500)
 
     try {
       uploadAbortControllerRef.current?.abort()
@@ -151,13 +202,37 @@ export default function DashboardPage() {
       })
 
       clearInterval(progressTickRef.current)
+      clearInterval(messageTickRef.current)
+      progressTickRef.current = null
+      messageTickRef.current = null
 
-      if (!isMountedRef.current) {
-        return
-      }
+      if (!isMountedRef.current) return
 
-      // Server has finished scanning; reflect that before we process the result
-      setUploadState((s) => ({ ...s, message: 'Processing projects…', progress: 75, step: 'Scanning' }))
+      // Snap to 90%+ (never go backwards) and switch to scanning phase messages.
+      messageIndexRef.current = 0
+      setUploadState((s) => ({
+        ...s,
+        message: UPLOAD_MESSAGES.scanning[0],
+        progress: Math.max(s.progress, 90),
+        step: 'Scanning',
+      }))
+
+      // Tick from current → 99 at a fast fixed pace during result processing.
+      progressTickRef.current = setInterval(() => {
+        setUploadState((s) => {
+          if (!s.loading || s.progress >= 99) return s
+          return { ...s, progress: s.progress + 1 }
+        })
+      }, 300)
+
+      // Cycle scanning messages.
+      messageTickRef.current = setInterval(() => {
+        setUploadState((s) => {
+          if (!s.loading) return s
+          messageIndexRef.current = (messageIndexRef.current + 1) % UPLOAD_MESSAGES.scanning.length
+          return { ...s, message: UPLOAD_MESSAGES.scanning[messageIndexRef.current] }
+        })
+      }, 1800)
 
       const actions = result?.actions ?? []
       const created = actions
@@ -169,18 +244,29 @@ export default function DashboardPage() {
 
       setUploadHighlights({ created, merged })
 
-      setUploadState((s) => ({ ...s, message: 'Refreshing stats…', progress: 90, step: 'Finishing' }))
-      await refreshStats()
-      if (!isMountedRef.current) {
-        return
-      }
+      // Fire-and-forget: refresh stats in the background so it never blocks
+      // the progress bar from reaching 100%.
+      refreshStats().catch(() => {})
 
       const createdCount = result?.created_count ?? 0
       const mergedCount = result?.merged_count ?? 0
+      const summary =
+        createdCount > 0 && mergedCount > 0
+          ? `Added ${createdCount} new project${createdCount !== 1 ? 's' : ''}, updated ${mergedCount} existing.`
+          : createdCount > 0
+            ? `${createdCount} new project${createdCount !== 1 ? 's' : ''} created successfully!`
+            : mergedCount > 0
+              ? `${mergedCount} project${mergedCount !== 1 ? 's' : ''} updated with new files.`
+              : 'Upload complete!'
+
+      clearInterval(messageTickRef.current)
+      clearInterval(progressTickRef.current)
+      progressTickRef.current = null
+      messageTickRef.current = null
       setUploadState({
         loading: false,
         error: false,
-        message: `Upload complete. Created ${createdCount}, merged ${mergedCount}.`,
+        message: summary,
         progress: 100,
         step: 'Done',
       })
@@ -191,9 +277,10 @@ export default function DashboardPage() {
       setPage('projects')
     } catch (error) {
       clearInterval(progressTickRef.current)
-      if (error?.name === 'AbortError' || !isMountedRef.current) {
-        return
-      }
+      clearInterval(messageTickRef.current)
+      progressTickRef.current = null
+      messageTickRef.current = null
+      if (error?.name === 'AbortError' || !isMountedRef.current) return
 
       setUploadState({
         loading: false,
@@ -261,7 +348,7 @@ export default function DashboardPage() {
           <div className="mt-4 space-y-1.5">
             <div className="flex items-center justify-between font-mono text-2xs text-muted uppercase tracking-widest">
               <span>{uploadState.step}</span>
-              <span>{uploadState.progress}%</span>
+              <span>{Math.floor(uploadState.progress)}%</span>
             </div>
             <div className="h-1 w-full overflow-hidden rounded-full bg-border">
               <div
