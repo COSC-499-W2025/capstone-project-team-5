@@ -6,14 +6,27 @@ global.window.api = {
   health:               jest.fn().mockResolvedValue({ status: 'ok' }),
   getCurrentUser:       jest.fn().mockResolvedValue({ username: 'testuser' }),
   setUsername:          jest.fn(),
+  setAuthUsername:      jest.fn(),
   getUsername:          jest.fn().mockReturnValue(null),
   getProjects:          jest.fn().mockResolvedValue([]),
   getSkills:            jest.fn().mockResolvedValue([]),
+  getProfile:           jest.fn().mockResolvedValue(null),
   getWorkExperiences:   jest.fn().mockResolvedValue([]),
+  getEducations:        jest.fn().mockResolvedValue([]),
   createWorkExperience:  jest.fn().mockResolvedValue({}),
   updateWorkExperience:  jest.fn().mockResolvedValue({}),
   deleteWorkExperience:  jest.fn().mockResolvedValue(null),
   getResumes:           jest.fn().mockResolvedValue([]),
+  createResume:         jest.fn().mockResolvedValue({}),
+  updateResume:         jest.fn().mockResolvedValue({}),
+  deleteResume:         jest.fn().mockResolvedValue(null),
+  analyzeProject:       jest.fn().mockResolvedValue({}),
+  getLLMConfig:         jest.fn().mockResolvedValue({ is_allowed: false, model_preferences: [] }),
+  downloadResumePdf:    jest.fn().mockResolvedValue({
+    bytes: new ArrayBuffer(8),
+    contentType: 'application/pdf',
+    filename: 'resume.pdf',
+  }),
 
   // Consent
   getAvailableServices: jest.fn().mockResolvedValue([
