@@ -7,13 +7,13 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from conftest import auth_headers
 from fastapi.testclient import TestClient
 
 from capstone_project_team_5.api.main import app
 from capstone_project_team_5.data.db import get_session
 from capstone_project_team_5.data.models import Project, UploadRecord, User
 from capstone_project_team_5.data.models.resume import Resume
-from conftest import auth_headers
 
 
 @pytest.fixture
