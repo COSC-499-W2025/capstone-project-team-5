@@ -255,7 +255,7 @@ function ProjectDetail({ project, onAnalysisComplete }) {
       <ProjectMeta project={project} />
 
       <div className="flex items-center justify-between">
-        <span className="font-mono text-sm font-semibold text-slate-400">ANALYSIS</span>
+        <span className="font-mono text-base font-semibold text-slate-400">ANALYSIS</span>
         {status !== ANALYSIS_STATUS.RUNNING && (
           <button className="btn btn-secondary text-sm" onClick={runAnalysis}>
             {status === ANALYSIS_STATUS.COMPLETE ? 'Re-analyze' : 'Run Analysis'}
