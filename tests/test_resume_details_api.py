@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from capstone_project_team_5.api.main import app
 from capstone_project_team_5.data.db import get_session
 from capstone_project_team_5.data.models import Education, User, WorkExperience
+from conftest import auth_headers
 
 
 @pytest.fixture
@@ -71,7 +72,7 @@ class TestListWorkExperiences:
         username, _ = test_user
         response = client.get(
             f"/api/users/{username}/work-experiences",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 200
         assert response.json() == []
@@ -81,16 +82,16 @@ class TestListWorkExperiences:
         client.post(
             f"/api/users/{username}/work-experiences",
             json={"company": "Second", "title": "Dev", "rank": 2},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         client.post(
             f"/api/users/{username}/work-experiences",
             json={"company": "First", "title": "Dev", "rank": 1},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         response = client.get(
             f"/api/users/{username}/work-experiences",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 200
         data = response.json()
@@ -107,7 +108,7 @@ class TestListWorkExperiences:
         username, _ = test_user
         response = client.get(
             f"/api/users/{username}/work-experiences",
-            headers={"X-Username": "otheruser"},
+            headers=auth_headers("otheruser"),
         )
         assert response.status_code == 403
 
@@ -120,7 +121,7 @@ class TestCreateWorkExperience:
         response = client.post(
             f"/api/users/{username}/work-experiences",
             json={"company": "Google", "title": "SWE"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 201
         data = response.json()
@@ -142,7 +143,7 @@ class TestCreateWorkExperience:
                 "is_current": False,
                 "rank": 1,
             },
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 201
         data = response.json()
@@ -161,7 +162,7 @@ class TestCreateWorkExperience:
                 "start_date": "2023-01-01",
                 "end_date": "2022-01-01",
             },
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 400
 
@@ -177,7 +178,7 @@ class TestCreateWorkExperience:
                 "is_current": True,
                 "end_date": "2023-12-31",
             },
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 400
 
@@ -190,12 +191,12 @@ class TestGetWorkExperience:
         create_resp = client.post(
             f"/api/users/{username}/work-experiences",
             json={"company": "Google", "title": "SWE"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         work_exp_id = create_resp.json()["id"]
         response = client.get(
             f"/api/users/{username}/work-experiences/{work_exp_id}",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 200
         assert response.json()["company"] == "Google"
@@ -204,7 +205,7 @@ class TestGetWorkExperience:
         username, _ = test_user
         response = client.get(
             f"/api/users/{username}/work-experiences/9999",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 404
 
@@ -217,13 +218,13 @@ class TestUpdateWorkExperience:
         create_resp = client.post(
             f"/api/users/{username}/work-experiences",
             json={"company": "Original", "title": "Dev", "location": "NYC"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         work_exp_id = create_resp.json()["id"]
         response = client.patch(
             f"/api/users/{username}/work-experiences/{work_exp_id}",
             json={"company": "Updated"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 200
         data = response.json()
@@ -236,7 +237,7 @@ class TestUpdateWorkExperience:
         response = client.patch(
             f"/api/users/{username}/work-experiences/9999",
             json={"company": "X"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 404
 
@@ -251,13 +252,13 @@ class TestUpdateWorkExperience:
                 "title": "SWE",
                 "end_date": "2023-12-31",
             },
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         work_exp_id = create_resp.json()["id"]
         response = client.patch(
             f"/api/users/{username}/work-experiences/{work_exp_id}",
             json={"is_current": True},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 200
         assert response.json()["is_current"] is True
@@ -272,19 +273,19 @@ class TestDeleteWorkExperience:
         create_resp = client.post(
             f"/api/users/{username}/work-experiences",
             json={"company": "ToDelete", "title": "X"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         work_exp_id = create_resp.json()["id"]
         response = client.delete(
             f"/api/users/{username}/work-experiences/{work_exp_id}",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 204
 
         # Verify it's gone
         get_resp = client.get(
             f"/api/users/{username}/work-experiences/{work_exp_id}",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert get_resp.status_code == 404
 
@@ -292,7 +293,7 @@ class TestDeleteWorkExperience:
         username, _ = test_user
         response = client.delete(
             f"/api/users/{username}/work-experiences/9999",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 404
 
@@ -307,7 +308,7 @@ class TestListEducations:
         username, _ = test_user
         response = client.get(
             f"/api/users/{username}/educations",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 200
         assert response.json() == []
@@ -317,16 +318,16 @@ class TestListEducations:
         client.post(
             f"/api/users/{username}/educations",
             json={"institution": "Second U", "degree": "MSc", "rank": 2},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         client.post(
             f"/api/users/{username}/educations",
             json={"institution": "First U", "degree": "BSc", "rank": 1},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         response = client.get(
             f"/api/users/{username}/educations",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 200
         data = response.json()
@@ -343,7 +344,7 @@ class TestListEducations:
         username, _ = test_user
         response = client.get(
             f"/api/users/{username}/educations",
-            headers={"X-Username": "otheruser"},
+            headers=auth_headers("otheruser"),
         )
         assert response.status_code == 403
 
@@ -356,7 +357,7 @@ class TestCreateEducation:
         response = client.post(
             f"/api/users/{username}/educations",
             json={"institution": "UBC", "degree": "BSc"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 201
         data = response.json()
@@ -378,7 +379,7 @@ class TestCreateEducation:
                 "is_current": False,
                 "rank": 1,
             },
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 201
         data = response.json()
@@ -392,7 +393,7 @@ class TestCreateEducation:
         response = client.post(
             f"/api/users/{username}/educations",
             json={"institution": "UBC", "degree": "BSc", "gpa": 6.0},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 400
 
@@ -408,7 +409,7 @@ class TestCreateEducation:
                 "start_date": "2024-01-01",
                 "end_date": "2020-01-01",
             },
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 400
 
@@ -424,7 +425,7 @@ class TestCreateEducation:
                 "is_current": True,
                 "end_date": "2024-05-15",
             },
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 400
 
@@ -437,12 +438,12 @@ class TestGetEducation:
         create_resp = client.post(
             f"/api/users/{username}/educations",
             json={"institution": "UBC", "degree": "BSc"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         edu_id = create_resp.json()["id"]
         response = client.get(
             f"/api/users/{username}/educations/{edu_id}",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 200
         assert response.json()["institution"] == "UBC"
@@ -451,7 +452,7 @@ class TestGetEducation:
         username, _ = test_user
         response = client.get(
             f"/api/users/{username}/educations/9999",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 404
 
@@ -464,13 +465,13 @@ class TestUpdateEducation:
         create_resp = client.post(
             f"/api/users/{username}/educations",
             json={"institution": "UBC", "degree": "BSc", "gpa": 3.5},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         edu_id = create_resp.json()["id"]
         response = client.patch(
             f"/api/users/{username}/educations/{edu_id}",
             json={"gpa": 3.9},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 200
         data = response.json()
@@ -482,7 +483,7 @@ class TestUpdateEducation:
         response = client.patch(
             f"/api/users/{username}/educations/9999",
             json={"gpa": 4.0},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 404
 
@@ -497,13 +498,13 @@ class TestUpdateEducation:
                 "degree": "BSc",
                 "end_date": "2024-05-15",
             },
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         edu_id = create_resp.json()["id"]
         response = client.patch(
             f"/api/users/{username}/educations/{edu_id}",
             json={"is_current": True},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 200
         assert response.json()["is_current"] is True
@@ -518,19 +519,19 @@ class TestDeleteEducation:
         create_resp = client.post(
             f"/api/users/{username}/educations",
             json={"institution": "ToDelete", "degree": "BSc"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         edu_id = create_resp.json()["id"]
         response = client.delete(
             f"/api/users/{username}/educations/{edu_id}",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 204
 
         # Verify it's gone
         get_resp = client.get(
             f"/api/users/{username}/educations/{edu_id}",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert get_resp.status_code == 404
 
@@ -538,6 +539,6 @@ class TestDeleteEducation:
         username, _ = test_user
         response = client.delete(
             f"/api/users/{username}/educations/9999",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 404
