@@ -192,6 +192,7 @@ export default function DashboardPage() {
 
         const projectItems = getProjectItems(projects.value)
         const analysisTasks = projectItems
+          .filter((item) => item?.rel_path)
           .map((item) => item?.id)
           .filter((id) => Number.isFinite(id))
           .map((id) => api.analyzeProject(id))

@@ -274,6 +274,11 @@ export default function ResumesPage() {
       return
     }
 
+    if (!project.rel_path) {
+      setDraftStatus('This project cannot be analyzed (no source files to scan).')
+      return
+    }
+
     setDraftLoading(true)
     setForm((current) => ({
       ...current,

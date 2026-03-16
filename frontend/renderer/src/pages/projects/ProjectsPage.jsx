@@ -228,7 +228,7 @@ function ProjectDetail({ project, onAnalysisComplete }) {
 
   // Run once on mount — skip if the project already carries analysis data
   useEffect(() => {
-    if (!isAnalyzed(project)) {
+    if (!isAnalyzed(project) && project?.rel_path) {
       runAnalysis()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
