@@ -11,6 +11,7 @@
 <details>
   <summary><h3>Evaluation</h3></summary>
 
+![](WEEK10.png)
 </details>
 ### Tasks worked on
 
