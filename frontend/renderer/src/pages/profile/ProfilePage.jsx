@@ -29,6 +29,13 @@ function validate(form) {
   return null
 }
 
+function ensureScheme(url) {
+  const trimmed = url.trim()
+  if (!trimmed) return null
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return 'https://' + trimmed
+}
+
 function buildPayload(form) {
   return {
     first_name: form.first_name.trim() || null,
@@ -39,9 +46,9 @@ function buildPayload(form) {
     city: form.city.trim() || null,
     state: form.state.trim() || null,
     zip_code: form.zip_code.trim() || null,
-    linkedin_url: form.linkedin_url.trim() || null,
+    linkedin_url: ensureScheme(form.linkedin_url),
     github_username: form.github_username.trim() || null,
-    website: form.website.trim() || null,
+    website: ensureScheme(form.website),
   }
 }
 
@@ -132,7 +139,7 @@ export default function ProfilePage() {
             <input
               className="input"
               placeholder="LinkedIn URL"
-              type="url"
+              type="text"
               value={form.linkedin_url}
               onChange={(e) => setField('linkedin_url', e.target.value)}
             />
@@ -145,7 +152,7 @@ export default function ProfilePage() {
             <input
               className="input md:col-span-2"
               placeholder="Website"
-              type="url"
+              type="text"
               value={form.website}
               onChange={(e) => setField('website', e.target.value)}
             />
