@@ -109,6 +109,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   global.URL.createObjectURL = jest.fn(() => 'blob:resume-preview')
   global.URL.revokeObjectURL = jest.fn()
+  localStorage.clear()
 })
 
 test('shows the empty state and keeps preview disabled until data is ready', async () => {
@@ -276,9 +277,149 @@ test('generates and previews a pdf from saved entries', async () => {
   )
 
   await waitFor(() =>
-    expect(screen.getByTitle(/resume pdf preview/i)).toBeInTheDocument()
+    expect(screen.getByText(/full preview of the generated resume document/i)).toBeInTheDocument()
   )
   expect(
-    screen.getAllByRole('button', { name: /download pdf/i }).some((button) => !button.disabled)
-  ).toBe(true)
+    screen.getByRole('button', { name: /download pdf/i })
+  ).toBeEnabled()
+})
+
+test('tab switcher toggles between entries and preview views', async () => {
+  renderResumesPage({
+    getResumes: jest.fn().mockResolvedValue([EXISTING_RESUME]),
+  })
+
+  await waitFor(() =>
+    expect(screen.getByText('Built a desktop portfolio workspace.')).toBeInTheDocument()
+  )
+
+  // Entries tab is active by default — resume bullet visible
+  expect(screen.getByRole('button', { name: /^entries$/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /^preview$/i })).toBeInTheDocument()
+
+  // Switch to Preview tab
+  fireEvent.click(screen.getByRole('button', { name: /^preview$/i }))
+
+  // Resume cards should be gone, preview CTA visible
+  expect(screen.queryByText('Built a desktop portfolio workspace.')).not.toBeInTheDocument()
+  expect(screen.getByText(/no preview generated yet/i)).toBeInTheDocument()
+
+  // Switch back to Entries tab
+  fireEvent.click(screen.getByRole('button', { name: /^entries$/i }))
+  expect(screen.getByText('Built a desktop portfolio workspace.')).toBeInTheDocument()
+})
+
+test('preview pdf auto-switches to the preview tab', async () => {
+  renderResumesPage({
+    getResumes: jest.fn().mockResolvedValue([EXISTING_RESUME]),
+  })
+
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: /preview pdf/i })).toBeEnabled()
+  )
+
+  // Should start on entries tab — bullet visible
+  expect(screen.getByText('Built a desktop portfolio workspace.')).toBeInTheDocument()
+
+  fireEvent.click(screen.getByRole('button', { name: /preview pdf/i }))
+
+  // Should auto-switch to preview tab — bullet hidden
+  await waitFor(() =>
+    expect(screen.getByText(/full preview of the generated resume document/i)).toBeInTheDocument()
+  )
+  expect(screen.queryByText('Built a desktop portfolio workspace.')).not.toBeInTheDocument()
+})
+
+test('download pdf button works without previewing first', async () => {
+  renderResumesPage({
+    getResumes: jest.fn().mockResolvedValue([EXISTING_RESUME]),
+  })
+
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: /download pdf/i })).toBeEnabled()
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: /download pdf/i }))
+
+  await waitFor(() =>
+    expect(window.api.downloadResumePdf).toHaveBeenCalledWith('alice', {
+      template_name: 'jake',
+    })
+  )
+
+  // Should have triggered a blob download
+  expect(global.URL.createObjectURL).toHaveBeenCalled()
+})
+
+test('caches preview to localStorage and restores on remount', async () => {
+  const { unmount } = render(
+    <AppContext.Provider value={{ apiOk: true, user: { username: 'alice' } }}>
+      <ResumesPage />
+    </AppContext.Provider>
+  )
+  window.api = createApi({
+    getResumes: jest.fn().mockResolvedValue([EXISTING_RESUME]),
+  })
+
+  // Generate preview in a fresh render
+  unmount()
+  const { unmount: unmount2 } = render(
+    <AppContext.Provider value={{ apiOk: true, user: { username: 'alice' } }}>
+      <ResumesPage />
+    </AppContext.Provider>
+  )
+
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: /preview pdf/i })).toBeEnabled()
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: /preview pdf/i }))
+
+  await waitFor(() =>
+    expect(window.api.downloadResumePdf).toHaveBeenCalled()
+  )
+
+  // Verify something was cached
+  expect(localStorage.getItem('resume_preview_alice')).not.toBeNull()
+
+  // Unmount and remount to simulate navigation
+  unmount2()
+  render(
+    <AppContext.Provider value={{ apiOk: true, user: { username: 'alice' } }}>
+      <ResumesPage />
+    </AppContext.Provider>
+  )
+
+  // Switch to preview tab — cached preview should show stale badge
+  fireEvent.click(screen.getByRole('button', { name: /^preview$/i }))
+
+  await waitFor(() =>
+    expect(screen.getByText(/stale/i)).toBeInTheDocument()
+  )
+})
+
+test('deleting all resume entries clears the cached preview', async () => {
+  localStorage.setItem('resume_preview_alice', JSON.stringify({
+    base64: btoa('fakepdf'),
+    filename: 'test.pdf',
+    contentType: 'application/pdf',
+  }))
+
+  renderResumesPage({
+    getResumes: jest.fn().mockResolvedValue([EXISTING_RESUME]),
+  })
+
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: /^delete$/i })).toBeInTheDocument()
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+  fireEvent.click(screen.getByRole('button', { name: /^yes$/i }))
+
+  await waitFor(() =>
+    expect(window.api.deleteResume).toHaveBeenCalledWith('alice', 1)
+  )
+
+  // Cache should be cleared since all entries are gone
+  expect(localStorage.getItem('resume_preview_alice')).toBeNull()
 })
