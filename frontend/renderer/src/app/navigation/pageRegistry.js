@@ -1,5 +1,6 @@
 import DashboardPage from '../../pages/dashboard/DashboardPage'
 import ProjectsPage from '../../pages/projects/ProjectsPage'
+import AnalysesPage from '../../pages/analyses/AnalysesPage'
 import SkillsPage from '../../pages/skills/SkillsPage'
 import ExperiencePage from '../../pages/experience/ExperiencePage'
 import EducationPage from '../../pages/education/EducationPage'
@@ -10,7 +11,8 @@ import ComingSoonPage from '../../pages/shared/ComingSoonPage'
 
 const PAGE_COMPONENTS = {
   dashboard: DashboardPage,
-  projects: ProjectsPage,
+  projects:  ProjectsPage,
+  analyses:  AnalysesPage,
   skills: SkillsPage,
   experience: ExperiencePage,
   education: EducationPage,

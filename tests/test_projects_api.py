@@ -11,9 +11,17 @@ from fastapi.testclient import TestClient
 
 from capstone_project_team_5.api.main import app
 from capstone_project_team_5.data.db import get_session
-from capstone_project_team_5.data.models import ArtifactSource, CodeAnalysis, Project, UploadRecord
+from capstone_project_team_5.data.models import (
+    ArtifactSource,
+    CodeAnalysis,
+    Project,
+    UploadRecord,
+    User,
+    UserCodeAnalysis,
+)
 from capstone_project_team_5.services.content_store import get_manifests_root, get_objects_root
 from capstone_project_team_5.services.upload_storage import get_upload_zip_path
+from conftest import auth_headers
 
 
 def _create_zip_bytes(entries: list[tuple[str, bytes]]) -> bytes:
@@ -35,6 +43,46 @@ def _upload_single_project(client: TestClient, name: str) -> int:
     )
     assert response.status_code == 201
     return response.json()["projects"][0]["id"]
+
+
+def _create_user(username: str) -> int:
+    with get_session() as session:
+        user = session.query(User).filter(User.username == username).first()
+        if user is None:
+            user = User(username=username, password_hash="hash")
+            session.add(user)
+            session.flush()
+        return user.id
+
+
+def _link_analysis_to_user(
+    *,
+    project_id: int,
+    username: str,
+    language: str = "Python",
+    summary_text: str = "Saved summary",
+    metrics: dict[str, object] | None = None,
+) -> int:
+    user_id = _create_user(username)
+    payload = metrics or {
+        "language": language,
+        "tools": ["FastAPI"],
+        "practices": ["Testing"],
+        "lines_of_code": 123,
+    }
+    with get_session() as session:
+        analysis = CodeAnalysis(
+            project_id=project_id,
+            language=language,
+            analysis_type="local",
+            metrics_json=json.dumps(payload),
+            summary_text=summary_text,
+        )
+        session.add(analysis)
+        session.flush()
+        session.add(UserCodeAnalysis(user_id=user_id, analysis_id=analysis.id))
+        session.flush()
+        return analysis.id
 
 
 def test_upload_projects_returns_metadata(api_db: None) -> None:
@@ -475,7 +523,7 @@ def test_analysis_skips_when_fingerprint_unchanged(api_db: None) -> None:
     assert upload_response.status_code == 201
     project_id = upload_response.json()["projects"][0]["id"]
 
-    analyze_response = client.post(f"/api/projects/{project_id}/analyze")
+    analyze_response = client.post(f"/api/projects/{project_id}/analyze", headers=auth_headers("testuser"))
     assert analyze_response.status_code == 200
     with get_session() as session:
         first_count = (
@@ -483,7 +531,7 @@ def test_analysis_skips_when_fingerprint_unchanged(api_db: None) -> None:
         )
     assert first_count == 1
 
-    analyze_response2 = client.post(f"/api/projects/{project_id}/analyze")
+    analyze_response2 = client.post(f"/api/projects/{project_id}/analyze", headers=auth_headers("testuser"))
     assert analyze_response2.status_code == 200
     with get_session() as session:
         second_count = (
@@ -498,7 +546,7 @@ def test_analysis_skips_when_fingerprint_unchanged(api_db: None) -> None:
     )
     assert upload_response2.status_code == 201
 
-    analyze_response3 = client.post(f"/api/projects/{project_id}/analyze")
+    analyze_response3 = client.post(f"/api/projects/{project_id}/analyze", headers=auth_headers("testuser"))
     assert analyze_response3.status_code == 200
     with get_session() as session:
         third_count = (
@@ -591,7 +639,7 @@ def test_analyze_project_updates_importance_score() -> None:
     assert upload_response.status_code == 201
     project_id = upload_response.json()["projects"][0]["id"]
 
-    analyze_response = client.post(f"/api/projects/{project_id}/analyze")
+    analyze_response = client.post(f"/api/projects/{project_id}/analyze", headers=auth_headers("testuser"))
     assert analyze_response.status_code == 200
     analyze_payload = analyze_response.json()
     assert analyze_payload["id"] == project_id
@@ -695,7 +743,7 @@ def test_analyze_project_ai_falls_back_to_local(monkeypatch: pytest.MonkeyPatch)
     assert upload_response.status_code == 201
     project_id = upload_response.json()["projects"][0]["id"]
 
-    analyze_response = client.post(f"/api/projects/{project_id}/analyze?use_ai=true")
+    analyze_response = client.post(f"/api/projects/{project_id}/analyze?use_ai=true", headers=auth_headers("testuser"))
     assert analyze_response.status_code == 200
     payload = analyze_response.json()
     assert payload["resume_bullet_source"] == "Local"
@@ -730,3 +778,60 @@ def test_score_config_endpoints_round_trip() -> None:
     get_resp2 = client.get("/api/projects/config/score")
     assert get_resp2.status_code == 200
     assert get_resp2.json() == new_cfg
+
+
+def test_list_saved_projects_returns_user_scoped_saved_data(api_db: None) -> None:
+    client = TestClient(app)
+    project_id = _upload_single_project(client, "saved_scope")
+    analysis_id = _link_analysis_to_user(project_id=project_id, username="saved-user")
+
+    response = client.get(
+        "/api/projects/saved/saved-user",
+        headers={"X-Username": "saved-user"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload) == 1
+    assert payload[0]["projects"][0]["id"] == project_id
+    assert payload[0]["projects"][0]["analyses"][0]["id"] == analysis_id
+    assert payload[0]["projects"][0]["languages"] == ["Python"]
+    assert payload[0]["projects"][0]["tools"] == ["FastAPI"]
+    assert payload[0]["projects"][0]["practices"] == ["Testing"]
+    assert payload[0]["projects"][0]["lines_of_code"] == 123
+
+
+def test_list_saved_projects_filters_out_projects_not_linked_to_user(api_db: None) -> None:
+    client = TestClient(app)
+    visible_project_id = _upload_single_project(client, "visible_proj")
+    hidden_project_id = _upload_single_project(client, "hidden_proj")
+    _link_analysis_to_user(project_id=visible_project_id, username="viewer")
+    _link_analysis_to_user(project_id=hidden_project_id, username="other-user")
+
+    response = client.get(
+        "/api/projects/saved/viewer",
+        headers={"X-Username": "viewer"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    returned_project_ids = {
+        project["id"]
+        for upload in payload
+        for project in upload["projects"]
+    }
+    assert visible_project_id in returned_project_ids
+    assert hidden_project_id not in returned_project_ids
+
+
+def test_list_saved_projects_rejects_other_user_access(api_db: None) -> None:
+    client = TestClient(app)
+    _create_user("owner")
+
+    response = client.get(
+        "/api/projects/saved/owner",
+        headers={"X-Username": "different-user"},
+    )
+
+    assert response.status_code == 403
+    assert "own saved analyses" in response.json()["detail"]

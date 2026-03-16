@@ -55,6 +55,82 @@ class PaginatedProjectsResponse(BaseModel):
     pagination: PaginationMeta
 
 
+class SavedAnalysisSummary(BaseModel):
+    """Saved analysis metadata for a project."""
+
+    id: int
+    language: str
+    summary_text: str | None
+    resume_bullets: list[str] | None = None
+    ai_bullets: list[str] | None = None
+    ai_warning: str | None = None
+    skill_timeline: list[dict] | None = None
+    score_breakdown: dict | None = None
+    git: dict | None = None
+    tools: list[str] | None = None
+    practices: list[str] | None = None
+    other_languages: list[str] | None = None
+    duration: str | None = None
+    user_role: str | None = None
+    user_role_types: dict | None = None
+    user_contribution_percentage: float | None = None
+    role_justification: str | None = None
+    created_at: datetime
+
+
+class CodeAnalysisUpdateRequest(BaseModel):
+    """Fields allowed to be updated on a code analysis."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    language: str | None = None
+    summary_text: str | None = None
+    resume_bullets: list[str] | None = None
+    ai_bullets: list[str] | None = None
+    score_breakdown: dict[str, float] | None = None
+    skill_timeline: list[dict] | None = None
+    tools: list[str] | None = None
+    practices: list[str] | None = None
+    other_languages: list[str] | None = None
+
+
+class SavedProjectSummary(BaseModel):
+    """Saved project details aggregated for a user's analyses."""
+
+    id: int
+    name: str
+    rel_path: str
+    file_count: int
+    importance_rank: int | None
+    importance_score: float | None
+    user_role: str | None
+    user_contribution_percentage: confloat(ge=0, le=100) | None  # type: ignore
+    role_justification: str | None
+    user_role_types: dict[str, str] | None = None
+    has_git_repo: bool
+    is_collaborative: bool
+    is_showcase: bool
+    start_date: datetime | None
+    end_date: datetime | None
+    languages: list[str]
+    tools: list[str]
+    practices: list[str]
+    lines_of_code: int | None
+    analyses_count: int
+    analyses: list[SavedAnalysisSummary]
+
+
+class SavedUploadSummary(BaseModel):
+    """Saved upload and its projects for a specific user."""
+
+    id: int
+    filename: str
+    size_bytes: int
+    file_count: int
+    created_at: datetime
+    projects: list[SavedProjectSummary]
+
+
 class ProjectUploadResponse(BaseModel):
     """Response schema for zip upload endpoint."""
 
