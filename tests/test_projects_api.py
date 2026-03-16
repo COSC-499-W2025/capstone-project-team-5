@@ -523,7 +523,9 @@ def test_analysis_skips_when_fingerprint_unchanged(api_db: None) -> None:
     assert upload_response.status_code == 201
     project_id = upload_response.json()["projects"][0]["id"]
 
-    analyze_response = client.post(f"/api/projects/{project_id}/analyze", headers=auth_headers("testuser"))
+    analyze_response = client.post(
+        f"/api/projects/{project_id}/analyze", headers=auth_headers("testuser")
+    )
     assert analyze_response.status_code == 200
     with get_session() as session:
         first_count = (
@@ -531,7 +533,9 @@ def test_analysis_skips_when_fingerprint_unchanged(api_db: None) -> None:
         )
     assert first_count == 1
 
-    analyze_response2 = client.post(f"/api/projects/{project_id}/analyze", headers=auth_headers("testuser"))
+    analyze_response2 = client.post(
+        f"/api/projects/{project_id}/analyze", headers=auth_headers("testuser")
+    )
     assert analyze_response2.status_code == 200
     with get_session() as session:
         second_count = (
@@ -546,7 +550,9 @@ def test_analysis_skips_when_fingerprint_unchanged(api_db: None) -> None:
     )
     assert upload_response2.status_code == 201
 
-    analyze_response3 = client.post(f"/api/projects/{project_id}/analyze", headers=auth_headers("testuser"))
+    analyze_response3 = client.post(
+        f"/api/projects/{project_id}/analyze", headers=auth_headers("testuser")
+    )
     assert analyze_response3.status_code == 200
     with get_session() as session:
         third_count = (
@@ -639,7 +645,9 @@ def test_analyze_project_updates_importance_score() -> None:
     assert upload_response.status_code == 201
     project_id = upload_response.json()["projects"][0]["id"]
 
-    analyze_response = client.post(f"/api/projects/{project_id}/analyze", headers=auth_headers("testuser"))
+    analyze_response = client.post(
+        f"/api/projects/{project_id}/analyze", headers=auth_headers("testuser")
+    )
     assert analyze_response.status_code == 200
     analyze_payload = analyze_response.json()
     assert analyze_payload["id"] == project_id
@@ -743,7 +751,9 @@ def test_analyze_project_ai_falls_back_to_local(monkeypatch: pytest.MonkeyPatch)
     assert upload_response.status_code == 201
     project_id = upload_response.json()["projects"][0]["id"]
 
-    analyze_response = client.post(f"/api/projects/{project_id}/analyze?use_ai=true", headers=auth_headers("testuser"))
+    analyze_response = client.post(
+        f"/api/projects/{project_id}/analyze?use_ai=true", headers=auth_headers("testuser")
+    )
     assert analyze_response.status_code == 200
     payload = analyze_response.json()
     assert payload["resume_bullet_source"] == "Local"
@@ -787,7 +797,7 @@ def test_list_saved_projects_returns_user_scoped_saved_data(api_db: None) -> Non
 
     response = client.get(
         "/api/projects/saved/saved-user",
-        headers={"X-Username": "saved-user"},
+        headers=auth_headers("saved-user"),
     )
 
     assert response.status_code == 200
@@ -810,16 +820,12 @@ def test_list_saved_projects_filters_out_projects_not_linked_to_user(api_db: Non
 
     response = client.get(
         "/api/projects/saved/viewer",
-        headers={"X-Username": "viewer"},
+        headers=auth_headers("viewer"),
     )
 
     assert response.status_code == 200
     payload = response.json()
-    returned_project_ids = {
-        project["id"]
-        for upload in payload
-        for project in upload["projects"]
-    }
+    returned_project_ids = {project["id"] for upload in payload for project in upload["projects"]}
     assert visible_project_id in returned_project_ids
     assert hidden_project_id not in returned_project_ids
 
@@ -830,7 +836,7 @@ def test_list_saved_projects_rejects_other_user_access(api_db: None) -> None:
 
     response = client.get(
         "/api/projects/saved/owner",
-        headers={"X-Username": "different-user"},
+        headers=auth_headers("different-user"),
     )
 
     assert response.status_code == 403

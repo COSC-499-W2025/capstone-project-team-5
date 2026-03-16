@@ -37,6 +37,8 @@ function setupApi(overrides = {}) {
     clearCredentials:     jest.fn(),
     getUsername:          jest.fn().mockReturnValue('alice'),
     getProjects:          jest.fn().mockResolvedValue([]),
+    getSavedProjects:     jest.fn().mockResolvedValue([]),
+    getAuthUsername:      jest.fn().mockReturnValue('alice'),
     getSkills:            jest.fn().mockResolvedValue([]),
     getWorkExperiences:   jest.fn().mockResolvedValue([]),
     getEducations:        jest.fn().mockResolvedValue([]),
@@ -96,7 +98,7 @@ test('renders all nav items in sidebar', async () => {
   localStorage.setItem('zip2job_token', 'fake-token')
   localStorage.setItem('zip2job_username', 'alice')
   render(<App />)
-  const labels = ['Dashboard', 'Projects', 'Skills', 'Experience', 'Education', 'Portfolio', 'Resumes', 'Consents']
+  const labels = ['Dashboard', 'Projects', 'Analyses', 'Skills', 'Experience', 'Education', 'Portfolio', 'Resumes', 'Consents']
   await waitFor(() => expect(screen.getByText('Portfolio Engine')).toBeInTheDocument())
   for (const label of labels) {
     expect(screen.getAllByText(label).length).toBeGreaterThan(0)
@@ -125,6 +127,7 @@ test('clicking a nav item updates the topbar title', async () => {
 
 test('dashboard quick action opens the resumes workspace', async () => {
   setupApi()
+  localStorage.setItem('zip2job_token', 'fake-token')
   localStorage.setItem('zip2job_username', 'alice')
   render(<App />)
   await waitFor(() => expect(screen.getByText('Portfolio Engine')).toBeInTheDocument())

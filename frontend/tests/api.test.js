@@ -158,7 +158,6 @@ describe('api.downloadResumePdf', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Username': 'alice',
         },
         body: JSON.stringify({ template_name: 'modern' }),
       })
