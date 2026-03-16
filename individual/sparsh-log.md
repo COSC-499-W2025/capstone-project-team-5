@@ -8,11 +8,14 @@
 # TERM2 Logs - Sparsh Khanna
 ---
 ## Week 10 | March 8 - March 15, 2026
+<details>
+  <summary><h3>Evaluation</h3></summary>
 
+</details>
 ### Tasks worked on
 
 - Logout Functionality and Improved Auth Logic [PR#388](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/388)
-- Dashboard Progress Bar & Upload UX Improvements [PR in progress on `Progress-feedback` branch]
+- Dashboard Progress Bar & Upload UX Improvements [PR#392](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/392)
 - Fixed upload bug on the Dashboard page.
 - Reviewed teammates' code.
 
