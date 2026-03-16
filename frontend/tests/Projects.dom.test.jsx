@@ -323,7 +323,7 @@ test('card gains importance score after successful analysis', async () => {
 test('displays thumbnail image on card when has_thumbnail is true', async () => {
   renderProjectsPage({ projectPayload: [ANALYZED_PROJECT] })
   await waitFor(() => expect(screen.getByText('analyzed-project')).toBeInTheDocument())
-  const img = screen.getByAlt('analyzed-project thumbnail')
+  const img = screen.getByAltText('analyzed-project thumbnail')
   expect(img).toBeInTheDocument()
   expect(img.src).toContain('/api/projects/2/thumbnail')
 })
@@ -331,7 +331,7 @@ test('displays thumbnail image on card when has_thumbnail is true', async () => 
 test('does not display thumbnail image on card when has_thumbnail is false', async () => {
   renderProjectsPage({ projectPayload: [RAW_PROJECT] })
   await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
-  expect(screen.queryByAlt('demo-project thumbnail')).not.toBeInTheDocument()
+  expect(screen.queryByAltText('demo-project thumbnail')).not.toBeInTheDocument()
 })
 
 // ─── ProjectDrawer thumbnail ─────────────────────────────────────────────────
@@ -342,7 +342,7 @@ test('shows thumbnail in drawer when project has thumbnail', async () => {
   fireEvent.click(screen.getByRole('button', { name: /analyzed-project/i }))
   await waitFor(() => expect(screen.getByLabelText('Close')).toBeInTheDocument())
   // Thumbnail image appears in both the card and the drawer
-  const imgs = screen.getAllByAlt('analyzed-project thumbnail')
+  const imgs = screen.getAllByAltText('analyzed-project thumbnail')
   expect(imgs.length).toBeGreaterThanOrEqual(2)
 })
 
@@ -351,7 +351,7 @@ test('does not show thumbnail in drawer when project has no thumbnail', async ()
   await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
   fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
   await waitFor(() => expect(screen.getByLabelText('Close')).toBeInTheDocument())
-  expect(screen.queryByAlt('demo-project thumbnail')).not.toBeInTheDocument()
+  expect(screen.queryByAltText('demo-project thumbnail')).not.toBeInTheDocument()
 })
 
 test('shows "Set Thumbnail" button in drawer for project without thumbnail', async () => {
@@ -385,13 +385,13 @@ test('clearing thumbnail removes the image from card', async () => {
   renderProjectsPage({ projectPayload: [ANALYZED_PROJECT] })
   await waitFor(() => expect(screen.getByText('analyzed-project')).toBeInTheDocument())
   // Thumbnail is initially visible on the card
-  expect(screen.getByAlt('analyzed-project thumbnail')).toBeInTheDocument()
+  expect(screen.getByAltText('analyzed-project thumbnail')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: /analyzed-project/i }))
   await waitFor(() => expect(screen.getByText('Clear Thumbnail')).toBeInTheDocument())
   fireEvent.click(screen.getByText('Clear Thumbnail'))
   // After clearing, the "Set Thumbnail" button appears and image is gone
   await waitFor(() => expect(screen.getByText('Set Thumbnail')).toBeInTheDocument())
-  expect(screen.queryByAlt('analyzed-project thumbnail')).not.toBeInTheDocument()
+  expect(screen.queryByAltText('analyzed-project thumbnail')).not.toBeInTheDocument()
 })
 
 test('selecting a file calls uploadProjectThumbnail API', async () => {

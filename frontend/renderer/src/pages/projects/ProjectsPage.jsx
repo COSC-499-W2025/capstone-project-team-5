@@ -123,6 +123,16 @@ export default function ProjectsPage() {
     setOpen((prev)  => prev?.id === projectId ? { ...prev, ...result } : prev)
   }
 
+  function handleThumbnailChange(projectId, hasThumbnail) {
+    const thumbnailUrl = hasThumbnail ? `/api/projects/${projectId}/thumbnail` : null
+    const update = (p) =>
+      p.id === projectId ? { ...p, has_thumbnail: hasThumbnail, thumbnail_url: thumbnailUrl } : p
+    setProjects((prev) => prev.map(update))
+    setOpen((prev) =>
+      prev?.id === projectId ? { ...prev, has_thumbnail: hasThumbnail, thumbnail_url: thumbnailUrl } : prev
+    )
+  }
+
   // Filter + sort
   const visible = projects
     .filter((p) => !query || p.name.toLowerCase().includes(query.toLowerCase()))
@@ -205,6 +215,7 @@ export default function ProjectsPage() {
         project={open}
         onClose={() => setOpen(null)}
         onAnalysisDone={handleAnalysisDone}
+        onThumbnailChange={handleThumbnailChange}
       />
     )}
     </>
@@ -226,6 +237,16 @@ function ProjectCard({ project, isNew, isMerged, onOpen, onMouseEnter }) {
       onClick={() => onOpen(project)}
       onMouseEnter={onMouseEnter}
     >
+      {/* Thumbnail */}
+      {project.has_thumbnail && (
+        <img
+          src={window.api.getProjectThumbnailUrl(project.id)}
+          alt={`${project.name} thumbnail`}
+          className="w-full h-32 object-cover rounded-t -mx-5 -mt-5 mb-3"
+          style={{ width: 'calc(100% + 2.5rem)' }}
+        />
+      )}
+
       {/* Name + status chips */}
       <div className="flex items-start justify-between gap-2">
         <span className="text-sm font-semibold text-ink leading-snug">{project.name}</span>
@@ -275,12 +296,45 @@ function Chip({ variant, children }) {
 
 const S = { IDLE: 'idle', RUNNING: 'running', DONE: 'done', ERROR: 'error' }
 
-function ProjectDrawer({ project, onClose, onAnalysisDone }) {
+function ProjectDrawer({ project, onClose, onAnalysisDone, onThumbnailChange }) {
   const alreadyDone = isAnalyzed(project)
   const [status, setStatus] = useState(alreadyDone ? S.DONE  : S.IDLE)
   const [data,   setData]   = useState(alreadyDone ? project : null)
   const [err,    setErr]    = useState('')
   const alive = useRef(true)
+
+  // Thumbnail state
+  const [hasThumbnail, setHasThumbnail] = useState(project.has_thumbnail ?? false)
+  const [thumbErr,     setThumbErr]     = useState('')
+  const [thumbVer,     setThumbVer]     = useState(0)
+  const thumbInputRef = useRef(null)
+
+  async function handleThumbnailFileSelected(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setThumbErr('')
+    try {
+      await window.api.uploadProjectThumbnail(project.id, file)
+      setHasThumbnail(true)
+      setThumbVer((v) => v + 1)
+      onThumbnailChange?.(project.id, true)
+    } catch (err) {
+      setThumbErr(err?.message || 'Failed to upload thumbnail.')
+    } finally {
+      e.target.value = ''
+    }
+  }
+
+  async function handleClearThumbnail() {
+    setThumbErr('')
+    try {
+      await window.api.deleteProjectThumbnail(project.id)
+      setHasThumbnail(false)
+      onThumbnailChange?.(project.id, false)
+    } catch (err) {
+      setThumbErr(err?.message || 'Failed to clear thumbnail.')
+    }
+  }
 
   useEffect(() => {
     alive.current = true
@@ -322,6 +376,15 @@ function ProjectDrawer({ project, onClose, onAnalysisDone }) {
       {/* Panel */}
       <div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[540px] flex-col border-l border-border bg-surface shadow-2xl text-ink">
 
+        {/* Thumbnail banner */}
+        {hasThumbnail && (
+          <img
+            src={window.api.getProjectThumbnailUrl(project.id) + (thumbVer ? `?v=${thumbVer}` : '')}
+            alt={`${project.name} thumbnail`}
+            className="w-full h-40 object-cover shrink-0"
+          />
+        )}
+
         {/* Header */}
         <div className="flex shrink-0 items-start gap-3 border-b border-border px-5 py-4">
           <div className="min-w-0 flex-1">
@@ -329,6 +392,21 @@ function ProjectDrawer({ project, onClose, onAnalysisDone }) {
             <p className="mt-0.5 font-mono text-xs text-muted">{project.rel_path}</p>
           </div>
           <div className="flex shrink-0 items-center gap-2 pt-0.5">
+            {hasThumbnail ? (
+              <button
+                onClick={handleClearThumbnail}
+                className="rounded border border-border-hi px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-elevated"
+              >
+                Clear Thumbnail
+              </button>
+            ) : (
+              <button
+                onClick={() => thumbInputRef.current?.click()}
+                className="rounded border border-border-hi px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-elevated"
+              >
+                Set Thumbnail
+              </button>
+            )}
             {status !== S.RUNNING && (
               <button
                 onClick={analyze}
@@ -348,6 +426,11 @@ function ProjectDrawer({ project, onClose, onAnalysisDone }) {
             </button>
           </div>
         </div>
+        {thumbErr && (
+          <div className="px-5 pt-2">
+            <p className="text-xs text-danger">{thumbErr}</p>
+          </div>
+        )}
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto">
@@ -377,6 +460,15 @@ function ProjectDrawer({ project, onClose, onAnalysisDone }) {
             {status === S.DONE && data && <AnalysisDetail data={data} />}
           </div>
         </div>
+
+        <input
+          ref={thumbInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/gif,image/webp,image/bmp"
+          className="hidden"
+          data-testid="thumbnail-file-input"
+          onChange={handleThumbnailFileSelected}
+        />
       </div>
     </>
   )
