@@ -113,6 +113,7 @@ def save_code_analysis_to_db(
         # This could be due to database not being initialized, connection issues, etc.
         import logging as _logging
         import traceback as _traceback
+
         _logging.getLogger(__name__).error(
             "save_code_analysis_to_db failed:\n%s", _traceback.format_exc()
         )
