@@ -111,7 +111,11 @@ def save_code_analysis_to_db(
     except Exception:
         # Don't fail the CLI if database save fails
         # This could be due to database not being initialized, connection issues, etc.
-        pass
+        import logging as _logging
+        import traceback as _traceback
+        _logging.getLogger(__name__).error(
+            "save_code_analysis_to_db failed:\n%s", _traceback.format_exc()
+        )
 
 
 def _prepare_language_specific_data(
