@@ -6,12 +6,13 @@ Endpoints under test:
 - GET  /api/consent/latest
 - GET  /api/consent/llm/config
 
-All endpoints use the shared X-Username header (optional) instead of X-User-Id.
+All endpoints accept an optional Bearer token to associate records with a user.
 """
 
 from __future__ import annotations
 
 import pytest
+from conftest import auth_headers
 from fastapi.testclient import TestClient
 
 from capstone_project_team_5.api.main import app
@@ -126,7 +127,7 @@ class TestUpsertConsent:
         response = client.post(
             "/api/consent",
             json=payload,
-            headers={"X-Username": test_user.username},
+            headers=auth_headers(test_user.username),
         )
 
         assert response.status_code == 201
@@ -158,7 +159,7 @@ class TestUpsertConsent:
 
     def test_upsert_updates_existing_user_record(self, client: TestClient, test_user: User) -> None:
         """Second POST for a user updates their existing record."""
-        headers = {"X-Username": test_user.username}
+        headers = auth_headers(test_user.username)
         client.post(
             "/api/consent",
             json={"consent_given": True},
@@ -192,7 +193,7 @@ class TestUpsertConsent:
         response = client.post(
             "/api/consent",
             json={"consent_given": True},
-            headers={"X-Username": "ghost_user_does_not_exist"},
+            headers=auth_headers("ghost_user_does_not_exist"),
         )
 
         assert response.status_code == 404
@@ -230,7 +231,7 @@ class TestUpsertConsent:
         client.post(
             "/api/consent",
             json={"consent_given": True},
-            headers={"X-Username": test_user.username},
+            headers=auth_headers(test_user.username),
         )
 
         with get_session() as session:
@@ -281,7 +282,7 @@ class TestGetLatestConsent:
 
         response = client.get(
             "/api/consent/latest",
-            headers={"X-Username": test_user.username},
+            headers=auth_headers(test_user.username),
         )
 
         assert response.status_code == 200
@@ -295,7 +296,7 @@ class TestGetLatestConsent:
 
         response = client.get(
             "/api/consent/latest",
-            headers={"X-Username": test_user.username},
+            headers=auth_headers(test_user.username),
         )
 
         assert response.status_code == 200
@@ -305,7 +306,7 @@ class TestGetLatestConsent:
         """Without fallback, missing user record returns 404."""
         response = client.get(
             "/api/consent/latest?fallback_to_global=false",
-            headers={"X-Username": test_user.username},
+            headers=auth_headers(test_user.username),
         )
 
         assert response.status_code == 404
@@ -387,7 +388,7 @@ class TestLLMConfig:
 
         response = client.get(
             "/api/consent/llm/config",
-            headers={"X-Username": test_user.username},
+            headers=auth_headers(test_user.username),
         )
 
         assert response.status_code == 200
@@ -411,7 +412,7 @@ class TestLLMConfig:
 
         response = client.get(
             "/api/consent/llm/config",
-            headers={"X-Username": test_user.username},
+            headers=auth_headers(test_user.username),
         )
 
         assert response.status_code == 200
@@ -424,7 +425,7 @@ class TestLLMConfig:
 
 
 class TestAuthConsistency:
-    """Verify consent endpoints use X-Username (not X-User-Id)."""
+    """Verify consent endpoints use Bearer token auth (not legacy headers)."""
 
     def test_x_user_id_header_is_ignored(self, client: TestClient) -> None:
         """Old X-User-Id header should have no effect — treated as anonymous."""
@@ -437,11 +438,12 @@ class TestAuthConsistency:
         assert response.status_code == 201
         assert response.json()["user_id"] is None  # anonymous / global
 
-    def test_x_username_creates_user_record(self, client: TestClient, test_user: User) -> None:
+    def test_bearer_token_creates_user_record(self, client: TestClient, test_user: User) -> None:
+        """Valid Bearer token associates the record with the authenticated user."""
         response = client.post(
             "/api/consent",
             json={"consent_given": True},
-            headers={"X-Username": test_user.username},
+            headers=auth_headers(test_user.username),
         )
 
         assert response.status_code == 201

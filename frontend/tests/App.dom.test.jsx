@@ -30,6 +30,8 @@ function setupApi(overrides = {}) {
     getAvailableServices: jest.fn().mockResolvedValue([]),
     giveConsent:          jest.fn().mockResolvedValue({ status: 'ok' }),
     getLLMConfig:         jest.fn().mockResolvedValue({ provider: 'openai' }),
+    setAuthToken:         jest.fn(),
+    getAuthToken:         jest.fn().mockReturnValue(null),
     setAuthUsername:      jest.fn(),
     setUsername:          jest.fn(),
     clearCredentials:     jest.fn(),
@@ -79,6 +81,7 @@ test('shows ConsentSetup when getLatestConsent returns null', async () => {
 // ── Main shell ─────────────────────────────────────────────────────────────
 test('renders sidebar and topbar after successful boot with existing consent', async () => {
   setupApi()
+  localStorage.setItem('zip2job_token', 'fake-token')
   localStorage.setItem('zip2job_username', 'alice')
   render(<App />)
   await waitFor(() => expect(screen.getByText('Portfolio Engine')).toBeInTheDocument())
@@ -90,6 +93,7 @@ test('renders sidebar and topbar after successful boot with existing consent', a
 
 test('renders all nav items in sidebar', async () => {
   setupApi()
+  localStorage.setItem('zip2job_token', 'fake-token')
   localStorage.setItem('zip2job_username', 'alice')
   render(<App />)
   const labels = ['Dashboard', 'Projects', 'Skills', 'Experience', 'Education', 'Portfolio', 'Resumes', 'Consents']
@@ -101,6 +105,7 @@ test('renders all nav items in sidebar', async () => {
 
 test('clicking a nav item updates the topbar title', async () => {
   setupApi()
+  localStorage.setItem('zip2job_token', 'fake-token')
   localStorage.setItem('zip2job_username', 'alice')
   render(<App />)
   await waitFor(() => expect(screen.getByText('Portfolio Engine')).toBeInTheDocument())
@@ -135,17 +140,19 @@ test('dashboard quick action opens the resumes workspace', async () => {
 
 test('shows username in sidebar when user is loaded', async () => {
   setupApi()
+  localStorage.setItem('zip2job_token', 'fake-token')
   localStorage.setItem('zip2job_username', 'alice')
   render(<App />)
   await waitFor(() => expect(screen.getByText('alice')).toBeInTheDocument())
 })
 
-test('restores saved username into the Electron bridge during boot', async () => {
+test('restores saved token and username into the Electron bridge during boot', async () => {
   setupApi()
+  localStorage.setItem('zip2job_token', 'fake-token')
   localStorage.setItem('zip2job_username', 'alice')
   render(<App />)
 
-  await waitFor(() => expect(window.api.setAuthUsername).toHaveBeenCalledWith('alice'))
+  await waitFor(() => expect(window.api.setAuthToken).toHaveBeenCalledWith('fake-token'))
   expect(window.api.setUsername).toHaveBeenCalledWith('alice')
 })
 
@@ -168,6 +175,7 @@ test('shows api offline when health check throws', async () => {
 
 // ── Boot error handling ────────────────────────────────────────────────────
 test('transient boot error (5xx) does NOT clear localStorage', async () => {
+  localStorage.setItem('zip2job_token', 'fake-token')
   localStorage.setItem('zip2job_username', 'alice')
   setupApi({
     getCurrentUser:   jest.fn().mockRejectedValue(httpError(503)),
@@ -183,6 +191,7 @@ test('transient boot error (5xx) does NOT clear localStorage', async () => {
 })
 
 test('network error during boot does NOT clear localStorage', async () => {
+  localStorage.setItem('zip2job_token', 'fake-token')
   localStorage.setItem('zip2job_username', 'alice')
   setupApi({
     getCurrentUser:   jest.fn().mockRejectedValue(new Error('ECONNREFUSED')),
@@ -197,6 +206,7 @@ test('network error during boot does NOT clear localStorage', async () => {
 })
 
 test('401 auth error during boot DOES clear localStorage', async () => {
+  localStorage.setItem('zip2job_token', 'fake-token')
   localStorage.setItem('zip2job_username', 'alice')
   setupApi({
     getCurrentUser:   jest.fn().mockRejectedValue(httpError(401)),
@@ -206,11 +216,13 @@ test('401 auth error during boot DOES clear localStorage', async () => {
   await waitFor(() =>
     expect(screen.queryByText('Starting…')).not.toBeInTheDocument()
   )
+  expect(localStorage.getItem('zip2job_token')).toBeNull()
   expect(localStorage.getItem('zip2job_username')).toBeNull()
   expect(window.api.clearCredentials).toHaveBeenCalled()
 })
 
 test('403 auth error during boot DOES clear localStorage', async () => {
+  localStorage.setItem('zip2job_token', 'fake-token')
   localStorage.setItem('zip2job_username', 'alice')
   setupApi({
     getCurrentUser:   jest.fn().mockRejectedValue(httpError(403)),
@@ -220,6 +232,7 @@ test('403 auth error during boot DOES clear localStorage', async () => {
   await waitFor(() =>
     expect(screen.queryByText('Starting…')).not.toBeInTheDocument()
   )
+  expect(localStorage.getItem('zip2job_token')).toBeNull()
   expect(localStorage.getItem('zip2job_username')).toBeNull()
   expect(window.api.clearCredentials).toHaveBeenCalled()
 })
@@ -227,6 +240,7 @@ test('403 auth error during boot DOES clear localStorage', async () => {
 // ── Log Out ────────────────────────────────────────────────────────────────
 test('sidebar renders a Log Out button when the shell is shown', async () => {
   setupApi()
+  localStorage.setItem('zip2job_token', 'fake-token')
   localStorage.setItem('zip2job_username', 'alice')
   render(<App />)
   await waitFor(() => expect(screen.getByText('Portfolio Engine')).toBeInTheDocument())
@@ -235,7 +249,9 @@ test('sidebar renders a Log Out button when the shell is shown', async () => {
 
 test('clicking Log Out clears localStorage and returns to ConsentSetup', async () => {
   setupApi()
+  localStorage.setItem('zip2job_token', 'fake-token')
   localStorage.setItem('zip2job_username', 'alice')
+
   render(<App />)
   await waitFor(() => expect(screen.getByText('Portfolio Engine')).toBeInTheDocument())
 
@@ -244,6 +260,7 @@ test('clicking Log Out clears localStorage and returns to ConsentSetup', async (
   await waitFor(() =>
     expect(screen.getByText(/welcome back/i)).toBeInTheDocument()
   )
+  expect(localStorage.getItem('zip2job_token')).toBeNull()
   expect(localStorage.getItem('zip2job_username')).toBeNull()
   expect(window.api.clearCredentials).toHaveBeenCalled()
 })

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Generator
 
 import pytest
+from conftest import auth_headers
 from fastapi.testclient import TestClient
 
 from capstone_project_team_5.api.main import app
@@ -65,7 +66,7 @@ class TestGetCurrentUserInfo:
         """Test getting current user info with valid authentication."""
         username, user_id = test_user
 
-        response = client.get("/api/users/me", headers={"X-Username": username})
+        response = client.get("/api/users/me", headers=auth_headers(username))
 
         assert response.status_code == 200
         data = response.json()
@@ -74,7 +75,7 @@ class TestGetCurrentUserInfo:
         assert "created_at" in data
 
     def test_get_current_user_info_no_auth(self, client: TestClient) -> None:
-        """Test that missing X-Username header returns 401."""
+        """Test that missing Authorization header returns 401."""
         response = client.get("/api/users/me")
 
         assert response.status_code == 401
@@ -92,11 +93,11 @@ class TestGetProfile:
         client.post(
             f"/api/users/{username}/profile",
             json={"first_name": "John", "last_name": "Doe"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
 
         # Get profile
-        response = client.get(f"/api/users/{username}/profile", headers={"X-Username": username})
+        response = client.get(f"/api/users/{username}/profile", headers=auth_headers(username))
 
         assert response.status_code == 200
         data = response.json()
@@ -107,7 +108,7 @@ class TestGetProfile:
         """Test getting nonexistent profile fails."""
         username, _ = test_user
 
-        response = client.get(f"/api/users/{username}/profile", headers={"X-Username": username})
+        response = client.get(f"/api/users/{username}/profile", headers=auth_headers(username))
 
         assert response.status_code == 404
 
@@ -122,7 +123,7 @@ class TestCreateProfile:
         response = client.post(
             f"/api/users/{username}/profile",
             json={"first_name": "John"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
 
         assert response.status_code == 201
@@ -138,14 +139,14 @@ class TestCreateProfile:
         client.post(
             f"/api/users/{username}/profile",
             json={"first_name": "John"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
 
         # Try to create again
         response = client.post(
             f"/api/users/{username}/profile",
             json={"first_name": "Jane"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
 
         assert response.status_code == 409
@@ -161,7 +162,7 @@ class TestUpsertProfile:
         response = client.patch(
             f"/api/users/{username}/profile",
             json={"first_name": "John", "email": "john@example.com"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
 
         assert response.status_code == 200
@@ -177,14 +178,14 @@ class TestUpsertProfile:
         client.post(
             f"/api/users/{username}/profile",
             json={"first_name": "John", "last_name": "Doe"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
 
         # Update with PATCH
         response = client.patch(
             f"/api/users/{username}/profile",
             json={"first_name": "Jane"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
 
         assert response.status_code == 200
@@ -204,22 +205,22 @@ class TestDeleteProfile:
         client.post(
             f"/api/users/{username}/profile",
             json={"first_name": "John", "last_name": "Doe"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
 
         # Delete profile
-        response = client.delete(f"/api/users/{username}/profile", headers={"X-Username": username})
+        response = client.delete(f"/api/users/{username}/profile", headers=auth_headers(username))
         assert response.status_code == 204
 
         # Verify profile is gone
-        response = client.get(f"/api/users/{username}/profile", headers={"X-Username": username})
+        response = client.get(f"/api/users/{username}/profile", headers=auth_headers(username))
         assert response.status_code == 404
 
     def test_delete_profile_not_found(self, client: TestClient, test_user: tuple[str, int]) -> None:
         """Test deleting nonexistent profile returns 404."""
         username, _ = test_user
 
-        response = client.delete(f"/api/users/{username}/profile", headers={"X-Username": username})
+        response = client.delete(f"/api/users/{username}/profile", headers=auth_headers(username))
         assert response.status_code == 404
 
     def test_delete_profile_forbidden(self, client: TestClient, test_user: tuple[str, int]) -> None:
@@ -227,6 +228,6 @@ class TestDeleteProfile:
         username, _ = test_user
 
         response = client.delete(
-            f"/api/users/{username}/profile", headers={"X-Username": "otheruser"}
+            f"/api/users/{username}/profile", headers=auth_headers("otheruser")
         )
         assert response.status_code == 403

@@ -6,6 +6,12 @@ import pytest
 
 import capstone_project_team_5.data.db as app_db
 from capstone_project_team_5.data.db import init_db
+from capstone_project_team_5.services.jwt_service import create_access_token
+
+
+def auth_headers(username: str) -> dict[str, str]:
+    """Return Authorization headers with a valid JWT for the given username."""
+    return {"Authorization": f"Bearer {create_access_token(username)}"}
 
 
 @pytest.fixture

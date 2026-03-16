@@ -22,6 +22,7 @@ dependencies = [
     "fastapi>=0.128.0",
     "uvicorn[standard]>=0.40.0",
     "python-multipart>=0.0.21",
+    "pyjwt>=2.8.0",
     "pylatex>=1.4.2",
 ]
 

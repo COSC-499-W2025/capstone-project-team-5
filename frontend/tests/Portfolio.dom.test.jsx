@@ -28,8 +28,10 @@ function setupApi(overrides = {}) {
     getAvailableServices:  jest.fn().mockResolvedValue([]),
     giveConsent:           jest.fn().mockResolvedValue({ status: 'ok' }),
     getLLMConfig:          jest.fn().mockResolvedValue({ provider: 'openai' }),
+    setAuthToken:          jest.fn(),
     setAuthUsername:       jest.fn(),
     setUsername:           jest.fn(),
+    clearCredentials:      jest.fn(),
     getUsername:           jest.fn().mockReturnValue('alice'),
     getProjects:           jest.fn().mockResolvedValue([]),
     getSkills:             jest.fn().mockResolvedValue([]),
@@ -47,6 +49,7 @@ function setupApi(overrides = {}) {
 
 async function bootToPortfolioPage(overrides = {}) {
   setupApi(overrides)
+  localStorage.setItem('zip2job_token', 'fake-token')
   localStorage.setItem('zip2job_username', 'alice')
   render(<App />)
   // Wait for the shell to appear

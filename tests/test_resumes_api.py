@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from conftest import auth_headers
 from fastapi.testclient import TestClient
 
 from capstone_project_team_5.api.main import app
@@ -123,7 +124,7 @@ def _create_resume(
     resp = client.post(
         f"/api/users/{username}/resumes",
         json=payload,
-        headers={"X-Username": username},
+        headers=auth_headers(username),
     )
     return resp.json()
 
@@ -138,7 +139,7 @@ class TestListResumes:
         username, _ = test_user
         response = client.get(
             f"/api/users/{username}/resumes",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 200
         assert response.json() == []
@@ -153,7 +154,7 @@ class TestListResumes:
         _create_resume(client, username, test_project, title="Listed Project")
         response = client.get(
             f"/api/users/{username}/resumes",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 200
         data = response.json()
@@ -169,7 +170,7 @@ class TestListResumes:
         username, _ = test_user
         response = client.get(
             f"/api/users/{username}/resumes",
-            headers={"X-Username": "otheruser"},
+            headers=auth_headers("otheruser"),
         )
         assert response.status_code == 403
 
@@ -198,7 +199,7 @@ class TestGetResume:
         )
         response = client.get(
             f"/api/users/{username}/resumes/{test_project}",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 200
         data = response.json()
@@ -215,7 +216,7 @@ class TestGetResume:
         username, _ = test_user
         response = client.get(
             f"/api/users/{username}/resumes/9999",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 404
 
@@ -228,7 +229,7 @@ class TestGetResume:
         username, _ = test_user
         response = client.get(
             f"/api/users/{username}/resumes/1",
-            headers={"X-Username": "otheruser"},
+            headers=auth_headers("otheruser"),
         )
         assert response.status_code == 403
 
@@ -249,7 +250,7 @@ class TestCreateResume:
         response = client.post(
             f"/api/users/{username}/resumes",
             json={"project_id": test_project, "title": "Minimal"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 201
         data = response.json()
@@ -273,7 +274,7 @@ class TestCreateResume:
                 "bullet_points": ["Built REST API", "Wrote tests"],
                 "analysis_snapshot": ["Python", "FastAPI", "SQLAlchemy"],
             },
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 201
         data = response.json()
@@ -299,7 +300,7 @@ class TestCreateResume:
                 "title": "Second Version",
                 "bullet_points": ["Updated bullet"],
             },
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 201
         data = response.json()
@@ -309,7 +310,7 @@ class TestCreateResume:
         # Verify only one resume project exists for this project_id
         list_resp = client.get(
             f"/api/users/{username}/resumes",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert len(list_resp.json()) == 1
 
@@ -322,7 +323,7 @@ class TestCreateResume:
         response = client.post(
             f"/api/users/{username}/resumes",
             json={"project_id": 999999, "title": "Bad Project"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 400
 
@@ -339,7 +340,7 @@ class TestCreateResume:
         response = client.post(
             f"/api/users/{username}/resumes",
             json={"project_id": 1, "title": "Wrong User"},
-            headers={"X-Username": "otheruser"},
+            headers=auth_headers("otheruser"),
         )
         assert response.status_code == 403
 
@@ -368,7 +369,7 @@ class TestUpdateResume:
         response = client.patch(
             f"/api/users/{username}/resumes/{test_project}",
             json={"title": "Updated Title"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 200
         data = response.json()
@@ -394,7 +395,7 @@ class TestUpdateResume:
         response = client.patch(
             f"/api/users/{username}/resumes/{test_project}",
             json={"bullet_points": ["new bullet 1", "new bullet 2"]},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 200
         data = response.json()
@@ -407,7 +408,7 @@ class TestUpdateResume:
         response = client.patch(
             f"/api/users/{username}/resumes/9999",
             json={"title": "Nope"},
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 404
 
@@ -424,7 +425,7 @@ class TestUpdateResume:
             response = client.patch(
                 f"/api/users/{username}/resumes/{test_project}",
                 json={"title": "Will Fail"},
-                headers={"X-Username": username},
+                headers=auth_headers(username),
             )
 
         assert response.status_code == 400
@@ -446,7 +447,7 @@ class TestUpdateResume:
         response = client.patch(
             f"/api/users/{username}/resumes/1",
             json={"title": "Wrong User"},
-            headers={"X-Username": "otheruser"},
+            headers=auth_headers("otheruser"),
         )
         assert response.status_code == 403
 
@@ -467,14 +468,14 @@ class TestDeleteResume:
         _create_resume(client, username, test_project, title="To Delete")
         response = client.delete(
             f"/api/users/{username}/resumes/{test_project}",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 204
 
         # Verify it's gone
         get_resp = client.get(
             f"/api/users/{username}/resumes/{test_project}",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert get_resp.status_code == 404
 
@@ -482,7 +483,7 @@ class TestDeleteResume:
         username, _ = test_user
         response = client.delete(
             f"/api/users/{username}/resumes/9999",
-            headers={"X-Username": username},
+            headers=auth_headers(username),
         )
         assert response.status_code == 404
 
@@ -495,7 +496,7 @@ class TestDeleteResume:
         username, _ = test_user
         response = client.delete(
             f"/api/users/{username}/resumes/1",
-            headers={"X-Username": "otheruser"},
+            headers=auth_headers("otheruser"),
         )
         assert response.status_code == 403
 
@@ -519,7 +520,7 @@ class TestGenerateResumePdf:
             response = client.post(
                 f"/api/users/{username}/resumes/generate",
                 json={"template_name": "jake"},
-                headers={"X-Username": username},
+                headers=auth_headers(username),
             )
         assert response.status_code == 404
 
@@ -549,7 +550,7 @@ class TestGenerateResumePdf:
             response = client.post(
                 f"/api/users/{username}/resumes/generate",
                 json={"template_name": "jake"},
-                headers={"X-Username": username},
+                headers=auth_headers(username),
             )
         assert response.status_code == 200
         assert response.headers["content-type"] == "application/pdf"
@@ -567,7 +568,7 @@ class TestGenerateResumePdf:
             response = client.post(
                 f"/api/users/{username}/resumes/generate",
                 json={"template_name": "jake"},
-                headers={"X-Username": username},
+                headers=auth_headers(username),
             )
         assert response.status_code == 502
 
@@ -584,6 +585,6 @@ class TestGenerateResumePdf:
         response = client.post(
             f"/api/users/{username}/resumes/generate",
             json={"template_name": "jake"},
-            headers={"X-Username": "otheruser"},
+            headers=auth_headers("otheruser"),
         )
         assert response.status_code == 403
