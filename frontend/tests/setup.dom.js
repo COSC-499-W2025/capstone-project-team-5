@@ -21,6 +21,9 @@ global.window.api = {
   updateResume:         jest.fn().mockResolvedValue({}),
   deleteResume:         jest.fn().mockResolvedValue(null),
   analyzeProject:       jest.fn().mockResolvedValue({}),
+  uploadProjectThumbnail: jest.fn().mockResolvedValue(null),
+  deleteProjectThumbnail: jest.fn().mockResolvedValue(null),
+  getProjectThumbnailUrl: jest.fn((id) => `http://localhost:8000/api/projects/${id}/thumbnail`),
   getLLMConfig:         jest.fn().mockResolvedValue({ is_allowed: false, model_preferences: [] }),
   downloadResumePdf:    jest.fn().mockResolvedValue({
     bytes: new ArrayBuffer(8),

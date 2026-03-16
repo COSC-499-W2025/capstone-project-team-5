@@ -242,6 +242,19 @@ contextBridge.exposeInMainWorld('api', {
   deleteProject: (projectId) =>
     request('DELETE', `/api/projects/${projectId}`),
 
+  // Project thumbnails
+  uploadProjectThumbnail: (projectId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return requestWithForm('PUT', `/api/projects/${projectId}/thumbnail`, formData);
+  },
+
+  deleteProjectThumbnail: (projectId) =>
+    request('DELETE', `/api/projects/${projectId}/thumbnail`),
+
+  getProjectThumbnailUrl: (projectId) =>
+    `${API_BASE}/api/projects/${projectId}/thumbnail`,
+
   // Project analysis
   analyzeProject: (projectId, options = {}) =>
     request(

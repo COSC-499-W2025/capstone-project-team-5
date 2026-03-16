@@ -249,3 +249,68 @@ describe('api username - unified variable', () => {
     expect(global.api.getUsername()).toBe('bob');
   });
 });
+
+// ─── Project thumbnail API ───────────────────────────────────────────────────
+
+const mock204 = () =>
+  Promise.resolve({
+    ok: true,
+    status: 204,
+    headers: { get: () => null },
+    text: () => Promise.resolve(''),
+    json: () => Promise.resolve(null),
+  });
+
+describe('api.uploadProjectThumbnail', () => {
+  it('calls PUT /api/projects/{id}/thumbnail with FormData', async () => {
+    fetch.mockResolvedValue(mock204());
+
+    const file = new File(['pixels'], 'thumb.png', { type: 'image/png' });
+    const result = await global.api.uploadProjectThumbnail(42, file);
+
+    expect(result).toBeNull();
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8000/api/projects/42/thumbnail',
+      expect.objectContaining({ method: 'PUT' })
+    );
+    const body = fetch.mock.calls[0][1].body;
+    expect(body).toBeInstanceOf(FormData);
+    expect(body.get('file')).toBeInstanceOf(File);
+  });
+
+  it('throws on 400 bad request', async () => {
+    fetch.mockResolvedValue({
+      ok: false,
+      status: 400,
+      headers: { get: (key) => key === 'content-type' ? 'application/json' : null },
+      json: () => Promise.resolve({ detail: 'File exceeds 2 MiB.' }),
+      text: () => Promise.resolve(JSON.stringify({ detail: 'File exceeds 2 MiB.' })),
+    });
+
+    const file = new File(['x'.repeat(100)], 'big.png', { type: 'image/png' });
+    await expect(global.api.uploadProjectThumbnail(42, file)).rejects.toThrow('File exceeds 2 MiB.');
+  });
+});
+
+describe('api.deleteProjectThumbnail', () => {
+  it('calls DELETE /api/projects/{id}/thumbnail', async () => {
+    fetch.mockResolvedValue(mock204());
+
+    const result = await global.api.deleteProjectThumbnail(42);
+
+    expect(result).toBeNull();
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8000/api/projects/42/thumbnail',
+      expect.objectContaining({ method: 'DELETE' })
+    );
+  });
+});
+
+describe('api.getProjectThumbnailUrl', () => {
+  it('returns full thumbnail URL without making a fetch call', () => {
+    const url = global.api.getProjectThumbnailUrl(42);
+
+    expect(url).toBe('http://localhost:8000/api/projects/42/thumbnail');
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});
