@@ -233,7 +233,7 @@ function ProjectCard({ project, isNew, isMerged, onOpen, onMouseEnter }) {
 
   return (
     <button
-      className={`card text-left w-full ${borderOverride}`}
+      className={`card text-left w-full !p-0 overflow-hidden ${borderOverride}`}
       onClick={() => onOpen(project)}
       onMouseEnter={onMouseEnter}
     >
@@ -242,39 +242,41 @@ function ProjectCard({ project, isNew, isMerged, onOpen, onMouseEnter }) {
         <img
           src={window.api.getProjectThumbnailUrl(project.id)}
           alt={`${project.name} thumbnail`}
-          className="w-full h-32 object-cover rounded-t -mx-5 -mt-5 mb-3"
-          style={{ width: 'calc(100% + 2.5rem)' }}
+          className="w-full h-32 object-cover"
         />
       )}
 
-      {/* Name + status chips */}
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-sm font-semibold text-ink leading-snug">{project.name}</span>
-        <div className="flex shrink-0 gap-1 pt-px">
-          {isNew             && <Chip variant="success">NEW</Chip>}
-          {isMerged && !isNew && <Chip variant="accent">MERGED</Chip>}
+      {/* Content */}
+      <div className="p-5">
+        {/* Name + status chips */}
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-sm font-semibold text-ink leading-snug">{project.name}</span>
+          <div className="flex shrink-0 gap-1 pt-px">
+            {isNew             && <Chip variant="success">NEW</Chip>}
+            {isMerged && !isNew && <Chip variant="accent">MERGED</Chip>}
+          </div>
         </div>
-      </div>
 
-      {/* Path */}
-      <p className="mt-1.5 font-mono text-xs text-muted truncate">{project.rel_path}</p>
+        {/* Path */}
+        <p className="mt-1.5 font-mono text-xs text-muted truncate">{project.rel_path}</p>
 
-      {/* Footer */}
-      <div className="mt-4 flex items-end justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-xs text-muted">
-            {project.file_count} files
-            {project.language && <span> · {project.language}</span>}
-          </p>
-          {project.user_role && (
-            <p className="mt-0.5 text-xs text-ink/70 truncate">{project.user_role}</p>
+        {/* Footer */}
+        <div className="mt-4 flex items-end justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-xs text-muted">
+              {project.file_count} files
+              {project.language && <span> · {project.language}</span>}
+            </p>
+            {project.user_role && (
+              <p className="mt-0.5 text-xs text-ink/70 truncate">{project.user_role}</p>
+            )}
+          </div>
+          {project.importance_score != null && (
+            <span className="shrink-0 font-mono text-lg font-bold tabular-nums text-ink leading-none">
+              {Math.round(project.importance_score)}
+            </span>
           )}
         </div>
-        {project.importance_score != null && (
-          <span className="shrink-0 font-mono text-lg font-bold tabular-nums text-ink leading-none">
-            {Math.round(project.importance_score)}
-          </span>
-        )}
       </div>
     </button>
   )
