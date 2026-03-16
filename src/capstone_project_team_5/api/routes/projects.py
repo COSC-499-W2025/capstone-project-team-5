@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -54,6 +56,8 @@ from capstone_project_team_5.services.skill_persistence import save_skills_to_db
 from capstone_project_team_5.services.upload import inspect_zip
 from capstone_project_team_5.services.upload_storage import get_upload_zip_path, store_upload_zip
 from capstone_project_team_5.workflows.analysis_pipeline import analyze_projects_structured
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -440,17 +444,26 @@ async def upload_project_zip(
         filename = f"{filename}.zip"
     requested_mapping = _parse_project_mapping(project_mapping)
 
+    t_total = time.perf_counter()
+    logger.info("[upload] ▶ started  file=%s", filename)
+
     with TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir) / filename
         chunk_size = 8192  # 8KB chunks
 
+        t0 = time.perf_counter()
         with temp_path.open("wb") as f:
             while True:
                 chunk = await file.read(chunk_size)
                 if not chunk:
                     break
                 f.write(chunk)
+        size_kb = temp_path.stat().st_size / 1024
+        logger.info(
+            "[upload] ✔ streamed to disk  %.1f KB  (%.3fs)", size_kb, time.perf_counter() - t0
+        )
 
+        t0 = time.perf_counter()
         try:
             result, collab_flags, _project_dates = inspect_zip(temp_path)
         except InvalidZipError as exc:
@@ -458,6 +471,12 @@ async def upload_project_zip(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(exc),
             ) from exc
+        logger.info(
+            "[upload] ✔ inspect_zip  projects=%d  files=%d  (%.3fs)",
+            len(result.projects),
+            result.file_count,
+            time.perf_counter() - t0,
+        )
 
         detected_names = [project.name for project in result.projects]
         matches = find_matching_projects(detected_names) if detected_names else {}
@@ -495,6 +514,7 @@ async def upload_project_zip(
             session.add(upload_record)
             session.flush()
 
+            t0 = time.perf_counter()
             try:
                 store_upload_zip(upload_record.id, upload_record.filename, temp_path)
             except OSError as exc:
@@ -502,7 +522,9 @@ async def upload_project_zip(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to store upload archive.",
                 ) from exc
+            logger.info("[upload] ✔ store_upload_zip  (%.3fs)", time.perf_counter() - t0)
 
+            t0 = time.perf_counter()
             try:
                 ingest_zip(temp_path, upload_record.id)
             except Exception as exc:
@@ -510,6 +532,7 @@ async def upload_project_zip(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to store upload artifacts.",
                 ) from exc
+            logger.info("[upload] ✔ ingest_zip  (%.3fs)", time.perf_counter() - t0)
 
             existing_match_ids = [
                 ids[0]
@@ -615,6 +638,12 @@ async def upload_project_zip(
             created_count = sum(1 for action in actions if action.action == "created")
             merged_count = sum(1 for action in actions if action.action == "merged")
 
+        logger.info(
+            "[upload] ✔ done  created=%d merged=%d  total=%.3fs",
+            created_count,
+            merged_count,
+            time.perf_counter() - t_total,
+        )
         return ProjectUploadResponse(
             upload_id=upload_record.id,
             filename=upload_record.filename,
