@@ -6,14 +6,17 @@
 <!-- <details> -->
   <summary><h3>T2 Week 10</h3></summary>
 
-  
+  <img width="1363" height="793" alt="image" src="https://github.com/user-attachments/assets/60000cb6-6285-4a28-8e2e-8eec4634f644" />
+
 
 #### What Went Well
-- [PR #378 - Refactor Education & Experience Pages](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/378): Extracted duplicated CRUD state management logic from `EducationPage` and `ExperiencePage` into a reusable `useCrudList` custom hook, eliminating ~250 lines of duplicate code. Each page now only defines its own API mappings, validation rules, and payload builders, while delegating all list management, form handling, and deletion to the shared hook. This is a code-only refactor with no visual changes.
-
-- [PR #379 - Refactor + Tests for Experience Page](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/379): Built on #378 by adding bullet point support to experience entries across forms, JSON serialization, and card displays. Introduced comprehensive unit tests for the `useCrudList` hook (16 test cases covering loading, listing, creating, updating, deleting, form state, validation, and error handling) as well as integration tests for bullet point workflows. All tests pass locally via Jest.
-
-- [PR #389 - Create User Profile UI](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/389): Introduced the User Profile page enabling users to manage personal and contact information (name, email, phone, address, LinkedIn, GitHub, website). Introduced a `useSingletonForm` hook, a reusable abstraction for managing single-resource forms, complementing the existing `useCrudList` pattern. DOM tests were added covering empty states, create/edit workflows, validation errors, API error surfacing, and 404 handling.
+- Prepped for peer testing #2. excited! :)
+- Merged:
+  - [PR #378 - Refactor Education & Experience Pages](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/378): Extracted duplicated CRUD state management logic from `EducationPage` and `ExperiencePage` into a reusable `useCrudList` custom hook, eliminating ~250 lines of duplicate code. Each page now only defines its own API mappings, validation rules, and payload builders, while delegating all list management, form handling, and deletion to the shared hook. This is a code-only refactor with no visual changes.
+  
+  - [PR #379 - Refactor + Tests for Experience Page](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/379): Built on #378 by adding bullet point support to experience entries across forms, JSON serialization, and card displays. Introduced comprehensive unit tests for the `useCrudList` hook (16 test cases covering loading, listing, creating, updating, deleting, form state, validation, and error handling) as well as integration tests for bullet point workflows. All tests pass locally via Jest.
+  
+  - [PR #389 - Create User Profile UI](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/389): Introduced the User Profile page enabling users to manage personal and contact information (name, email, phone, address, LinkedIn, GitHub, website). Introduced a `useSingletonForm` hook, a reusable abstraction for managing single-resource forms, complementing the existing `useCrudList` pattern. DOM tests were added covering empty states, create/edit workflows, validation errors, API error surfacing, and 404 handling.
 
 - Reviewed and approved:
   - [PR #377 - refactor(frontend): reorganize renderer structure](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/377):
