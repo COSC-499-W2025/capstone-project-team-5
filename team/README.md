@@ -1,6 +1,9 @@
 # Team Weekly Logs
 <details>
   <summary><h3>T2 Week 10 | March 8 - March 15 </h3></summary>
+  ### Burnup Chart
+<img alt="T2 Week 10 Burnup Chart" src="https://github.com/user-attachments/assets/aff51252-40e8-4331-9909-7e4c050e0bfd" />
+
 
   ### Past Work
 - [PR #393 - Project analysis UI](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/393): Added detailed project analysis rendering in a modal view, including endpoint-driven analysis loading and expanded frontend test coverage.
