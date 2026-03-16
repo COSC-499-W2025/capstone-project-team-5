@@ -88,7 +88,7 @@ export default function ProjectsPage() {
         const disk  = readCache()
         const items = getProjectItems(payload).map((p) => {
           const hit = analysisCache?.current[p.id] ?? disk[String(p.id)]
-          return hit ? { ...p, ...hit } : p
+          return hit ? { ...p, ...hit, name: p.name, rel_path: p.rel_path } : p
         })
         setProjects(items)
         setError('')
@@ -118,7 +118,7 @@ export default function ProjectsPage() {
   function handleAnalysisDone(projectId, result) {
     if (analysisCache?.current) analysisCache.current[projectId] = result
     writeCache(projectId, result)
-    const merge = (p) => p.id === projectId ? { ...p, ...result } : p
+    const merge = (p) => p.id === projectId ? { ...p, ...result, name: p.name, rel_path: p.rel_path } : p
     setProjects((prev) => prev.map(merge))
     setOpen((prev)  => prev?.id === projectId ? { ...prev, ...result } : prev)
   }
