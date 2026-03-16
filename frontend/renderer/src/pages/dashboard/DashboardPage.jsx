@@ -84,7 +84,6 @@ export default function DashboardPage() {
   const progressTickRef = useRef(null)
   const messageTickRef = useRef(null)
   const messageIndexRef = useRef(0)
-  const attemptedSkillsBackfillRef = useRef(false)
 
   const [stats, setStats] = useState({
     projects: '—',
@@ -181,29 +180,7 @@ export default function DashboardPage() {
           resumes.status === 'fulfilled' ? formatCardCount(getCollectionCount(resumes.value)) : '—',
       })
 
-      if (
-        !attemptedSkillsBackfillRef.current &&
-        projectCount > 0 &&
-        skillsCount === 0 &&
-        projects.status === 'fulfilled' &&
-        typeof api.analyzeProject === 'function'
-      ) {
-        attemptedSkillsBackfillRef.current = true
 
-        const projectItems = getProjectItems(projects.value)
-        const analysisTasks = projectItems
-          .map((item) => item?.id)
-          .filter((id) => Number.isFinite(id))
-          .map((id) => api.analyzeProject(id))
-
-        if (analysisTasks.length > 0) {
-          Promise.allSettled(analysisTasks).then(() => {
-            if (isMountedRef.current) {
-              loadDashboardStats()
-            }
-          })
-        }
-      }
     } catch {
       if (isMountedRef.current) {
         setStats(defaultStats)

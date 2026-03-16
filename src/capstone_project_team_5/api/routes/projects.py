@@ -271,6 +271,31 @@ def _get_user_or_404(session: Session, username: str) -> User:
     return user
 
 
+def _ensure_user_analysis_link(session: Session, project_id: int, username: str) -> None:
+    """Ensure a UserCodeAnalysis link exists for the user and the project's latest analysis."""
+    user = session.query(User).filter(User.username == username).first()
+    if user is None:
+        return
+    latest = (
+        session.query(CodeAnalysis)
+        .filter(CodeAnalysis.project_id == project_id)
+        .order_by(CodeAnalysis.id.desc())
+        .first()
+    )
+    if latest is None:
+        return
+    existing = (
+        session.query(UserCodeAnalysis)
+        .filter(
+            UserCodeAnalysis.user_id == user.id,
+            UserCodeAnalysis.analysis_id == latest.id,
+        )
+        .first()
+    )
+    if existing is None:
+        session.add(UserCodeAnalysis(user_id=user.id, analysis_id=latest.id))
+
+
 def _build_saved_uploads_response(session: Session, username: str) -> list[SavedUploadSummary]:
     """Build the saved uploads/projects view used by the TUI retrieve flow."""
     from contextlib import suppress
@@ -987,6 +1012,9 @@ def analyze_project(
     use_ai: bool = False,
     force: bool = False,
 ) -> ProjectAnalysisResult:
+    # Phase 1: load project data and handle cache — close session before running
+    # analysis so we don't hold a SQLite shared lock that would prevent
+    # save_code_analysis_to_db (which opens its own session) from writing.
     with get_session() as session:
         project = session.query(Project).filter(Project.id == project_id).first()
         if project is None:
@@ -1015,34 +1043,41 @@ def analyze_project(
             payload = cached.get("payload")
             if isinstance(payload, dict):
                 cached_response = ProjectAnalysisResult(**payload)
-                # Keep /api/skills synchronized even when serving from cache.
                 save_skills_to_db(
                     session,
                     project.id,
                     cached_response.tools,
                     cached_response.practices,
                 )
+                _ensure_user_analysis_link(session, project.id, current_username)
                 return cached_response
+        # expire_on_commit=False means project attributes survive session close
 
-        response, fingerprint = _analyze_project_from_store(
-            project, upload_ids, use_ai, current_username=current_username
-        )
-        project.importance_score = response.importance_score
-        project.user_role = response.user_role
-        project.user_contribution_percentage = response.user_contribution_percentage
-        project.role_justification = response.role_justification
-        project.user_role_types = response.user_role_types
-        if response.user_role_types is not None:
-            flag_modified(project, "user_role_types")
-        save_skills_to_db(session, project.id, response.tools, response.practices)
+    # Phase 2: run analysis with no session open so save_code_analysis_to_db
+    # can acquire its own write lock without contention.
+    response, fingerprint = _analyze_project_from_store(
+        project, upload_ids, use_ai, current_username=current_username
+    )
 
-        # The pipeline's save_code_analysis_to_db already created a CodeAnalysis record
-        # (and linked it to the user if the user exists). Enrich its metrics_json with
-        # the full API response data (bullets, git, score breakdown, etc.) so that
-        # GET /api/projects/saved/{username} can return the complete payload.
+    # Phase 3: persist results in a fresh session (can now see the CodeAnalysis
+    # row that save_code_analysis_to_db committed in phase 2).
+    with get_session() as session:
+        project = session.query(Project).filter(Project.id == project_id).first()
+        if project is not None:
+            project.importance_score = response.importance_score
+            project.user_role = response.user_role
+            project.user_contribution_percentage = response.user_contribution_percentage
+            project.role_justification = response.role_justification
+            project.user_role_types = response.user_role_types
+            if response.user_role_types is not None:
+                flag_modified(project, "user_role_types")
+        save_skills_to_db(session, project_id, response.tools, response.practices)
+
+        # Enrich the CodeAnalysis record created by save_code_analysis_to_db
+        # with the full API response data (bullets, git, score breakdown, etc.).
         code_analysis = (
             session.query(CodeAnalysis)
-            .filter(CodeAnalysis.project_id == project.id)
+            .filter(CodeAnalysis.project_id == project_id)
             .order_by(CodeAnalysis.id.desc())
             .first()
         )
@@ -1074,8 +1109,10 @@ def analyze_project(
                 }
             )
 
-        write_analysis_cache(project.id, fingerprint, response.model_dump())
-        return response
+        _ensure_user_analysis_link(session, project_id, current_username)
+
+    write_analysis_cache(project_id, fingerprint, response.model_dump())
+    return response
 
 
 @router.post(
