@@ -3,8 +3,40 @@
 **GitHub:** [@ribhavsharma](https://github.com/ribhavsharma)
 ---
 
+## **Term 2 – Week 10 | March 8 – March 15, 2026**
 
-## **Term 2 – Week 9 | March 7 – March 13, 2026**
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+
+<img width="1503" height="947" alt="image" src="https://github.com/user-attachments/assets/b3f8c394-9f31-43a2-ba0e-1cafb3607e57" />
+
+
+</details>
+
+## **Task Progress**
+
+### **Coding Tasks**
+- Opened **PR [#397 – feat: add jwt auth](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/397)**, replacing the placeholder `X-Username` header with proper JWT-based authentication. The server now issues signed tokens on login/register; clients send them as `Authorization: Bearer <token>`. Closes the identity-spoofing vulnerability where any client could impersonate any user. Session persistence and logout both handle token lifecycle correctly. All 123 frontend tests and all backend test suites pass.
+
+### **Testing / Debugging**
+- Updated all backend test files (`test_users_api.py`, `test_resumes_api.py`, `test_resume_details_api.py`, `test_consent_api.py`) to use the new `auth_headers()` helper that generates valid Bearer tokens instead of the old `X-Username` header.
+- Fixed pre-existing test failures in `test_consent_api.py` caused by stale header assumptions.
+- Resolved ruff linting failures (`B904`, `UP017`, `I001`) introduced during the JWT migration.
+
+### **Reviewing / Collaboration**
+- Reviewed **PR [#395 – feat: backfill resume preview and frontend coverage to main](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/395)**, which brought in the in-page PDF preview/download flow and binary-safe preload bridge changes that had been merged into stacked branches instead of `main`.
+- Reviewed **PR [#388 – Logout Functionality and Improved Auth logic](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/388)**, which introduced a full logout mechanism, redesigned the consent wizard, and improved 401/403 error handling to distinguish auth failures from transient network errors.
+
+### **Issues / Blockers**
+- None.
+
+### **Next Steps**
+- Expand test coverage for the JWT auth flow (token expiry, invalid token handling).
+- Continue integrating remaining backend APIs into the frontend.
+- Look into refresh token support or token expiry UX (e.g. automatic re-prompt on 401).
+
+## **Term 2 – Week 9 | March 1 – March 8, 2026**
 <details>
   <summary><h3>Evaluation</h3></summary>
 
