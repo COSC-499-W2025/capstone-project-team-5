@@ -507,6 +507,46 @@ def test_analysis_skips_when_fingerprint_unchanged(api_db: None) -> None:
     assert third_count == 2
 
 
+def test_analyze_all_ignores_invalid_cached_payload(
+    api_db: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client = TestClient(app)
+    zip_bytes = _create_zip_bytes([("proj/main.py", b"print('v1')\n")])
+    upload_response = client.post(
+        "/api/projects/upload",
+        files={"file": ("initial.zip", zip_bytes, "application/zip")},
+    )
+    assert upload_response.status_code == 201
+    project_id = upload_response.json()["projects"][0]["id"]
+
+    monkeypatch.setattr(
+        "capstone_project_team_5.api.routes.projects.compute_project_fingerprint",
+        lambda _rel_path, _upload_ids: "same-fingerprint",
+    )
+    monkeypatch.setattr(
+        "capstone_project_team_5.api.routes.projects.load_analysis_cache",
+        lambda pid: (
+            {"fingerprint": "same-fingerprint", "payload": "invalid"} if pid == project_id else None
+        ),
+    )
+
+    analyze_response = client.post("/api/projects/analyze")
+    assert analyze_response.status_code == 200
+    payload = analyze_response.json()
+
+    analyzed_ids = {item["id"] for item in payload["analyzed"]}
+    assert project_id in analyzed_ids
+
+    skipped_for_project = [item for item in payload["skipped"] if item["project_id"] == project_id]
+    assert not skipped_for_project
+
+    with get_session() as session:
+        analysis_count = (
+            session.query(CodeAnalysis).filter(CodeAnalysis.project_id == project_id).count()
+        )
+    assert analysis_count == 1
+
+
 def test_delete_project_removes_record() -> None:
     client = TestClient(app)
     zip_bytes = _create_zip_bytes(

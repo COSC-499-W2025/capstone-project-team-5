@@ -1,18 +1,10 @@
 const { contextBridge } = require('electron');
 
 const API_BASE = 'http://localhost:8000';
-let currentUsername = (process.env.ZIP2JOB_USERNAME || '').trim();
 
-// Username is set once during login/register and reused on every request
-let _username = null;
-
-function withAuthHeaders(headers = {}) {
-  if (!currentUsername) return headers;
-  return {
-    ...headers,
-    'X-Username': currentUsername,
-  };
-}
+// Single source of truth for the authenticated username.
+// Used both for the X-Username request header and the display username.
+let _username = (process.env.ZIP2JOB_USERNAME || '').trim() || null;
 
 async function parseResponseBody(res) {
   if (res.status === 204) return null;
@@ -44,50 +36,126 @@ function getErrorMessage(parsedBody, status) {
   return `HTTP ${status}`;
 }
 
-async function request(method, path, body, signal) {
-  const opts = {
-    method,
-    headers: withAuthHeaders({ 'Content-Type': 'application/json' }),
-    signal,
-  };
+/** Creates an Error that carries the raw HTTP status code as a numeric property. */
+function httpError(parsedBody, status) {
+  const err = new Error(getErrorMessage(parsedBody, status));
+  err.status = status;
+  return err;
+}
 
+function buildQueryString(params = {}) {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null) {
+      return;
+    }
+
+    searchParams.set(key, String(value));
+  });
+
+  const query = searchParams.toString();
+  return query ? `?${query}` : '';
+}
+
+function parseFilename(contentDisposition) {
+  if (!contentDisposition) {
+    return 'resume.pdf';
+  }
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1].trim());
+  }
+
+  const quotedMatch = contentDisposition.match(/filename="([^"]+)"/i);
+  if (quotedMatch?.[1]) {
+    return quotedMatch[1].trim();
+  }
+
+  const plainMatch = contentDisposition.match(/filename=([^;]+)/i);
+  if (plainMatch?.[1]) {
+    return plainMatch[1].trim().replace(/^"|"$/g, '');
+  }
+
+  return 'resume.pdf';
+}
+
+async function request(method, path, body, signal) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (_username) headers['X-Username'] = _username;
+
+  const opts = { method, headers, signal };
   if (body) opts.body = JSON.stringify(body);
 
   const res = await fetch(`${API_BASE}${path}`, opts);
   const parsedBody = await parseResponseBody(res);
 
   if (!res.ok) {
-    throw new Error(getErrorMessage(parsedBody, res.status));
+    throw httpError(parsedBody, res.status);
   }
 
   return parsedBody;
 }
 
 async function requestWithForm(method, path, formData, signal) {
+  const headers = {};
+  if (_username) headers['X-Username'] = _username;
+
   const res = await fetch(`${API_BASE}${path}`, {
     method,
-    headers: withAuthHeaders(),
+    headers,
     body: formData,
     signal,
   });
   const parsedBody = await parseResponseBody(res);
 
   if (!res.ok) {
-    throw new Error(getErrorMessage(parsedBody, res.status));
+    throw httpError(parsedBody, res.status);
   }
 
   return parsedBody;
 }
 
-contextBridge.exposeInMainWorld('api', {
-  setAuthUsername: (username) => {
-    currentUsername = (username || '').trim();
-  },
-  getAuthUsername: () => currentUsername,
+async function requestBinary(method, path, body, signal) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (_username) headers['X-Username'] = _username;
 
-  // Internal username state (set after login/register)
-  setUsername: (username) => { _username = username; },
-  getUsername: () => _username,
+  const opts = {
+    method,
+    headers,
+    signal,
+  };
+
+  if (body) opts.body = JSON.stringify(body);
+
+  const res = await fetch(`${API_BASE}${path}`, opts);
+
+  if (!res.ok) {
+    const parsedBody = await parseResponseBody(res);
+    throw httpError(parsedBody, res.status);
+  }
+
+  return {
+    bytes: await res.arrayBuffer(),
+    contentType: res.headers.get('content-type') || 'application/octet-stream',
+    filename: parseFilename(res.headers.get('content-disposition')),
+  };
+}
+
+contextBridge.exposeInMainWorld('api', {
+  // Both setters write the same variable so callers don't need to call both.
+  setAuthUsername: (username) => { _username = (username || '').trim() || null; },
+  getAuthUsername: () => _username,
+  setUsername:     (username) => { _username = username || null; },
+  getUsername:     () => _username,
+
+  /**
+   * Clear all credential state in the preload bridge.
+   * The React layer is responsible for clearing localStorage and
+   * resetting its own state; this keeps the two in sync.
+   */
+  clearCredentials: () => { _username = null; },
 
   // Health
   health: () => request('GET', '/health'),
@@ -168,8 +236,14 @@ contextBridge.exposeInMainWorld('api', {
     request('DELETE', `/api/projects/${projectId}`),
 
   // Project analysis
-  analyzeProject: (projectId) =>
-    request('POST', `/api/projects/${projectId}/analyze`),
+  analyzeProject: (projectId, options = {}) =>
+    request(
+      'POST',
+      `/api/projects/${projectId}/analyze${buildQueryString({
+        use_ai: options?.useAi,
+        force: options?.force,
+      })}`
+    ),
 
   analyzeProjects: (data) =>
     request('POST', '/api/projects/analyze', data),
@@ -222,6 +296,9 @@ contextBridge.exposeInMainWorld('api', {
 
   generateResume: (username, data) =>
     request('POST', `/api/users/${username}/resumes/generate`, data),
+
+  downloadResumePdf: (username, data) =>
+    requestBinary('POST', `/api/users/${username}/resumes/generate`, data),
 
   createResume: (username, data) =>
     request('POST', `/api/users/${username}/resumes`, data),

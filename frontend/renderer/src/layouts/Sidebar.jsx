@@ -1,6 +1,6 @@
 import { NAV_ITEMS } from '../app/navigation/navItems'
 
-export default function Sidebar({ current, onNav, apiOk, user }) {
+export default function Sidebar({ current, onNav, apiOk, user, onLogout }) {
   return (
     <aside className="flex min-w-[220px] w-[220px] flex-col border-r border-border bg-surface">
       <div className="border-b border-border px-5 py-6">
@@ -38,6 +38,15 @@ export default function Sidebar({ current, onNav, apiOk, user }) {
           />
           {apiOk ? 'api online' : 'api offline'}
         </div>
+        {onLogout && (
+          <button
+            type="button"
+            onClick={onLogout}
+            className="mt-1 w-full text-left font-mono text-2xs text-muted hover:text-ink transition-colors"
+          >
+            ⎋ Log out
+          </button>
+        )}
       </div>
     </aside>
   )
