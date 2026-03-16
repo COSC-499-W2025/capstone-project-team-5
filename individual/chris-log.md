@@ -379,8 +379,7 @@ This past week I focused mainly on frontend upload work. I connected the upload 
 
 <details>
   <summary><h3></h3></summary>
-
-
+<img alt="Screenshot 2026-03-15 192316" src="https://github.com/user-attachments/assets/c28c9f14-ffad-46c0-9bc0-90cc77c8e892" />
 
 This past week I focused on frontend follow-up work and UI feature implementation. I fixed a few minor bugs from last week's frontend code, implemented dashboard statistic cards, and built out the Skills page frontend. I also added DOM tests for these updates to improve confidence in rendering and interaction behavior as we continue toward peer-testing and final integration.
 
