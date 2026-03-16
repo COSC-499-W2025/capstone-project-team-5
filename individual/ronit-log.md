@@ -2,7 +2,54 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-_Last Updated:_ March 1, 2026
+_Last Updated:_ March 15, 2026
+
+---
+
+## Week 10 | March 9-15, 2026
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+  <img width="1088" height="640" alt="image" src="https://github.com/user-attachments/assets/b136bf3b-c023-4547-abfe-f09ca3aa5bd5" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| **Coding Tasks** | | |
+| Refactored frontend renderer structure | ✅ Done | Broke renderer monolith into app, layout, page, component, and helper modules across multiple files while preserving existing behavior ([PR #377](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/377)) |
+| Implemented resumes workspace shell | ✅ Done | Replaced placeholder page with real workspace shell, wired navigation from dashboard, loads existing resumes via API ([PR #383](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/383)) |
+| Implemented resume entry editor | ✅ Done | Added inline editor, project-based draft creation, AI assist toggle, and CRUD operations for resume entries ([PR #384](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/384)) |
+| Implemented resume PDF preview | ✅ Done | Added binary-safe preload bridge, renderer preview state, and in-page preview and download flow for generated resumes ([PR #385](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/385)) |
+| Fixed PDF preview, added tabs, direct download, and zoom | ✅ Done | Fix broken PDF preview, add tab view, direct download, localStorage cache, and zoom toolbar ([PR #409](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/409)) |
+| Added project thumbnail support to Electron frontend | ✅ Done | Thumbnail display and management in the frontend ([PR #411](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/411)) |
+| **Testing Tasks** | | |
+| Updated existing frontend tests for renderer refactor | ✅ Done | Updated App, ConsentSetup, Projects, and rendererUtils test suites to match new module structure ([PR #377](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/377)) |
+| Added resume frontend test coverage | ✅ Done | Covers renderer workflows and preload bridge behaviors including navigation, editor interactions, and preview flows ([PR #386](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/386)) |
+| Added tests for PDF preview zoom and tab features | ✅ Done | Added resume DOM tests and pdf.js mock for new zoom/tab functionality ([PR #409](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/409)) |
+| Added tests for project thumbnail support | ✅ Done | Updated App, Projects, and API test suites plus added backend tests for thumbnail endpoints ([PR #411](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/411)) |
+| **Reviewing/Collaboration Tasks** | | |
+| Reviewed [PR #408](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/408) (pre-peer testing UX tweaks) | ✅ Done | Manually confirmed functionality |
+| Reviewed [PR #405](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/405) (consent current config page) | ✅ Done | Manually confirmed functionality |
+| Reviewed [PR #397](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/397) (JWT auth) | ✅ Done | |
+| Reviewed [PR #393](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/393) (project analysis UI) | ✅ Done | Flagged low contrast with `text-muted`, misleading progress bars in score breakdown, and git activity name display bug; suggested accepting both Space and Enter for button elements |
+| Reviewed [PR #391](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/391) (frontend skills page) | ✅ Done | Suggested better categorization between tools/practices and adding a search/filter option for long skill lists |
+| Reviewed [PR #388](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/388) (logout functionality and improved auth logic) | ✅ Done | Noted two username variables in preload was confusing; suggested simplifying auth logic |
+| Reviewed [PR #389](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/389) (create user profile UI) | ✅ Done | |
+| Reviewed [PR #379](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/379) (refactor + tests for experience page) | ✅ Done | |
+| Reviewed [PR #378](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/378) (refactor education & experience pages) | ✅ Done | |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| Make changes based on peer testing feedback | ❌ Not Started | Address issues identified during peer testing |
+| Continue code reviews | | Ongoing task |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Start milestone 3 dashboard implementation | ✅ Done | Built out the resume frontend with workspace shell, entry editor, PDF preview, and test coverage (PRs #377, #383–#386, #395) |
+| Continue code reviews | ✅ Done | Ongoing task |
 
 ---
 
