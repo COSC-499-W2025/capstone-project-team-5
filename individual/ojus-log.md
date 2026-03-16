@@ -2,7 +2,56 @@
 
 **GitHub:** [@ojusharma](https://github.com/ojusharma)
 
+
 <!-- <details> -->
+  <summary><h3>T2 Week 10</h3></summary>
+
+  <img width="1363" height="793" alt="image" src="https://github.com/user-attachments/assets/60000cb6-6285-4a28-8e2e-8eec4634f644" />
+
+
+#### What Went Well
+- Prepped for peer testing #2. excited! :)
+- Merged:
+  - [PR #378 - Refactor Education & Experience Pages](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/378): Extracted duplicated CRUD state management logic from `EducationPage` and `ExperiencePage` into a reusable `useCrudList` custom hook, eliminating ~250 lines of duplicate code. Each page now only defines its own API mappings, validation rules, and payload builders, while delegating all list management, form handling, and deletion to the shared hook. This is a code-only refactor with no visual changes.
+  
+  - [PR #379 - Refactor + Tests for Experience Page](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/379): Built on #378 by adding bullet point support to experience entries across forms, JSON serialization, and card displays. Introduced comprehensive unit tests for the `useCrudList` hook (16 test cases covering loading, listing, creating, updating, deleting, form state, validation, and error handling) as well as integration tests for bullet point workflows. All tests pass locally via Jest.
+  
+  - [PR #389 - Create User Profile UI](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/389): Introduced the User Profile page enabling users to manage personal and contact information (name, email, phone, address, LinkedIn, GitHub, website). Introduced a `useSingletonForm` hook, a reusable abstraction for managing single-resource forms, complementing the existing `useCrudList` pattern. DOM tests were added covering empty states, create/edit workflows, validation errors, API error surfacing, and 404 handling.
+
+- Reviewed and approved:
+  - [PR #377 - refactor(frontend): reorganize renderer structure](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/377):
+  My review: Praised the decomposition of the monolithic `app.jsx` into dedicated pages, components, and helpers were a massive win for following best practices and enabling parallel development. Confirmed regression test coverage and approved.
+
+  - [PR #383 - feat: resumes workspace shell (1/4)](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/383):
+  My review: Highlighted the clean use of `Promise.allSettled` with a cancellation flag in `useEffect` to prevent state updates on unmounted components. Noted the well-structured helper extraction into `lib/resumes.js`.
+
+  - [PR #384 - feat: resume entry editor (2/4)](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/384):
+  My review: Praised the clean separation of concerns with utility functions in `resumes.js`, the thoughtful AI-assist integration with privacy consent handling, and the complete inline CRUD workflow. Flagged a potential issue where the AI Assist toggle UI state might not propagate backend parameters.
+
+  - [PR #386 - test: resume frontend coverage (4/4)](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/386):
+  My review: Testing is comprehensive and hits every important test case: covering navigation, AI-assisted draft generation, preview rendering, and binary response handling. Good to merge!
+
+  - [PR #390 - Dashboard stat cards](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/390):
+  My review: Commended the data consistency fix and the defensive coding for count helpers. Noted the cache path fix in `analyze_all_projects` as a solid reliability improvement.
+
+  - [PR #392 - Progress Change](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/392):
+  My review: Praised the "super clean" multi-phase progress UI updates and the massive improvement to progress calculation accuracy. Approved the backend observability enhancements via detailed timing logs.
+
+  - Reviewed and approved individual logs
+
+#### What Didn't Go Well
+- All good
+
+#### Planning for Next Week
+- Complete Peer Testing #2, gather feedback and implement changes
+- Work towards milestone 3
+- Continue reviewing teammates' PRs to support code collaboration
+
+<!-- </details> -->
+
+
+
+ <details>
   <summary><h3>T2 Week 9</h3></summary>
 
 <img width="750" height="300" alt="image" src="https://github.com/user-attachments/assets/922323eb-829c-4878-8322-80ec9adf817a" />
@@ -31,9 +80,7 @@
 - Continue reviewing teammates' PRs to support code collaboration
 - Coordinate with team on integration testing across the full frontend-backend pipeline
 
-<!-- </details> -->
-
-
+</details>
 
 <details>
   <summary><h3>T2 Week 6,7,8</h3></summary>
