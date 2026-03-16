@@ -1,5 +1,38 @@
 # Team Weekly Logs
 <details>
+  <summary><h3>T2 Week 10 | March 8 - March 15 </h3></summary>
+
+  ### Past Work
+- [PR #393 - Project analysis UI](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/393): Added detailed project analysis rendering in a modal view, including endpoint-driven analysis loading and expanded frontend test coverage.
+- [PR #392 - Progress Change](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/392): Improved upload UX with phased progress messaging in the dashboard and better visibility into upload state changes.
+- [PR #391 - Frontend skills page](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/391): Replaced the Skills placeholder with a functional page, wired route navigation, and added DOM tests for empty and populated skill states.
+- [PR #390 - Dashboard stat cards](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/390): Fixed and polished dashboard count cards (projects, skills, experience, resumes) and corrected NEW/MERGED upload tags on the Projects page.
+- [PR #389 - Create User Profile UI](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/389): Added frontend profile create/view/edit flows for contact and personal details, with branch-corrected integration of the profile feature set.
+- [PR #388 - Logout Functionality and Improved Auth logic](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/388): Added reliable logout behavior and simplified consent/auth onboarding flow with stronger frontend error handling.
+- [PR #386 - test: resume frontend coverage (4/4)](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/386): Added renderer and preload tests for resume workflows, including navigation, AI-assisted draft generation, preview behavior, and binary response handling.
+- [PR #385 - feat: resume pdf preview (3/4)](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/385): Implemented binary-safe PDF preview and download flow so generated resumes can be reviewed directly in the UI.
+- [PR #384 - feat: resume entry editor (2/4)](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/384): Added interactive resume entry CRUD, including inline editing, project-based draft creation, and AI-assist toggle support.
+- [PR #383 - feat: resumes workspace shell (1/4)](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/383): Introduced the resumes workspace foundation with dashboard navigation, user resume loading, profile counts, and a two-column layout for later slices.
+- [PR #381 - Create User Profile UI](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/381): Introduced the initial User Profile page with create/view/edit support for name and contact links (email, phone, LinkedIn, GitHub, website).
+- [PR #379 - Refactor + Tests for Experience Page](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/379): Refactored Experience page state flow, added bullet-point handling for entries, and expanded automated tests for create/edit/delete behavior.
+- [PR #378 - Refactor Education & Experience Pages](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/378): Extracted duplicated CRUD state/effect logic from Education and Experience pages into reusable patterns for cleaner maintenance.
+- [PR #377 - refactor(frontend): reorganize renderer structure](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/377): Reorganized the renderer into app, layout, page, component, and helper modules while preserving behavior and adding regression checks.
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Continue building out remaining frontend UI pages | ✅ Done | Skills, experiences, project analysis, and profile creation flows implemented. |
+  | Add UI tests for upload flow | ✅ In Progress | Upload-related reliability and visibility work advanced; test coverage continuing. |
+  | Continue expanding frontend pages and integrating backend APIs | ✅ In Progress | Resume and PDF generation flows integrated into frontend experiences. |
+  | Coordinate on integration testing across frontend-backend pipeline | ✅ In Progress | Focus shifted toward peer-testing readiness and final integration stability. |
+
+  ### Future Work
+  - Conduct peer-testing and gather feedback on newly completed frontend features
+  - Prioritize and implement final frontend polish items from testing feedback
+  - Continue integration validation for auth/session behavior and generation flows
+</details>
+
+<details>
   <summary><h3>T2 Week 9 | March 1 - March 8 </h3></summary>
 
   ### Burnup Chart
