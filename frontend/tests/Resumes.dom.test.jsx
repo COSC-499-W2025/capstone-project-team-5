@@ -276,9 +276,9 @@ test('generates and previews a pdf from saved entries', async () => {
   )
 
   await waitFor(() =>
-    expect(screen.getByTitle(/resume pdf preview/i)).toBeInTheDocument()
+    expect(screen.getByText(/full preview of the generated resume document/i)).toBeInTheDocument()
   )
   expect(
-    screen.getAllByRole('button', { name: /download pdf/i }).some((button) => !button.disabled)
-  ).toBe(true)
+    screen.getByRole('button', { name: /download pdf/i })
+  ).toBeEnabled()
 })
