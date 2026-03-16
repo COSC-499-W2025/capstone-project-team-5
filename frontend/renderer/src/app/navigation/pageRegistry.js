@@ -7,6 +7,7 @@ import EducationPage from '../../pages/education/EducationPage'
 import ProfilePage from '../../pages/profile/ProfilePage'
 import PortfolioPage from '../../pages/portfolio/PortfolioPage'
 import ResumesPage from '../../pages/resumes/ResumesPage'
+import ConsentsPage from '../../pages/consents/ConsentsPage'
 import ComingSoonPage from '../../pages/shared/ComingSoonPage'
 
 const PAGE_COMPONENTS = {
@@ -19,6 +20,7 @@ const PAGE_COMPONENTS = {
   profile: ProfilePage,
   portfolio: PortfolioPage,
   resumes: ResumesPage,
+  consents: ConsentsPage,
 }
 
 export function getPageComponent(page) {

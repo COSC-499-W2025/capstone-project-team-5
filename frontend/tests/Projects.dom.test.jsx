@@ -12,6 +12,8 @@ const RAW_PROJECT = {
   name: 'demo-project',
   rel_path: 'repos/demo-project',
   file_count: 4,
+  has_thumbnail: false,
+  thumbnail_url: null,
 }
 
 const ANALYZED_PROJECT = {
@@ -37,6 +39,8 @@ const ANALYZED_PROJECT = {
   collaborators_display: 'Alice, Bob',
   created_at: '2024-01-15T00:00:00.000Z',
   skill_timeline: [{ date: '2024-01', skills: ['React', 'Node.js'] }],
+  has_thumbnail: true,
+  thumbnail_url: '/api/projects/2/thumbnail',
 }
 
 const ANALYSIS_RESULT = {
@@ -56,6 +60,9 @@ function renderProjectsPage({
   analyzeResult = ANALYSIS_RESULT,
   analyzeError = null,
   analyzeProject,
+  uploadThumbnailResult = null,
+  uploadThumbnailError = null,
+  deleteThumbnailResult = null,
 } = {}) {
   const analysisCache = { current: {} }
   window.api = {
@@ -67,6 +74,11 @@ function renderProjectsPage({
         ? jest.fn().mockRejectedValue(new Error(analyzeError))
         : jest.fn().mockResolvedValue(analyzeResult)
     ),
+    uploadProjectThumbnail: uploadThumbnailError
+      ? jest.fn().mockRejectedValue(new Error(uploadThumbnailError))
+      : jest.fn().mockResolvedValue(uploadThumbnailResult),
+    deleteProjectThumbnail: jest.fn().mockResolvedValue(deleteThumbnailResult),
+    getProjectThumbnailUrl: jest.fn((id) => `http://localhost:8000/api/projects/${id}/thumbnail`),
   }
   render(
     <AppContext.Provider value={{ apiOk, uploadHighlights, setUploadHighlights, analysisCache }}>
@@ -304,4 +316,116 @@ test('card gains importance score after successful analysis', async () => {
   fireEvent.click(screen.getByLabelText('Close'))
   // Card now shows rounded importance score
   await waitFor(() => expect(screen.getByText('88')).toBeInTheDocument())
+})
+
+// ─── ProjectCard thumbnail ───────────────────────────────────────────────────
+
+test('displays thumbnail image on card when has_thumbnail is true', async () => {
+  renderProjectsPage({ projectPayload: [ANALYZED_PROJECT] })
+  await waitFor(() => expect(screen.getByText('analyzed-project')).toBeInTheDocument())
+  const img = screen.getByAltText('analyzed-project thumbnail')
+  expect(img).toBeInTheDocument()
+  expect(img.src).toContain('/api/projects/2/thumbnail')
+})
+
+test('does not display thumbnail image on card when has_thumbnail is false', async () => {
+  renderProjectsPage({ projectPayload: [RAW_PROJECT] })
+  await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
+  expect(screen.queryByAltText('demo-project thumbnail')).not.toBeInTheDocument()
+})
+
+// ─── ProjectDrawer thumbnail ─────────────────────────────────────────────────
+
+test('shows thumbnail in drawer when project has thumbnail', async () => {
+  renderProjectsPage({ projectPayload: [ANALYZED_PROJECT] })
+  await waitFor(() => expect(screen.getByText('analyzed-project')).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: /analyzed-project/i }))
+  await waitFor(() => expect(screen.getByLabelText('Close')).toBeInTheDocument())
+  // Thumbnail image appears in both the card and the drawer
+  const imgs = screen.getAllByAltText('analyzed-project thumbnail')
+  expect(imgs.length).toBeGreaterThanOrEqual(2)
+})
+
+test('does not show thumbnail in drawer when project has no thumbnail', async () => {
+  renderProjectsPage({ projectPayload: [RAW_PROJECT] })
+  await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
+  await waitFor(() => expect(screen.getByLabelText('Close')).toBeInTheDocument())
+  expect(screen.queryByAltText('demo-project thumbnail')).not.toBeInTheDocument()
+})
+
+test('shows "Set Thumbnail" button in drawer for project without thumbnail', async () => {
+  renderProjectsPage({ projectPayload: [RAW_PROJECT] })
+  await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
+  await waitFor(() => expect(screen.getByLabelText('Close')).toBeInTheDocument())
+  expect(screen.getByText('Set Thumbnail')).toBeInTheDocument()
+  expect(screen.queryByText('Clear Thumbnail')).not.toBeInTheDocument()
+})
+
+test('shows "Clear Thumbnail" button in drawer when project has thumbnail', async () => {
+  renderProjectsPage({ projectPayload: [ANALYZED_PROJECT] })
+  await waitFor(() => expect(screen.getByText('analyzed-project')).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: /analyzed-project/i }))
+  await waitFor(() => expect(screen.getByLabelText('Close')).toBeInTheDocument())
+  expect(screen.getByText('Clear Thumbnail')).toBeInTheDocument()
+  expect(screen.queryByText('Set Thumbnail')).not.toBeInTheDocument()
+})
+
+test('clicking "Clear Thumbnail" calls deleteProjectThumbnail API', async () => {
+  renderProjectsPage({ projectPayload: [ANALYZED_PROJECT] })
+  await waitFor(() => expect(screen.getByText('analyzed-project')).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: /analyzed-project/i }))
+  await waitFor(() => expect(screen.getByText('Clear Thumbnail')).toBeInTheDocument())
+  fireEvent.click(screen.getByText('Clear Thumbnail'))
+  await waitFor(() => expect(window.api.deleteProjectThumbnail).toHaveBeenCalledWith(2))
+})
+
+test('clearing thumbnail removes the image from card', async () => {
+  renderProjectsPage({ projectPayload: [ANALYZED_PROJECT] })
+  await waitFor(() => expect(screen.getByText('analyzed-project')).toBeInTheDocument())
+  // Thumbnail is initially visible on the card
+  expect(screen.getByAltText('analyzed-project thumbnail')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /analyzed-project/i }))
+  await waitFor(() => expect(screen.getByText('Clear Thumbnail')).toBeInTheDocument())
+  fireEvent.click(screen.getByText('Clear Thumbnail'))
+  // After clearing, the "Set Thumbnail" button appears and image is gone
+  await waitFor(() => expect(screen.getByText('Set Thumbnail')).toBeInTheDocument())
+  expect(screen.queryByAltText('analyzed-project thumbnail')).not.toBeInTheDocument()
+})
+
+test('selecting a file calls uploadProjectThumbnail API', async () => {
+  renderProjectsPage({ projectPayload: [RAW_PROJECT] })
+  await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
+  await waitFor(() => expect(screen.getByText('Set Thumbnail')).toBeInTheDocument())
+  const fileInput = document.querySelector('[data-testid="thumbnail-file-input"]')
+  const file = new File(['pixels'], 'thumb.png', { type: 'image/png' })
+  fireEvent.change(fileInput, { target: { files: [file] } })
+  await waitFor(() => expect(window.api.uploadProjectThumbnail).toHaveBeenCalledWith(1, file))
+})
+
+test('after successful upload, thumbnail appears and button changes to Clear', async () => {
+  renderProjectsPage({ projectPayload: [RAW_PROJECT] })
+  await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
+  await waitFor(() => expect(screen.getByText('Set Thumbnail')).toBeInTheDocument())
+  const fileInput = document.querySelector('[data-testid="thumbnail-file-input"]')
+  const file = new File(['pixels'], 'thumb.png', { type: 'image/png' })
+  fireEvent.change(fileInput, { target: { files: [file] } })
+  await waitFor(() => expect(screen.getByText('Clear Thumbnail')).toBeInTheDocument())
+})
+
+test('shows error message when thumbnail upload fails', async () => {
+  renderProjectsPage({
+    projectPayload: [RAW_PROJECT],
+    uploadThumbnailError: 'File exceeds 2 MiB.',
+  })
+  await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
+  await waitFor(() => expect(screen.getByText('Set Thumbnail')).toBeInTheDocument())
+  const fileInput = document.querySelector('[data-testid="thumbnail-file-input"]')
+  const file = new File(['pixels'], 'big.png', { type: 'image/png' })
+  fireEvent.change(fileInput, { target: { files: [file] } })
+  await waitFor(() => expect(screen.getByText('File exceeds 2 MiB.')).toBeInTheDocument())
 })
