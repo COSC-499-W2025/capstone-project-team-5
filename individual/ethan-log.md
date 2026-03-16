@@ -158,3 +158,14 @@ Coding tasks involved setting up the frontend. The frontend/ now houses an elect
 | Final UI. | In Progress. | More to build. |   
 
 ![screenshot](Week9_checklist.png)
+
+## Term 2 - Week #10 (March 9 - 15)
+
+Coding tasks involved building the UI display to show users a detailed view of their analyzed projects after selecting a project card. Time was also spent preparing for peer evaluations. The plan for the future is to continue to build core frontend functionality to match the functionality of the backend meeting all the project requirements. https://github.com/COSC-499-W2025/capstone-project-team-5/pull/393
+
+| Task  | Status | Notes |
+| :---- | :------:| -------: |
+| Project Display. | Done | Pending a second review. | 
+| Final UI. | In Progress. | More to build. |   
+
+![screenshot](Week9_checklist.png)

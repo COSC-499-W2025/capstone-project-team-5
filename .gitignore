@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
+
+# Node
+node_modules/
+frontend/node_modules/
+
+# IDE
+.vscode/
+
+# artifacts
+.zip2job_artifacts/
+.zip2job_uploads/
