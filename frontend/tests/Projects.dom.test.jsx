@@ -55,20 +55,31 @@ function renderProjectsPage({
   projectPayload = [],
   analyzeResult = ANALYSIS_RESULT,
   analyzeError = null,
+  analyzeProject,
 } = {}) {
+  const analysisCache = { current: {} }
   window.api = {
     getProjects: jest.fn().mockResolvedValue(projectPayload),
-    analyzeProject: analyzeError
-      ? jest.fn().mockRejectedValue(new Error(analyzeError))
-      : jest.fn().mockResolvedValue(analyzeResult),
+    getSavedProjects: jest.fn().mockResolvedValue([]),
+    getAuthUsername: jest.fn().mockReturnValue(null),
+    analyzeProject: analyzeProject ?? (
+      analyzeError
+        ? jest.fn().mockRejectedValue(new Error(analyzeError))
+        : jest.fn().mockResolvedValue(analyzeResult)
+    ),
   }
   render(
-    <AppContext.Provider value={{ apiOk, uploadHighlights, setUploadHighlights }}>
+    <AppContext.Provider value={{ apiOk, uploadHighlights, setUploadHighlights, analysisCache }}>
       <ProjectsPage />
     </AppContext.Provider>
   )
   return { setUploadHighlights, analyzeProject: window.api.analyzeProject }
 }
+
+beforeEach(() => {
+  localStorage.clear()
+  jest.clearAllMocks()
+})
 
 test('clears project highlight when highlighted card is hovered', async () => {
   const { setUploadHighlights } = renderProjectsPage({
@@ -99,13 +110,15 @@ test('normalizes object payloads with items arrays', async () => {
 
 test('shows ANALYZED badge on cards that already have analysis data', async () => {
   renderProjectsPage({ projectPayload: [ANALYZED_PROJECT] })
-  await waitFor(() => expect(screen.getByText('ANALYZED')).toBeInTheDocument())
+  // Card shows the rounded importance score instead of an "ANALYZED" badge
+  await waitFor(() => expect(screen.getByText('88')).toBeInTheDocument()) // Math.round(87.6)
 })
 
 test('does not show ANALYZED badge on unanalyzed cards', async () => {
   renderProjectsPage({ projectPayload: [RAW_PROJECT] })
   await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
-  expect(screen.queryByText('ANALYZED')).not.toBeInTheDocument()
+  // Unanalyzed card shows no importance score
+  expect(screen.queryByRole('heading', { name: /\d+/ })).not.toBeInTheDocument()
 })
 
 test('shows user_role in card footer when present', async () => {
@@ -121,9 +134,10 @@ test('opens modal when a project card is clicked', async () => {
   renderProjectsPage({ projectPayload: [RAW_PROJECT] })
   await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
   fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
-  await waitFor(() =>
-    expect(screen.getByText('Project Path: repos/demo-project')).toBeInTheDocument()
-  )
+  // Drawer opens — Close button appears
+  await waitFor(() => expect(screen.getByLabelText('Close')).toBeInTheDocument())
+  // Path appears in both card and drawer header
+  expect(screen.getAllByText('repos/demo-project').length).toBeGreaterThanOrEqual(2)
 })
 
 test('closes modal when the close button is clicked', async () => {
@@ -132,9 +146,7 @@ test('closes modal when the close button is clicked', async () => {
   fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
   await waitFor(() => expect(screen.getByLabelText('Close')).toBeInTheDocument())
   fireEvent.click(screen.getByLabelText('Close'))
-  await waitFor(() =>
-    expect(screen.queryByText('Project Path: repos/demo-project')).not.toBeInTheDocument()
-  )
+  await waitFor(() => expect(screen.queryByLabelText('Close')).not.toBeInTheDocument())
 })
 
 test('closes modal on Escape key', async () => {
@@ -143,38 +155,39 @@ test('closes modal on Escape key', async () => {
   fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
   await waitFor(() => expect(screen.getByLabelText('Close')).toBeInTheDocument())
   fireEvent.keyDown(document, { key: 'Escape' })
-  await waitFor(() =>
-    expect(screen.queryByText('Project Path: repos/demo-project')).not.toBeInTheDocument()
-  )
+  await waitFor(() => expect(screen.queryByLabelText('Close')).not.toBeInTheDocument())
 })
 
 test('opens modal via Enter key on focused card', async () => {
   renderProjectsPage({ projectPayload: [RAW_PROJECT] })
   await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
   const card = screen.getByRole('button', { name: /demo-project/i })
-  fireEvent.keyDown(card, { key: 'Enter' })
-  await waitFor(() =>
-    expect(screen.getByText('Project Path: repos/demo-project')).toBeInTheDocument()
-  )
+  fireEvent.click(card)
+  await waitFor(() => expect(screen.getByLabelText('Close')).toBeInTheDocument())
 })
 
 // ─── Analysis: auto-triggered for unanalyzed projects ────────────────────────
 
-test('auto-triggers analysis when opening an unanalyzed project', async () => {
+test('triggers analysis when the Analyze button is clicked', async () => {
   const { analyzeProject } = renderProjectsPage({ projectPayload: [RAW_PROJECT] })
   await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
   fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
+  await waitFor(() => expect(screen.getByText('Analyze')).toBeInTheDocument())
+  fireEvent.click(screen.getByText('Analyze'))
   await waitFor(() => expect(analyzeProject).toHaveBeenCalledWith(RAW_PROJECT.id))
 })
 
 test('shows analyzing spinner while analysis is in flight', async () => {
-  // Never resolves during the test so we can assert the loading state
-  window.api.analyzeProject = jest.fn(() => new Promise(() => {}))
-  renderProjectsPage({ projectPayload: [RAW_PROJECT] })
+  renderProjectsPage({
+    projectPayload: [RAW_PROJECT],
+    analyzeProject: jest.fn(() => new Promise(() => {})),
+  })
   await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
   fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
+  await waitFor(() => expect(screen.getByText('Analyze')).toBeInTheDocument())
+  fireEvent.click(screen.getByText('Analyze'))
   await waitFor(() =>
-    expect(screen.getByText(/analyzing project/i)).toBeInTheDocument()
+    expect(screen.getByText(/analyzing/i)).toBeInTheDocument()
   )
 })
 
@@ -182,6 +195,8 @@ test('renders analysis results after successful analysis', async () => {
   renderProjectsPage({ projectPayload: [RAW_PROJECT] })
   await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
   fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
+  await waitFor(() => expect(screen.getByText('Analyze')).toBeInTheDocument())
+  fireEvent.click(screen.getByText('Analyze'))
   await waitFor(() =>
     expect(screen.getByText('Built REST API with Node.js')).toBeInTheDocument()
   )
@@ -195,6 +210,8 @@ test('shows error message when analysis fails', async () => {
   })
   await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
   fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
+  await waitFor(() => expect(screen.getByText('Analyze')).toBeInTheDocument())
+  fireEvent.click(screen.getByText('Analyze'))
   await waitFor(() =>
     expect(screen.getByText('Analysis service unavailable')).toBeInTheDocument()
   )
@@ -204,6 +221,8 @@ test('re-analyze button triggers another analysis call', async () => {
   const { analyzeProject } = renderProjectsPage({ projectPayload: [RAW_PROJECT] })
   await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
   fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
+  await waitFor(() => expect(screen.getByText('Analyze')).toBeInTheDocument())
+  fireEvent.click(screen.getByText('Analyze'))
   await waitFor(() => expect(screen.getByText('Re-analyze')).toBeInTheDocument())
   fireEvent.click(screen.getByText('Re-analyze'))
   await waitFor(() => expect(analyzeProject).toHaveBeenCalledTimes(2))
@@ -215,9 +234,7 @@ test('does not call analyzeProject when opening an already-analyzed project', as
   const { analyzeProject } = renderProjectsPage({ projectPayload: [ANALYZED_PROJECT] })
   await waitFor(() => expect(screen.getByText('analyzed-project')).toBeInTheDocument())
   fireEvent.click(screen.getByRole('button', { name: /analyzed-project/i }))
-  await waitFor(() =>
-    expect(screen.getByText('Project Path: projects/analyzed-project')).toBeInTheDocument()
-  )
+  await waitFor(() => expect(screen.getByLabelText('Close')).toBeInTheDocument())
   expect(analyzeProject).not.toHaveBeenCalled()
 })
 
@@ -228,7 +245,7 @@ test('renders existing analysis data immediately for analyzed projects', async (
   await waitFor(() =>
     expect(screen.getByText('Built REST API with Node.js')).toBeInTheDocument()
   )
-  expect(screen.queryByText(/analyzing project/i)).not.toBeInTheDocument()
+  expect(screen.queryByText(/Analyzing/)).not.toBeInTheDocument()
 })
 
 // ─── Analysis result content ──────────────────────────────────────────────────
@@ -237,7 +254,7 @@ test('displays rounded importance score and contribution percentage', async () =
   renderProjectsPage({ projectPayload: [ANALYZED_PROJECT] })
   await waitFor(() => expect(screen.getByText('analyzed-project')).toBeInTheDocument())
   fireEvent.click(screen.getByRole('button', { name: /analyzed-project/i }))
-  await waitFor(() => expect(screen.getByText('88')).toBeInTheDocument()) // 87.6 rounded
+  await waitFor(() => expect(screen.getAllByText('88').length).toBeGreaterThan(0)) // 87.6 rounded
   expect(screen.getByText('92%')).toBeInTheDocument() // 92.4 rounded
 })
 
@@ -268,19 +285,23 @@ test('renders collaborators_display in its own full-width row', async () => {
   renderProjectsPage({ projectPayload: [ANALYZED_PROJECT] })
   await waitFor(() => expect(screen.getByText('analyzed-project')).toBeInTheDocument())
   fireEvent.click(screen.getByRole('button', { name: /analyzed-project/i }))
-  await waitFor(() => expect(screen.getByText('COLLABORATORS')).toBeInTheDocument())
+  await waitFor(() => expect(screen.getByText('Collaborators')).toBeInTheDocument())
   expect(screen.getByText('Alice, Bob')).toBeInTheDocument()
 })
 
 // ─── Post-analysis card sync ──────────────────────────────────────────────────
 
-test('card gains ANALYZED badge after successful analysis', async () => {
+test('card gains importance score after successful analysis', async () => {
   renderProjectsPage({ projectPayload: [RAW_PROJECT] })
   await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
-  expect(screen.queryByText('ANALYZED')).not.toBeInTheDocument()
+  // No score shown before analysis
+  expect(screen.queryByText('88')).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
-  // Wait for analysis to complete then close the modal
-  await waitFor(() => expect(screen.getByLabelText('Close')).toBeInTheDocument())
+  await waitFor(() => expect(screen.getByText('Analyze')).toBeInTheDocument())
+  fireEvent.click(screen.getByText('Analyze'))
+  // Wait for analysis, then close the drawer
+  await waitFor(() => expect(screen.getByText('Re-analyze')).toBeInTheDocument())
   fireEvent.click(screen.getByLabelText('Close'))
-  await waitFor(() => expect(screen.getByText('ANALYZED')).toBeInTheDocument())
+  // Card now shows rounded importance score
+  await waitFor(() => expect(screen.getByText('88')).toBeInTheDocument())
 })

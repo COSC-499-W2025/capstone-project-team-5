@@ -5,312 +5,476 @@ import InlineError from '../../components/InlineError'
 import PageHeader from '../../components/PageHeader'
 import { getProjectItems } from '../../lib/projects'
 
-const ANALYSIS_STATUS = {
-  IDLE: 'idle',
-  RUNNING: 'running',
-  COMPLETE: 'complete',
-  ERROR: 'error',
+// ─── Persistent analysis cache ────────────────────────────────────────────────
+
+const CACHE_KEY = 'zip2job_analyses'
+function readCache() {
+  try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}') } catch { return {} }
+}
+function writeCache(projectId, result) {
+  try {
+    const c = readCache()
+    c[String(projectId)] = result
+    localStorage.setItem(CACHE_KEY, JSON.stringify(c))
+  } catch { /* quota exceeded */ }
 }
 
-function isAnalyzed(project) {
-  return !!(project?.importance_score || project?.user_role)
+function isAnalyzed(p) {
+  return !!(p?.importance_score || p?.user_role)
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+const SORT_OPTIONS = [
+  { value: 'date',  label: 'Date' },
+  { value: 'score', label: 'Score' },
+  { value: 'name',  label: 'Name' },
+]
 
 export default function ProjectsPage() {
   const { apiOk, uploadHighlights, setUploadHighlights, analysisCache } = useApp()
   const [projects, setProjects] = useState([])
-  const [error, setError] = useState('')
-  const [selectedProject, setSelectedProject] = useState(null)
+  const [error,    setError]    = useState('')
+  const [open,     setOpen]     = useState(null)
+  const [query,    setQuery]    = useState('')
+  const [sort,     setSort]     = useState('date')
 
   useEffect(() => {
     if (!apiOk) return
     let cancelled = false
-    async function loadProjects() {
+    async function load() {
       try {
-        const payload = await window.api.getProjects()
-        if (!cancelled) {
-          const items = getProjectItems(payload).map((p) =>
-            analysisCache?.current[p.id] ? { ...p, ...analysisCache.current[p.id] } : p
-          )
-          setProjects(items)
-          setError('')
+        const username = window.api.getAuthUsername()
+        const [payload, savedUploads] = await Promise.all([
+          window.api.getProjects(),
+          username ? window.api.getSavedProjects(username).catch(() => []) : Promise.resolve([]),
+        ])
+        if (cancelled) return
+
+        // Build projectId → saved analysis map from the saved uploads response
+        const savedMap = {}
+        for (const upload of (savedUploads || [])) {
+          for (const sp of (upload.projects || [])) {
+            // Newest analysis is last in the array (oldest-first from DB)
+            const latest = sp.analyses?.length > 0 ? sp.analyses[sp.analyses.length - 1] : null
+            savedMap[sp.id] = {
+              importance_score:             sp.importance_score,
+              user_role:                    latest?.user_role           ?? sp.user_role,
+              user_contribution_percentage: latest?.user_contribution_percentage ?? sp.user_contribution_percentage,
+              role_justification:           latest?.role_justification  ?? sp.role_justification,
+              user_role_types:              latest?.user_role_types     ?? sp.user_role_types,
+              other_languages:              sp.languages,
+              tools:                        sp.tools,
+              practices:                    sp.practices,
+              resume_bullets:               latest?.resume_bullets      ?? [],
+              ai_bullets:                   latest?.ai_bullets          ?? [],
+              ai_warning:                   latest?.ai_warning,
+              skill_timeline:               latest?.skill_timeline      ?? [],
+              score_breakdown:              latest?.score_breakdown     ?? {},
+              git:                          latest?.git,
+              duration:                     latest?.duration            ?? sp.duration,
+            }
+          }
         }
+
+        // Seed in-memory + localStorage cache with saved analysis data
+        for (const [id, data] of Object.entries(savedMap)) {
+          if (!analysisCache?.current[id]) {
+            if (analysisCache?.current) analysisCache.current[id] = data
+            writeCache(id, data)
+          }
+        }
+
+        const disk  = readCache()
+        const items = getProjectItems(payload).map((p) => {
+          const hit = analysisCache?.current[p.id] ?? disk[String(p.id)]
+          return hit ? { ...p, ...hit } : p
+        })
+        setProjects(items)
+        setError('')
       } catch (err) {
-        if (!cancelled) {
-          setError(err?.message || 'Failed to load projects.')
-          setProjects([])
-        }
+        if (!cancelled) { setError(err?.message || 'Failed to load projects.'); setProjects([]) }
       }
     }
-    loadProjects()
+    load()
     return () => { cancelled = true }
   }, [apiOk, uploadHighlights])
 
   const createdSet = new Set(uploadHighlights.created)
-  const mergedSet = new Set(uploadHighlights.merged)
+  const mergedSet  = new Set(uploadHighlights.merged)
 
-  function clearProjectHighlight(projectId) {
-    setUploadHighlights((current) => ({
-      created: current.created.filter((id) => id !== projectId),
-      merged: current.merged.filter((id) => id !== projectId),
+  function clearHighlight(id) {
+    setUploadHighlights((c) => ({
+      created: c.created.filter((x) => x !== id),
+      merged:  c.merged.filter((x) => x !== id),
     }))
   }
 
-  function handleProjectClick(project) {
-    if (createdSet.has(project.id) || mergedSet.has(project.id)) {
-      clearProjectHighlight(project.id)
-    }
-    setSelectedProject(project)
+  function handleOpen(project) {
+    if (createdSet.has(project.id) || mergedSet.has(project.id)) clearHighlight(project.id)
+    setOpen(project)
   }
 
-  // Sync enriched analysis data back into the cards list
-  function handleAnalysisComplete(projectId, result) {
+  function handleAnalysisDone(projectId, result) {
     if (analysisCache?.current) analysisCache.current[projectId] = result
-    setProjects((prev) =>
-      prev.map((p) => (p.id === projectId ? { ...p, ...result } : p))
-    )
-    setSelectedProject((prev) =>
-      prev?.id === projectId ? { ...prev, ...result } : prev
-    )
+    writeCache(projectId, result)
+    const merge = (p) => p.id === projectId ? { ...p, ...result } : p
+    setProjects((prev) => prev.map(merge))
+    setOpen((prev)  => prev?.id === projectId ? { ...prev, ...result } : prev)
   }
+
+  // Filter + sort
+  const visible = projects
+    .filter((p) => !query || p.name.toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => {
+      if (sort === 'score') return (b.importance_score ?? -1) - (a.importance_score ?? -1)
+      if (sort === 'name')  return a.name.localeCompare(b.name)
+      // date: newest first (higher id = newer upload)
+      return b.id - a.id
+    })
 
   return (
-    <div className="animate-fade-up space-y-6">
+    <>
+    <div className="animate-fade-up space-y-5">
       <PageHeader title="Projects" description="Uploaded and analyzed projects." />
       <InlineError message={error} />
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {projects.map((project) => {
-          const isCreated = createdSet.has(project.id)
-          const isMerged = mergedSet.has(project.id)
-          const analyzed = isAnalyzed(project)
-          const highlightClass = isCreated
-            ? 'border-emerald-400 bg-emerald-500/10'
-            : isMerged
-              ? 'border-amber-400 bg-amber-500/10'
-              : 'border-border'
-
-          return (
-            <div
-              key={project.id}
-              role="button"
-              tabIndex={0}
-              className={`card border ${highlightClass} cursor-pointer transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
-              onClick={() => handleProjectClick(project)}
-              onKeyDown={(e) => e.key === 'Enter' && handleProjectClick(project)}
-              onMouseEnter={() => {
-                if (isCreated || isMerged) clearProjectHighlight(project.id)
-              }}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-slate-200 truncate">{project.name}</div>
-                  <div className="mt-1 text-xs text-slate-500 truncate">{project.rel_path}</div>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  {isCreated && (
-                    <span className="rounded border border-emerald-400/30 bg-emerald-500/20 px-2 py-0.5 font-mono text-2xs text-emerald-200">
-                      NEW
-                    </span>
-                  )}
-                  {!isCreated && isMerged && (
-                    <span className="rounded border border-amber-400/30 bg-amber-500/20 px-2 py-0.5 font-mono text-2xs text-amber-100">
-                      MERGED
-                    </span>
-                  )}
-                  {analyzed && (
-                    <span className="rounded border border-sky-400/30 bg-sky-500/20 px-2 py-0.5 font-mono text-2xs text-sky-200">
-                      ANALYZED
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="mt-3 flex items-center justify-between">
-                <span className="font-mono text-sm text-slate-500">{project.file_count} files</span>
-                {project.user_role && (
-                  <span className="font-mono text-xs text-slate-400">{project.user_role}</span>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+      {/* Search + sort toolbar */}
+      {projects.length > 0 && (
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-xs">
+            <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search projects…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="input pl-8 py-1.5 text-xs"
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            {SORT_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setSort(opt.value)}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  sort === opt.value
+                    ? 'bg-elevated text-ink border border-border-hi'
+                    : 'text-muted hover:text-ink'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <span className="text-xs text-muted ml-auto">
+            {visible.length} of {projects.length}
+          </span>
+        </div>
+      )}
 
       {!error && projects.length === 0 && (
         <EmptyState message="No projects yet. Upload a ZIP from the dashboard." />
       )}
 
-      {selectedProject && (
-        <ProjectModal
-          project={selectedProject}
-          onClose={() => setSelectedProject(null)}
-          onAnalysisComplete={handleAnalysisComplete}
-        />
+      {query && visible.length === 0 && (
+        <p className="text-sm text-muted">No projects match "{query}".</p>
       )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {visible.map((p) => (
+          <ProjectCard
+            key={p.id}
+            project={p}
+            isNew={createdSet.has(p.id)}
+            isMerged={mergedSet.has(p.id)}
+            onOpen={handleOpen}
+            onMouseEnter={() => {
+              if (createdSet.has(p.id) || mergedSet.has(p.id)) clearHighlight(p.id)
+            }}
+          />
+        ))}
+      </div>
+
     </div>
+
+    {open && (
+      <ProjectDrawer
+        project={open}
+        onClose={() => setOpen(null)}
+        onAnalysisDone={handleAnalysisDone}
+      />
+    )}
+    </>
   )
 }
 
-// ─── Modal shell ──────────────────────────────────────────────────────────────
+// ─── Card ─────────────────────────────────────────────────────────────────────
 
-function ProjectModal({ project, onClose, onAnalysisComplete }) {
-  const overlayRef = useRef(null)
+function ProjectCard({ project, isNew, isMerged, onOpen, onMouseEnter }) {
+  const borderOverride = isNew
+    ? 'border-success/50'
+    : isMerged
+      ? 'border-accent/50'
+      : ''
+
+  return (
+    <button
+      className={`card text-left w-full ${borderOverride}`}
+      onClick={() => onOpen(project)}
+      onMouseEnter={onMouseEnter}
+    >
+      {/* Name + status chips */}
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-sm font-semibold text-ink leading-snug">{project.name}</span>
+        <div className="flex shrink-0 gap-1 pt-px">
+          {isNew             && <Chip variant="success">NEW</Chip>}
+          {isMerged && !isNew && <Chip variant="accent">MERGED</Chip>}
+        </div>
+      </div>
+
+      {/* Path */}
+      <p className="mt-1.5 font-mono text-xs text-muted truncate">{project.rel_path}</p>
+
+      {/* Footer */}
+      <div className="mt-4 flex items-end justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-xs text-muted">
+            {project.file_count} files
+            {project.language && <span> · {project.language}</span>}
+          </p>
+          {project.user_role && (
+            <p className="mt-0.5 text-xs text-ink/70 truncate">{project.user_role}</p>
+          )}
+        </div>
+        {project.importance_score != null && (
+          <span className="shrink-0 font-mono text-lg font-bold tabular-nums text-ink leading-none">
+            {Math.round(project.importance_score)}
+          </span>
+        )}
+      </div>
+    </button>
+  )
+}
+
+function Chip({ variant, children }) {
+  const cls = {
+    success: 'bg-success/15 text-success border-success/30',
+    accent:  'bg-accent/15  text-accent  border-accent/30',
+  }[variant]
+  return (
+    <span className={`rounded border px-1.5 py-0.5 font-mono text-2xs ${cls}`}>
+      {children}
+    </span>
+  )
+}
+
+// ─── Drawer ───────────────────────────────────────────────────────────────────
+
+const S = { IDLE: 'idle', RUNNING: 'running', DONE: 'done', ERROR: 'error' }
+
+function ProjectDrawer({ project, onClose, onAnalysisDone }) {
+  const alreadyDone = isAnalyzed(project)
+  const [status, setStatus] = useState(alreadyDone ? S.DONE  : S.IDLE)
+  const [data,   setData]   = useState(alreadyDone ? project : null)
+  const [err,    setErr]    = useState('')
+  const alive = useRef(true)
 
   useEffect(() => {
-    function onKeyDown(e) {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
+    alive.current = true
+    return () => { alive.current = false }
+  }, [])
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
   }, [])
 
-  return (
-    <div
-      ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm p-4"
-      onClick={(e) => e.target === overlayRef.current && onClose()}
-    >
-      <div className="relative flex h-[75vh] w-full max-w-4xl flex-col rounded-lg border border-border bg-background shadow-2xl">
-        {/* Header */}
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-3">
-          <div className="min-w-0">
-            <div className="text-lg font-semibold text-slate-200 truncate">{project.name}</div>
-            <div className="mt-0.5 font-mono text-base text-slate-500 truncate">
-              Project Path: {project.rel_path}
-            </div>
-          </div>
-          <button
-            className="shrink-0 rounded p-1 text-slate-500 transition-colors hover:bg-border hover:text-slate-200"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Scrollable body */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">
-          <ProjectDetail
-            project={project}
-            onAnalysisComplete={onAnalysisComplete}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Detail content ───────────────────────────────────────────────────────────
-
-function ProjectDetail({ project, onAnalysisComplete }) {
-  const alreadyAnalyzed = isAnalyzed(project)
-  const [status, setStatus] = useState(
-    alreadyAnalyzed ? ANALYSIS_STATUS.COMPLETE : ANALYSIS_STATUS.IDLE
-  )
-  const [data, setData] = useState(alreadyAnalyzed ? project : null)
-  const [error, setError] = useState('')
-  const isMountedRef = useRef(true)
-
   useEffect(() => {
-    isMountedRef.current = true
-    return () => { isMountedRef.current = false }
-  }, [])
+    const fn = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', fn)
+    return () => document.removeEventListener('keydown', fn)
+  }, [onClose])
 
-  // Run once on mount — skip if the project already carries analysis data
-  useEffect(() => {
-    if (!isAnalyzed(project)) {
-      runAnalysis()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  async function runAnalysis() {
-    setStatus(ANALYSIS_STATUS.RUNNING)
-    setError('')
+  async function analyze() {
+    setStatus(S.RUNNING)
+    setErr('')
     try {
       const result = await window.api.analyzeProject(project.id)
-      if (!isMountedRef.current) return
+      if (!alive.current) return
       setData(result)
-      setStatus(ANALYSIS_STATUS.COMPLETE)
-      onAnalysisComplete?.(project.id, result)
-    } catch (err) {
-      if (!isMountedRef.current) return
-      setError(err?.message || 'Analysis failed. Please try again.')
-      setStatus(ANALYSIS_STATUS.ERROR)
+      setStatus(S.DONE)
+      onAnalysisDone?.(project.id, result)
+    } catch (e) {
+      if (!alive.current) return
+      setErr(e?.message || 'Analysis failed.')
+      setStatus(S.ERROR)
     }
   }
 
   return (
-    <div className="space-y-3">
-      <ProjectMeta project={project} />
+    <>
+      {/* Backdrop — dark enough to hide cards behind */}
+      <div className="fixed inset-0 z-40 bg-black/80" onClick={onClose} />
 
-      <div className="flex items-center justify-between">
-        <span className="font-mono text-base font-semibold text-slate-400">ANALYSIS</span>
-        {status !== ANALYSIS_STATUS.RUNNING && (
-          <button className="btn btn-secondary text-sm" onClick={runAnalysis}>
-            {status === ANALYSIS_STATUS.COMPLETE ? 'Re-analyze' : 'Run Analysis'}
-          </button>
-        )}
+      {/* Panel */}
+      <div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[540px] flex-col border-l border-border bg-surface shadow-2xl text-ink">
+
+        {/* Header */}
+        <div className="flex shrink-0 items-start gap-3 border-b border-border px-5 py-4">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-semibold text-ink">{project.name}</h2>
+            <p className="mt-0.5 font-mono text-xs text-muted">{project.rel_path}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 pt-0.5">
+            {status !== S.RUNNING && (
+              <button
+                onClick={analyze}
+                className="rounded border border-border-hi px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-elevated"
+              >
+                {status === S.DONE ? 'Re-analyze' : 'Analyze'}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="rounded p-1.5 text-muted transition-colors hover:bg-border hover:text-ink"
+              aria-label="Close"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-5 py-4 space-y-4">
+            <MetaTable project={project} />
+
+            {/* Status states */}
+            {status === S.RUNNING && (
+              <div className="flex items-center gap-3 rounded border border-border px-4 py-3 text-sm text-muted">
+                <Spinner /> Analyzing…
+              </div>
+            )}
+            {status === S.IDLE && (
+              <div className="rounded border border-border px-4 py-3 text-sm text-muted">
+                No analysis yet.{' '}
+                <button onClick={analyze} className="text-ink underline underline-offset-2">Run it</button>
+                {' '}to extract your role, skills, and resume bullets.
+              </div>
+            )}
+            {status === S.ERROR && (
+              <div className="rounded border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+                {err}{' '}
+                <button onClick={analyze} className="underline underline-offset-2">Retry</button>
+              </div>
+            )}
+
+            {status === S.DONE && data && <AnalysisDetail data={data} />}
+          </div>
+        </div>
       </div>
+    </>
+  )
+}
 
-      <InlineError message={error} />
+// ─── Meta table ───────────────────────────────────────────────────────────────
 
-      {(status === ANALYSIS_STATUS.IDLE || status === ANALYSIS_STATUS.RUNNING) && (
-        <StatusCard>
-          <Spinner />
-          <span className="text-sm text-slate-400">
-            {status === ANALYSIS_STATUS.IDLE ? 'Starting analysis…' : 'Analyzing project…'}
-          </span>
-        </StatusCard>
-      )}
+function parseCollaborators(display) {
+  if (!display) return null
+  // Strip everything up to and including "N collaborator(s) detected: " (may have emoji prefix)
+  return display.replace(/^.*?\d+\s+collaborators?\s+detected:\s*/i, '').trim() || null
+}
 
-      {status === ANALYSIS_STATUS.ERROR && (
-        <StatusCard>
-          <span className="text-sm text-slate-400">
-            Analysis failed. Use the button above to retry.
-          </span>
-        </StatusCard>
-      )}
+function MetaTable({ project }) {
+  const collaborators = parseCollaborators(project.collaborators_display)
 
-      {status === ANALYSIS_STATUS.COMPLETE && data && (
-        <AnalysisResults data={data} />
-      )}
+  const items = [
+    { label: 'Files',        value: project.file_count },
+    { label: 'Language',     value: project.language   },
+    { label: 'Framework',    value: project.framework  },
+    { label: 'Uploaded',     value: project.created_at ? new Date(project.created_at).toLocaleDateString() : null },
+    { label: 'Duration',      value: project.duration, wide: true },
+    { label: 'Collaborators', value: collaborators,    wide: true },
+  ].filter((c) => c.value != null)
+
+  return (
+    <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+      {items.map((item) => (
+        <div key={item.label} className={item.wide ? 'col-span-2' : ''}>
+          <p className="text-xs text-ink/50 mb-0.5">{item.label}</p>
+          <p className="text-ink font-medium leading-snug">{item.value}</p>
+        </div>
+      ))}
     </div>
   )
 }
 
-// ─── Analysis results ─────────────────────────────────────────────────────────
+// ─── Analysis detail ──────────────────────────────────────────────────────────
 
-function AnalysisResults({ data }) {
+function AnalysisDetail({ data }) {
+  const primaryRole    = data.user_role_types?.primary_role ?? data.user_role
+  const secondaryRoles = data.user_role_types?.secondary_roles
+
   return (
     <div className="space-y-3">
-      <RoleBanner data={data} />
+
+      {/* Role + scores */}
+      {(primaryRole || data.importance_score != null) && (
+        <div className="rounded border border-border p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs text-ink/50 mb-1">Your role</p>
+              <p className="text-sm font-semibold text-ink">{primaryRole}</p>
+              {secondaryRoles && <p className="mt-0.5 text-xs text-muted">{secondaryRoles}</p>}
+              {data.role_justification && (
+                <p className="mt-2 text-xs text-muted leading-relaxed">{data.role_justification}</p>
+              )}
+            </div>
+            <div className="shrink-0 flex gap-5 text-right">
+              {data.importance_score != null && (
+                <div>
+                  <p className="text-xs text-ink/50 mb-0.5">Score</p>
+                  <p className="font-mono text-2xl font-bold tabular-nums text-ink leading-none">
+                    {Math.round(data.importance_score)}
+                  </p>
+                </div>
+              )}
+              {data.user_contribution_percentage != null && (
+                <div>
+                  <p className="text-xs text-ink/50 mb-0.5">Contrib</p>
+                  <p className="font-mono text-2xl font-bold tabular-nums text-ink leading-none">
+                    {Math.round(data.user_contribution_percentage)}%
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {data.resume_bullets?.length > 0 && (
-        <BulletSection
-          title="RESUME BULLETS"
-          bullets={data.resume_bullets}
-          accentClass="border-l-emerald-400"
-        />
+        <Section label="Resume bullets">
+          <ul className="space-y-2">
+            {data.resume_bullets.map((b, i) => (
+              <li key={i} className="border-l-2 border-success/60 pl-3 text-sm text-ink/80 leading-relaxed">{b}</li>
+            ))}
+          </ul>
+        </Section>
       )}
 
       {data.ai_bullets?.length > 0 && (
-        <BulletSection
-          title="AI SUMMARY"
-          bullets={data.ai_bullets}
-          accentClass="border-l-sky-400"
-          warning={data.ai_warning}
-        />
+        <Section label="AI summary" warning={data.ai_warning}>
+          <ul className="space-y-2">
+            {data.ai_bullets.map((b, i) => (
+              <li key={i} className="border-l-2 border-border-hi pl-3 text-sm text-ink/80 leading-relaxed">{b}</li>
+            ))}
+          </ul>
+        </Section>
       )}
 
       {data.git?.is_repo && <GitSection git={data.git} />}
@@ -318,258 +482,142 @@ function AnalysisResults({ data }) {
       <TechStack data={data} />
 
       {data.score_breakdown && Object.keys(data.score_breakdown).length > 0 && (
-        <Card label="SCORE BREAKDOWN">
-          <div className="space-y-2">
+        <Section label="Score breakdown">
+          <div className="space-y-2.5">
             {Object.entries(data.score_breakdown).map(([k, v]) => (
               <ScoreBar key={k} label={k.replace(/_/g, ' ')} value={v} />
             ))}
           </div>
-        </Card>
+        </Section>
       )}
 
       {data.skill_timeline?.length > 0 && (
-        <SkillTimeline timeline={data.skill_timeline} />
-      )}
-    </div>
-  )
-}
-
-// ─── Section components ───────────────────────────────────────────────────────
-
-function ProjectMeta({ project }) {
-  const gridItems = [
-    { label: 'files', value: project.file_count },
-    project.language && { label: 'language', value: project.language },
-    project.framework && { label: 'framework', value: project.framework },
-    project.created_at && {
-      label: 'uploaded',
-      value: new Date(project.created_at).toLocaleDateString(),
-    },
-  ].filter(Boolean)
-
-  return (
-    <div className="rounded border border-border p-3 space-y-3">
-      <div className="grid grid-cols-3 gap-x-4 gap-y-3">
-        {gridItems.map((item) => (
-          <MetaItem key={item.label} label={item.label} value={item.value} />
-        ))}
-      </div>
-      {project.duration && (
-        <div className="border-t border-border pt-3">
-          <div className="font-mono text-sm font-semibold text-slate-400 mb-1">DURATION</div>
-          <div className="text-base text-slate-300 leading-relaxed">{project.duration}</div>
-        </div>
-      )}
-      {project.collaborators_display && (
-        <div className="border-t border-border pt-3">
-          <div className="font-mono text-sm font-semibold text-slate-400 mb-1">COLLABORATORS</div>
-          <div className="text-base text-slate-300 leading-relaxed">{project.collaborators_display}</div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function RoleBanner({ data }) {
-  const primaryRole = data.user_role_types?.primary_role ?? data.user_role
-  const secondaryRoles = data.user_role_types?.secondary_roles
-  return (
-    <div className="rounded border border-border p-3">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          {primaryRole && (
-            <>
-              <div className="font-mono text-base font-semibold text-slate-400">YOUR ROLE</div>
-              <div className="mt-0.5 text-sm font-semibold text-slate-200">{primaryRole}</div>
-              {secondaryRoles && (
-                <div className="mt-0.5 font-mono text-sm text-slate-500">{secondaryRoles}</div>
-              )}
-            </>
-          )}
-          {data.role_justification && (
-            <p className="mt-2 text-base text-slate-400 leading-relaxed">{data.role_justification}</p>
-          )}
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-2 text-right">
-          {data.importance_score != null && (
-            <div>
-              <div className="font-mono text-sm font-semibold text-slate-400">IMPORTANCE</div>
-              <div className="text-2xl font-bold tabular-nums text-slate-200">{Math.round(data.importance_score)}</div>
-            </div>
-          )}
-          {data.user_contribution_percentage != null && (
-            <div>
-              <div className="font-mono text-sm font-semibold text-slate-400">CONTRIBUTION</div>
-              <div className="text-lg font-semibold tabular-nums text-slate-200">
-                {Math.round(data.user_contribution_percentage)}%
+        <Section label="Skill timeline">
+          <div className="space-y-2">
+            {data.skill_timeline.map((entry, i) => (
+              <div key={i} className="flex items-start gap-3 text-xs">
+                <span className="shrink-0 w-20 font-mono text-muted pt-0.5">{entry.date}</span>
+                <div className="flex flex-wrap gap-1">
+                  {entry.skills.map((s, j) => (
+                    <span key={j} className="rounded border border-border px-1.5 py-0.5 font-mono text-ink/70">{s}</span>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      </div>
+            ))}
+          </div>
+        </Section>
+      )}
     </div>
   )
 }
 
-function BulletSection({ title, bullets, accentClass, warning }) {
+// ─── Shared section wrapper ───────────────────────────────────────────────────
+
+function Section({ label, warning, children }) {
   return (
-    <Card label={title}>
-      {warning && (
-        <div className="mb-2 rounded border border-amber-400/30 bg-amber-500/10 px-2 py-1 font-mono text-2xs text-amber-200">
-          {warning}
-        </div>
-      )}
-      <ul className="space-y-1.5">
-        {bullets.map((b, i) => (
-          <li key={i} className={`border-l-2 pl-3 text-base leading-relaxed text-slate-300 ${accentClass}`}>
-            {b}
-          </li>
-        ))}
-      </ul>
-    </Card>
+    <div className="rounded border border-border">
+      <div className="border-b border-border px-3 py-2">
+        <span className="font-mono text-2xs text-ink/60 uppercase tracking-widest">{label}</span>
+      </div>
+      <div className="p-3">
+        {warning && (
+          <p className="mb-2 rounded border border-accent/30 bg-accent/10 px-2 py-1 text-xs text-accent/80">
+            {warning}
+          </p>
+        )}
+        {children}
+      </div>
+    </div>
   )
 }
 
 function GitSection({ git }) {
   const mine = git.current_author_contribution
   return (
-    <Card label="GIT ACTIVITY">
+    <Section label="Git activity">
       <div className="space-y-3">
-        {git.current_author && (
-          <div className="font-mono text-sm text-slate-400">Current Git Identity: {git.current_author}</div>
-        )}
         {mine && (
-          <div className="grid grid-cols-3 gap-3">
-            <MetaItem label="commits" value={mine.commits} />
-            <MetaItem label="lines added" value={mine.added?.toLocaleString()} />
-            <MetaItem label="lines deleted" value={mine.deleted?.toLocaleString()} />
+          <div className="grid grid-cols-3 gap-3 text-sm">
+            {[
+              { label: 'Commits',    value: mine.commits },
+              { label: 'Added',      value: mine.added?.toLocaleString()   },
+              { label: 'Removed',    value: mine.deleted?.toLocaleString() },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <p className="text-xs text-ink/50 mb-0.5">{label}</p>
+                <p className="font-medium text-ink">{value ?? '—'}</p>
+              </div>
+            ))}
           </div>
         )}
         {git.author_contributions?.length > 1 && (
-          <div className="space-y-1">
-            <div className="font-mono text-sm font-semibold text-slate-400 mb-1">ALL CONTRIBUTORS</div>
+          <div className="border-t border-border pt-3 space-y-1.5">
+            <p className="text-xs text-ink/50 mb-1.5">All contributors</p>
             {git.author_contributions.map((c, i) => (
-              <div key={i} className="flex items-center justify-between text-sm">
-                <span className="text-slate-300 truncate max-w-[50%]">{c.author}</span>
-                <span className="font-mono text-slate-500 shrink-0">
-                  {c.commits} commits · +{c.added?.toLocaleString()} / -{c.deleted?.toLocaleString()}
+              <div key={i} className="flex items-center justify-between text-xs">
+                <span className="text-ink truncate max-w-[55%]">{c.author}</span>
+                <span className="font-mono text-ink/50 shrink-0">
+                  {c.commits}c · +{c.added?.toLocaleString()} / -{c.deleted?.toLocaleString()}
                 </span>
               </div>
             ))}
           </div>
         )}
+        {git.current_author && (
+          <p className="text-xs text-ink/30 border-t border-border pt-2">
+            attributed to: {git.current_author}
+          </p>
+        )}
       </div>
-    </Card>
+    </Section>
   )
 }
 
 function TechStack({ data }) {
   const rows = [
-    data.other_languages?.length > 0 && { label: 'LANGUAGES', tags: data.other_languages },
-    data.tools?.length > 0 && { label: 'TOOLS', tags: data.tools },
-    data.practices?.length > 0 && { label: 'PRACTICES', tags: data.practices },
+    data.other_languages?.length > 0 && { label: 'Languages', tags: data.other_languages },
+    data.tools?.length      > 0 && { label: 'Tools',     tags: data.tools },
+    data.practices?.length  > 0 && { label: 'Practices', tags: data.practices },
   ].filter(Boolean)
   if (!rows.length) return null
   return (
-    <Card label="TECH STACK">
-      <div className="space-y-2">
+    <Section label="Tech stack">
+      <div className="space-y-3">
         {rows.map(({ label, tags }) => (
           <div key={label}>
-            <div className="font-mono text-sm font-semibold text-slate-400 mb-1">{label}</div>
-            <div className="flex flex-wrap gap-1.5">
-              {tags.map((t, i) => (
-                <span
-                  key={i}
-                  className="rounded border border-border px-2 py-0.5 font-mono text-sm text-slate-300"
-                >
-                  {t}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </Card>
-  )
-}
-
-function SkillTimeline({ timeline }) {
-  return (
-    <Card label="SKILL TIMELINE">
-      <div className="space-y-2">
-        {timeline.map((entry, i) => (
-          <div key={i} className="flex items-start gap-3">
-            <span className="font-mono text-sm text-slate-500 shrink-0 pt-0.5 w-24">
-              {entry.date}
-            </span>
+            <p className="text-xs text-ink/50 mb-1.5">{label}</p>
             <div className="flex flex-wrap gap-1">
-              {entry.skills.map((s, j) => (
-                <span
-                  key={j}
-                  className="rounded border border-border px-1.5 py-0.5 font-mono text-sm text-slate-300"
-                >
-                  {s}
-                </span>
+              {tags.map((t, i) => (
+                <span key={i} className="rounded border border-border px-2 py-0.5 font-mono text-xs text-ink/70">{t}</span>
               ))}
             </div>
           </div>
         ))}
       </div>
-    </Card>
+    </Section>
   )
 }
 
 function ScoreBar({ label, value }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="font-mono text-sm font-semibold text-slate-400 capitalize">{label}</span>
-      <span className="font-mono text-sm font-semibold tabular-nums text-slate-200">{Math.round(value)}</span>
-    </div>
-  )
-}
-
-// ─── Primitives ───────────────────────────────────────────────────────────────
-
-function Card({ label, children }) {
-  return (
-    <div className="rounded border border-border p-3">
-      {label && <div className="font-mono text-sm font-semibold text-slate-400 mb-2">{label}</div>}
-      {children}
-    </div>
-  )
-}
-
-function StatusCard({ children }) {
-  return (
-    <div className="flex items-center gap-3 rounded border border-border p-3">
-      {children}
-    </div>
-  )
-}
-
-function MetaItem({ label, value }) {
+  const pct = Math.min(100, Math.max(0, Math.round(value)))
   return (
     <div>
-      <div className="font-mono text-base font-semibold text-slate-400 capitalize">{label}</div>
-      <div className="mt-0.5 text-base text-slate-200">{value ?? '—'}</div>
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-xs text-ink/70 capitalize">{label}</span>
+        <span className="font-mono text-xs font-semibold tabular-nums text-ink">{pct}</span>
+      </div>
+      <div className="h-0.5 w-full rounded-full bg-border">
+        <div className="h-0.5 rounded-full bg-ink/40 transition-all" style={{ width: `${pct}%` }} />
+      </div>
     </div>
   )
 }
 
 function Spinner() {
   return (
-    <svg
-      className="h-4 w-4 shrink-0 animate-spin text-slate-500"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
+    <svg className="h-3.5 w-3.5 shrink-0 animate-spin text-muted" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-      />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
   )
 }

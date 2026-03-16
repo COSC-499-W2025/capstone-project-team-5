@@ -10,14 +10,27 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Annotated, Any
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
+from capstone_project_team_5.api.dependencies import get_current_username
 from capstone_project_team_5.api.schemas.projects import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
+    CodeAnalysisUpdateRequest,
     PaginatedProjectsResponse,
     PaginationMeta,
     ProjectAnalysisResult,
@@ -29,11 +42,21 @@ from capstone_project_team_5.api.schemas.projects import (
     ProjectUpdateRequest,
     ProjectUploadAction,
     ProjectUploadResponse,
+    SavedAnalysisSummary,
+    SavedProjectSummary,
+    SavedUploadSummary,
     ScoreConfig,
 )
 from capstone_project_team_5.consent_tool import ConsentTool
 from capstone_project_team_5.data.db import get_session
-from capstone_project_team_5.data.models import ArtifactSource, Project, UploadRecord
+from capstone_project_team_5.data.models import (
+    ArtifactSource,
+    CodeAnalysis,
+    Project,
+    UploadRecord,
+    User,
+    UserCodeAnalysis,
+)
 from capstone_project_team_5.models.upload import DetectedProject, InvalidZipError
 from capstone_project_team_5.services.content_store import (
     compute_project_file_count,
@@ -176,7 +199,7 @@ def _ensure_manifests(session: Session, upload_ids: list[int]) -> None:
 
 
 def _analyze_project_from_store(
-    project: Project, upload_ids: list[int], use_ai: bool
+    project: Project, upload_ids: list[int], use_ai: bool, current_username: str | None = None
 ) -> tuple[ProjectAnalysisResult, str]:
     consent_tool = _build_consent_tool(use_ai)
     file_count = compute_project_file_count(project.rel_path, upload_ids)
@@ -191,7 +214,9 @@ def _analyze_project_from_store(
     with TemporaryDirectory() as temp_dir:
         extract_root = Path(temp_dir)
         materialize_project_tree(project.rel_path, upload_ids, extract_root)
-        results = analyze_projects_structured(extract_root, detected, consent_tool)
+        results = analyze_projects_structured(
+            extract_root, detected, consent_tool, current_user=current_username
+        )
     analysis_map = {(item["name"], item["rel_path"]): item for item in results}
     analysis = analysis_map.get((project.name, project.rel_path))
     if analysis is None:
@@ -235,6 +260,160 @@ def _analysis_to_response(project_id: int, analysis: dict[str, Any]) -> ProjectA
     )
 
 
+def _get_user_or_404(session: Session, username: str) -> User:
+    """Return the requested user or raise 404."""
+    user = session.query(User).filter(User.username == username).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User '{username}' not found.",
+        )
+    return user
+
+
+def _build_saved_uploads_response(session: Session, username: str) -> list[SavedUploadSummary]:
+    """Build the saved uploads/projects view used by the TUI retrieve flow."""
+    from contextlib import suppress
+
+    user = _get_user_or_404(session, username)
+    uploads = (
+        session.query(UploadRecord)
+        .join(Project, Project.upload_id == UploadRecord.id)
+        .join(CodeAnalysis, CodeAnalysis.project_id == Project.id)
+        .join(UserCodeAnalysis, UserCodeAnalysis.analysis_id == CodeAnalysis.id)
+        .filter(UserCodeAnalysis.user_id == user.id)
+        .order_by(UploadRecord.created_at.desc())
+        .distinct()
+        .all()
+    )
+
+    saved_uploads: list[SavedUploadSummary] = []
+
+    for upload in uploads:
+        saved_projects: list[SavedProjectSummary] = []
+
+        for project in upload.projects:
+            languages: set[str] = set()
+            tools: set[str] = set()
+            practices: set[str] = set()
+            total_loc = 0
+            analyses: list[SavedAnalysisSummary] = []
+
+            for analysis in project.code_analyses:
+                link = (
+                    session.query(UserCodeAnalysis)
+                    .filter(
+                        UserCodeAnalysis.user_id == user.id,
+                        UserCodeAnalysis.analysis_id == analysis.id,
+                    )
+                    .first()
+                )
+                if link is None:
+                    continue
+
+                metrics: dict[str, Any] | None = None
+                if getattr(analysis, "metrics_json", None):
+                    with suppress(Exception):
+                        parsed = json.loads(analysis.metrics_json)
+                        if isinstance(parsed, dict):
+                            metrics = parsed
+
+                if analysis.language:
+                    languages.add(analysis.language)
+
+                if isinstance(metrics, dict):
+                    metrics_language = metrics.get("language") or metrics.get("language_name")
+                    if isinstance(metrics_language, str) and metrics_language:
+                        languages.add(metrics_language)
+                    for tool in metrics.get("tools") or []:
+                        tools.add(str(tool))
+                    for practice in metrics.get("practices") or []:
+                        practices.add(str(practice))
+                    loc = metrics.get("lines_of_code") or metrics.get("total_lines_of_code")
+                    if isinstance(loc, int):
+                        total_loc += loc
+                    elif isinstance(loc, str) and loc.isdigit():
+                        total_loc += int(loc)
+
+                def _str_list(val: Any) -> list[str] | None:
+                    if isinstance(val, list):
+                        return [str(x) for x in val if x] or None
+                    return None
+
+                m = metrics or {}
+                analyses.append(
+                    SavedAnalysisSummary(
+                        id=analysis.id,
+                        language=analysis.language,
+                        summary_text=analysis.summary_text,
+                        resume_bullets=_str_list(m.get("resume_bullets")),
+                        ai_bullets=_str_list(m.get("ai_bullets")),
+                        ai_warning=m.get("ai_warning"),
+                        skill_timeline=m.get("skill_timeline")
+                        if isinstance(m.get("skill_timeline"), list)
+                        else None,
+                        score_breakdown=m.get("score_breakdown")
+                        if isinstance(m.get("score_breakdown"), dict)
+                        else None,
+                        git=m.get("git") if isinstance(m.get("git"), dict) else None,
+                        tools=_str_list(m.get("tools")),
+                        practices=_str_list(m.get("practices")),
+                        other_languages=_str_list(m.get("other_languages")),
+                        duration=m.get("duration"),
+                        user_role=m.get("user_role"),
+                        user_role_types=m.get("user_role_types")
+                        if isinstance(m.get("user_role_types"), dict)
+                        else None,
+                        user_contribution_percentage=m.get("user_contribution_percentage"),
+                        role_justification=m.get("role_justification"),
+                        created_at=analysis.created_at,
+                    )
+                )
+
+            if not analyses:
+                continue
+
+            saved_projects.append(
+                SavedProjectSummary(
+                    id=project.id,
+                    name=project.name,
+                    rel_path=project.rel_path,
+                    file_count=project.file_count,
+                    importance_rank=project.importance_rank,
+                    importance_score=project.importance_score,
+                    user_role=project.user_role,
+                    user_contribution_percentage=project.user_contribution_percentage,
+                    role_justification=project.role_justification,
+                    user_role_types=project.user_role_types,
+                    has_git_repo=project.has_git_repo,
+                    is_collaborative=project.is_collaborative,
+                    is_showcase=bool(getattr(project, "is_showcase", False)),
+                    start_date=project.start_date,
+                    end_date=project.end_date,
+                    languages=sorted(languages),
+                    tools=sorted(tools),
+                    practices=sorted(practices),
+                    lines_of_code=total_loc if total_loc > 0 else None,
+                    analyses_count=len(analyses),
+                    analyses=analyses,
+                )
+            )
+
+        if saved_projects:
+            saved_uploads.append(
+                SavedUploadSummary(
+                    id=upload.id,
+                    filename=upload.filename,
+                    size_bytes=upload.size_bytes,
+                    file_count=upload.file_count,
+                    created_at=upload.created_at,
+                    projects=saved_projects,
+                )
+            )
+
+    return saved_uploads
+
+
 @router.get(
     "/",
     response_model=PaginatedProjectsResponse,
@@ -266,6 +445,140 @@ def list_projects(
                 offset=offset,
                 has_more=(offset + len(projects)) < total,
             ),
+        )
+
+
+@router.get(
+    "/saved/{username}",
+    response_model=list[SavedUploadSummary],
+    summary="List saved uploads for a user",
+    description=(
+        "Return the saved uploads, projects, and analyses visible to the authenticated user. "
+        "This mirrors the TUI 'Retrieve Projects' view."
+    ),
+    responses={
+        403: {"description": "Cannot access another user's saved analyses"},
+        404: {"description": "User not found"},
+    },
+)
+def list_saved_projects(
+    username: str,
+    current_username: Annotated[str, Depends(get_current_username)],
+) -> list[SavedUploadSummary]:
+    """Return saved uploads/projects/analyses for the authenticated user."""
+    if current_username != username:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only access your own saved analyses.",
+        )
+
+    with get_session() as session:
+        return _build_saved_uploads_response(session, username)
+
+
+@router.patch(
+    "/{project_id}/analyses/{analysis_id}",
+    response_model=SavedAnalysisSummary,
+    summary="Update a saved analysis",
+    description="Update the language or summary text of a specific code analysis.",
+    responses={
+        403: {"description": "Analysis does not belong to the authenticated user"},
+        404: {"description": "Analysis not found"},
+    },
+)
+def update_analysis(
+    project_id: int,
+    analysis_id: int,
+    update: CodeAnalysisUpdateRequest,
+    current_username: Annotated[str, Depends(get_current_username)],
+) -> SavedAnalysisSummary:
+    """Update editable fields on a code analysis."""
+    with get_session() as session:
+        analysis = (
+            session.query(CodeAnalysis)
+            .filter(CodeAnalysis.id == analysis_id, CodeAnalysis.project_id == project_id)
+            .first()
+        )
+        if analysis is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analysis not found.")
+
+        # Verify the authenticated user owns this analysis
+        user = session.query(User).filter(User.username == current_username).first()
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User not found.")
+        link = (
+            session.query(UserCodeAnalysis)
+            .filter(
+                UserCodeAnalysis.analysis_id == analysis_id, UserCodeAnalysis.user_id == user.id
+            )
+            .first()
+        )
+        if link is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only edit your own analyses.",
+            )
+
+        if update.language is not None:
+            analysis.language = update.language
+        if update.summary_text is not None:
+            analysis.summary_text = update.summary_text
+        metrics_patch = {
+            k: getattr(update, k)
+            for k in (
+                "resume_bullets",
+                "ai_bullets",
+                "score_breakdown",
+                "skill_timeline",
+                "tools",
+                "practices",
+                "other_languages",
+            )
+            if getattr(update, k) is not None
+        }
+        if metrics_patch:
+            try:
+                metrics = json.loads(analysis.metrics_json) if analysis.metrics_json else {}
+            except Exception:
+                metrics = {}
+            metrics.update(metrics_patch)
+            analysis.metrics_json = json.dumps(metrics)
+
+        session.flush()
+
+        try:
+            m2 = json.loads(analysis.metrics_json) if analysis.metrics_json else {}
+        except Exception:
+            m2 = {}
+
+        def _sl(val: Any) -> list[str] | None:
+            return [str(x) for x in val if x] or None if isinstance(val, list) else None
+
+        return SavedAnalysisSummary(
+            id=analysis.id,
+            language=analysis.language,
+            summary_text=analysis.summary_text,
+            resume_bullets=_sl(m2.get("resume_bullets")),
+            ai_bullets=_sl(m2.get("ai_bullets")),
+            ai_warning=m2.get("ai_warning"),
+            skill_timeline=m2.get("skill_timeline")
+            if isinstance(m2.get("skill_timeline"), list)
+            else None,
+            score_breakdown=m2.get("score_breakdown")
+            if isinstance(m2.get("score_breakdown"), dict)
+            else None,
+            git=m2.get("git") if isinstance(m2.get("git"), dict) else None,
+            tools=_sl(m2.get("tools")),
+            practices=_sl(m2.get("practices")),
+            other_languages=_sl(m2.get("other_languages")),
+            duration=m2.get("duration"),
+            user_role=m2.get("user_role"),
+            user_role_types=m2.get("user_role_types")
+            if isinstance(m2.get("user_role_types"), dict)
+            else None,
+            user_contribution_percentage=m2.get("user_contribution_percentage"),
+            role_justification=m2.get("role_justification"),
+            created_at=analysis.created_at,
         )
 
 
@@ -669,7 +982,10 @@ async def upload_project_zip(
     },
 )
 def analyze_project(
-    project_id: int, use_ai: bool = False, force: bool = False
+    project_id: int,
+    current_username: Annotated[str, Depends(get_current_username)],
+    use_ai: bool = False,
+    force: bool = False,
 ) -> ProjectAnalysisResult:
     with get_session() as session:
         project = session.query(Project).filter(Project.id == project_id).first()
@@ -708,12 +1024,56 @@ def analyze_project(
                 )
                 return cached_response
 
-        response, fingerprint = _analyze_project_from_store(project, upload_ids, use_ai)
+        response, fingerprint = _analyze_project_from_store(
+            project, upload_ids, use_ai, current_username=current_username
+        )
         project.importance_score = response.importance_score
         project.user_role = response.user_role
         project.user_contribution_percentage = response.user_contribution_percentage
+        project.role_justification = response.role_justification
+        project.user_role_types = response.user_role_types
+        if response.user_role_types is not None:
+            flag_modified(project, "user_role_types")
         save_skills_to_db(session, project.id, response.tools, response.practices)
-        session.flush()
+
+        # The pipeline's save_code_analysis_to_db already created a CodeAnalysis record
+        # (and linked it to the user if the user exists). Enrich its metrics_json with
+        # the full API response data (bullets, git, score breakdown, etc.) so that
+        # GET /api/projects/saved/{username} can return the complete payload.
+        code_analysis = (
+            session.query(CodeAnalysis)
+            .filter(CodeAnalysis.project_id == project.id)
+            .order_by(CodeAnalysis.id.desc())
+            .first()
+        )
+        if code_analysis is not None:
+            code_analysis.metrics_json = json.dumps(
+                {
+                    "language": response.language,
+                    "framework": response.framework,
+                    "other_languages": list(response.other_languages or []),
+                    "tools": list(response.tools or []),
+                    "practices": list(response.practices or []),
+                    "score_breakdown": response.score_breakdown or {},
+                    "resume_bullets": list(response.resume_bullets or []),
+                    "ai_bullets": list(response.ai_bullets or []),
+                    "ai_warning": response.ai_warning,
+                    "skill_timeline": [
+                        e.model_dump() if hasattr(e, "model_dump") else e
+                        for e in (response.skill_timeline or [])
+                    ],
+                    "git": response.git.model_dump() if response.git else None,
+                    "duration": response.duration,
+                    "collaborators_display": response.collaborators_display,
+                    "contribution_summary": response.contribution_summary,
+                    "importance_score": response.importance_score,
+                    "user_role": response.user_role,
+                    "user_contribution_percentage": response.user_contribution_percentage,
+                    "role_justification": response.role_justification,
+                    "user_role_types": response.user_role_types,
+                }
+            )
+
         write_analysis_cache(project.id, fingerprint, response.model_dump())
         return response
 

@@ -122,7 +122,7 @@ async function requestWithForm(method, path, formData, signal) {
 
 async function requestBinary(method, path, body, signal) {
   const headers = { 'Content-Type': 'application/json' };
-  if (_username) headers['X-Username'] = _username;
+  if (_token) headers['Authorization'] = `Bearer ${_token}`;
 
   const opts = {
     method,
@@ -216,8 +216,8 @@ contextBridge.exposeInMainWorld('api', {
     request('DELETE', `/api/users/${username}/educations/${educationId}`),
 
   // Projects
-  getProjects: () =>
-    request('GET', '/api/projects/'),
+  getProjects: (qs = '') =>
+    request('GET', `/api/projects/${qs}`),
 
   getProject: (projectId) =>
     request('GET', `/api/projects/${projectId}`),
@@ -257,6 +257,12 @@ contextBridge.exposeInMainWorld('api', {
 
   rerankProjects: (data) =>
     request('POST', '/api/projects/rerank', data),
+
+  getSavedProjects: (username) =>
+    request('GET', `/api/projects/saved/${encodeURIComponent(username)}`),
+
+  updateAnalysis: (projectId, analysisId, data) =>
+    request('PATCH', `/api/projects/${projectId}/analyses/${analysisId}`, data),
 
   // Project scoring config
   getScoreConfig: () =>
