@@ -36,6 +36,8 @@ const UPLOAD_MESSAGES = {
     'Mapping file tree…',
     'Counting contributions…',
   ],
+}
+
 function getProjectCount(payload) {
   if (!payload) {
     return 0
