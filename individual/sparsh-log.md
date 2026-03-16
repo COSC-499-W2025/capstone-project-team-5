@@ -7,6 +7,42 @@
 
 # TERM2 Logs - Sparsh Khanna
 ---
+## Week 10 | March 8 - March 15, 2026
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+![](WEEK10.png)
+</details>
+### Tasks worked on
+
+- Logout Functionality and Improved Auth Logic [PR#388](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/388)
+- Dashboard Progress Bar & Upload UX Improvements [PR#392](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/392)
+- Fixed upload bug on the Dashboard page.
+- Reviewed teammates' code.
+
+### Personal Contributions
+
+- **Logout Functionality and Improved Auth Logic**
+In this pull request I added logout functionality to the Electron frontend and improved the overall auth flow. This involved updating `useAppBootstrap.js` to handle logout state transitions, wiring up a logout option in the `Sidebar`, updating `AppShell` and `AppRoot` to respond to auth state changes, refactoring `ConsentSetup.jsx` for a cleaner UX, and updating `preload.js` to expose the necessary IPC methods. I also significantly expanded the DOM test suite (`App.dom.test.jsx`, `ConsentSetup.dom.test.jsx`, `api.test.js`) to cover the new logout and auth flows.
+
+- **Dashboard Progress Bar & Upload UX Improvements**
+On the `Progress-feedback` branch I improved the upload experience on the `DashboardPage`. This included adding an asymptotic progress bar with easing (so it slows as it approaches 95% rather than freezing at a hard cap), introducing phase-aware cycling messages (reading / uploading / scanning) that update at intervals calibrated to file size, and fixing a bug where uploads were silently failing. I also patched the backend `projects.py` route to handle the edge case that was causing uploads not to work.
+
+### Tests Added
+- [PR#388](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/388)
+  - `frontend/tests/App.dom.test.jsx` — new DOM tests covering logout flow and auth state transitions
+  - `frontend/tests/ConsentSetup.dom.test.jsx` — expanded tests for the updated ConsentSetup component
+  - `frontend/tests/api.test.js` — additional tests covering preload API changes
+
+### PRs Reviewed
+- [PR#389](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/389) *(User Profile UI)*
+- [PR#395](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/395) *(Resume main backfill)*
+
+### Additional Details
+
+This week's focus was on the frontend — shipping logout functionality and auth improvements (PR#388), then pivoting to improving the dashboard upload UX with a proper progress bar, phase-aware messaging, and fixing a broken upload flow that was silently failing on both the frontend and backend.
+
+---
 ## Week 9 | March 1 - March 8, 2026
 
 <details>
