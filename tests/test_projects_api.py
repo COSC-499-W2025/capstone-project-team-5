@@ -7,6 +7,7 @@ from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
+from conftest import auth_headers
 from fastapi.testclient import TestClient
 
 from capstone_project_team_5.api.main import app
@@ -21,7 +22,6 @@ from capstone_project_team_5.data.models import (
 )
 from capstone_project_team_5.services.content_store import get_manifests_root, get_objects_root
 from capstone_project_team_5.services.upload_storage import get_upload_zip_path
-from conftest import auth_headers
 
 
 def _create_zip_bytes(entries: list[tuple[str, bytes]]) -> bytes:

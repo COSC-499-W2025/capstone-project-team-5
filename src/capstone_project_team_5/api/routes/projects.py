@@ -39,12 +39,12 @@ from capstone_project_team_5.api.schemas.projects import (
     ProjectReRankResponse,
     ProjectsAnalyzeAllResponse,
     ProjectSummary,
-    SavedAnalysisSummary,
-    SavedProjectSummary,
-    SavedUploadSummary,
     ProjectUpdateRequest,
     ProjectUploadAction,
     ProjectUploadResponse,
+    SavedAnalysisSummary,
+    SavedProjectSummary,
+    SavedUploadSummary,
     ScoreConfig,
 )
 from capstone_project_team_5.consent_tool import ConsentTool
