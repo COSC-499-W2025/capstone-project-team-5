@@ -374,3 +374,30 @@ This past week I focused mainly on frontend upload work. I connected the upload 
 | Team Meeting | Not Yet Started | Review and align on Milestone priorities. |
 | Further Code Contribution | Not Yet Started | Write code for new feature based on team meeting. |
 </details>
+
+## T2 - Week 10 | 08  March 2026 - 15 March 2026
+
+<details>
+  <summary><h3></h3></summary>
+
+
+
+This past week I focused on frontend follow-up work and UI feature implementation. I fixed a few minor bugs from last week's frontend code, implemented dashboard statistic cards, and built out the Skills page frontend. I also added DOM tests for these updates to improve confidence in rendering and interaction behavior as we continue toward peer-testing and final integration.
+
+### Previous Weeks:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Team Meetings | Completed | Agreed on frontend priorities and prepared for peer-testing. |
+| Frontend Bug Fixes | Completed | Resolved minor issues from last week's frontend changes. |
+| Dashboard Stat Cards | Completed | Implemented frontend code for dashboard summary/stat cards. |
+| Skills Page | Completed | Implemented frontend code for the Skills page. |
+| DOM Tests | Completed | Added DOM tests for dashboard cards and Skills page behavior. |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Peer-testing | Not Yet Started | Conduct peer-testing and gather information for final push. |
+| Team Meetings | Not Yet Started | Decide on changes and priorities based on peer-testing. |
+| Further Code Contribution | Not Yet Started | Write code based on team meetings. |
+</details>
