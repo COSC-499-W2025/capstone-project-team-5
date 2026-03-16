@@ -381,7 +381,6 @@ This past week I focused mainly on frontend upload work. I connected the upload 
   <summary><h3></h3></summary>
 
 
-
 This past week I focused on frontend follow-up work and UI feature implementation. I fixed a few minor bugs from last week's frontend code, implemented dashboard statistic cards, and built out the Skills page frontend. I also added DOM tests for these updates to improve confidence in rendering and interaction behavior as we continue toward peer-testing and final integration.
 
 ### Previous Weeks:
