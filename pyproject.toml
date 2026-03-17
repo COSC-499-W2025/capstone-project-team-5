@@ -23,6 +23,7 @@ dependencies = [
     "uvicorn[standard]>=0.40.0",
     "python-multipart>=0.0.21",
     "pyjwt>=2.8.0",
+    "psycopg2-binary>=2.9.9",
     "pylatex>=1.4.2",
 ]
 
