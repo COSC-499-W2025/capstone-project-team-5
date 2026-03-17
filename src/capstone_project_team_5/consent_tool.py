@@ -10,10 +10,20 @@ from __future__ import annotations
 
 from typing import Any
 
-import easygui as eg
+try:
+    import easygui as eg
+except (ImportError, ModuleNotFoundError):
+    eg = None  # type: ignore[assignment]  # GUI unavailable in headless environments
 
 from capstone_project_team_5.data.db import get_session
 from capstone_project_team_5.data.models import ConsentRecord
+
+
+def _require_gui() -> None:
+    """Raise a clear error if GUI is unavailable (headless Docker environments)."""
+    if eg is None:
+        msg = "GUI (easygui/tkinter) is not available in this environment"
+        raise RuntimeError(msg)
 
 
 class ConsentTool:
@@ -150,6 +160,7 @@ Requires API keys. You can configure this later in settings."""
         Returns:
             True if user agrees (selects first choice), False otherwise.
         """
+        _require_gui()
         choice = eg.buttonbox(text, title=title, choices=choices)
         # First choice is agreement, any other choice or None is decline
         return choice == choices[0] if choice is not None else False

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import easygui as eg
-
 from capstone_project_team_5.models.upload import DirectoryNode, FileNode, ZipUploadResult
 
 
@@ -15,6 +13,8 @@ def prompt_for_zip_file() -> Path | None:
     Returns:
         Path to selected zip file, or None if cancelled.
     """
+    import easygui as eg
+
     zip_path_str = eg.fileopenbox(
         msg="Select a .zip file containing your project",
         title="Select Project Archive",
