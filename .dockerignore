@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.ruff_cache/
+.pytest_cache/
+.git/
+.github/
+*.db
+.zip2job_uploads/
+.zip2job_artifacts/
+.vscode/
+.idea/
+docs/
+frontend_dist/
+frontend/node_modules/
+frontend/dist/
