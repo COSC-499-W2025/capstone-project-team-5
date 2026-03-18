@@ -31,11 +31,10 @@ node_modules/
 dist/
 build/
 *.bundle.js
-lib/
-es/
-esm/
-mjs/
-cjs/
+/es/
+/esm/
+/mjs/
+/cjs/
 
 # Optional Haxe output directories
 # .haxe_cache/

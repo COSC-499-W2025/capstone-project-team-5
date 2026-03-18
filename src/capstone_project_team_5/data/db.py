@@ -31,9 +31,16 @@ _SessionLocal: sessionmaker[Session] | None = None
 
 
 def get_database_url() -> str:
-    """Return the database URL, allowing overrides via environment variable."""
-    env_url = os.getenv("DB_URL")
+    """Return the database URL, allowing overrides via environment variable.
+
+    Checks DATABASE_URL (Railway auto-injects for PostgreSQL plugin),
+    then DB_URL, then falls back to a local SQLite file.
+    """
+    env_url = os.getenv("DATABASE_URL") or os.getenv("DB_URL")
     if env_url:
+        # Railway injects postgres:// but SQLAlchemy 2.x requires postgresql://
+        if env_url.startswith("postgres://"):
+            env_url = env_url.replace("postgres://", "postgresql://", 1)
         return env_url
 
     project_root = Path(__file__).resolve().parents[3]
@@ -45,7 +52,10 @@ def _get_engine() -> Engine:
     global _engine
     if _engine is None:
         database_url = get_database_url()
-        _engine = create_engine(database_url, echo=False, future=True)
+        kwargs: dict = {"echo": False, "future": True}
+        if not database_url.startswith("sqlite"):
+            kwargs.update(pool_size=5, max_overflow=10)
+        _engine = create_engine(database_url, **kwargs)
         # Lazy initialization: create tables on first engine access
         _ensure_tables_created()
     return _engine
