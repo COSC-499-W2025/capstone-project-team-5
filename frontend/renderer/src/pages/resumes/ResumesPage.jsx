@@ -478,6 +478,179 @@ export default function ResumesPage() {
     }
   }
 
+  function renderForm() {
+    return (
+      <form onSubmit={handleSave} className="card space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-bold">
+              {editingProjectId ? 'Edit Resume Entry' : 'Build Resume Entry'}
+            </h2>
+            <p className="mt-1 text-xs text-muted">
+              Save polished project bullets now. The PDF preview uses every saved entry.
+            </p>
+          </div>
+          <button type="button" className="btn-ghost text-xs" onClick={cancelForm}>
+            Cancel
+          </button>
+        </div>
+
+        <InlineError message={formError} />
+
+        {!editingProjectId && (
+          <div className="rounded-lg border border-border bg-elevated/70 p-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-xs font-semibold text-ink">Draft Assist</div>
+                <p className="mt-1 text-2xs leading-relaxed text-muted">
+                  Use AI when consent allows it, otherwise build from local project analysis.
+                </p>
+              </div>
+              <label className="flex items-center gap-2 text-xs text-ink">
+                <input
+                  type="checkbox"
+                  checked={useAiAssist}
+                  onChange={(event) => setUseAiAssist(event.target.checked)}
+                  disabled={!llmConfig?.is_allowed || draftLoading}
+                />
+                Use AI Assist
+              </label>
+            </div>
+            <p className="mt-2 font-mono text-2xs uppercase tracking-widest text-muted">
+              {llmConfig?.is_allowed
+                ? `AI ready${llmConfig.model_preferences?.[0] ? ` · ${llmConfig.model_preferences[0]}` : ''}`
+                : 'Local analysis only'}
+            </p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {editingProjectId ? (
+            <div className="rounded-lg border border-border bg-elevated/60 px-3 py-2">
+              <div className="text-2xs uppercase tracking-widest text-muted">Project</div>
+              <div className="mt-1 text-sm font-semibold text-ink">{form.project_name}</div>
+            </div>
+          ) : (
+            <label className="space-y-1">
+              <span className="font-mono text-2xs uppercase tracking-widest text-muted">
+                Project
+              </span>
+              <select
+                value={form.project_id}
+                onChange={(event) => hydrateDraft(event.target.value)}
+                className="input"
+                disabled={draftLoading || availableProjects.length === 0}
+              >
+                <option value="">Choose a project…</option>
+                {availableProjects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <label className="space-y-1">
+            <span className="font-mono text-2xs uppercase tracking-widest text-muted">
+              Title
+            </span>
+            <input
+              className="input"
+              value={form.title}
+              onChange={(event) => updateField('title', event.target.value)}
+              placeholder="Project title for the resume"
+            />
+          </label>
+        </div>
+
+        <label className="space-y-1">
+          <span className="font-mono text-2xs uppercase tracking-widest text-muted">
+            Description
+          </span>
+          <textarea
+            rows={3}
+            className="input w-full"
+            value={form.description}
+            onChange={(event) => updateField('description', event.target.value)}
+            placeholder="Short summary for the entry"
+          />
+        </label>
+
+        <label className="space-y-1">
+          <span className="font-mono text-2xs uppercase tracking-widest text-muted">
+            Technologies
+          </span>
+          <input
+            className="input"
+            value={form.analysis_snapshot}
+            onChange={(event) => updateField('analysis_snapshot', event.target.value)}
+            placeholder="React, FastAPI, PostgreSQL"
+          />
+        </label>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="font-mono text-2xs uppercase tracking-widest text-muted">
+                Bullet Points
+              </div>
+              {draftStatus && <p className="mt-1 text-2xs text-muted">{draftStatus}</p>}
+            </div>
+            <button type="button" className="btn-ghost text-xs" onClick={addBullet}>
+              + Add Bullet
+            </button>
+          </div>
+
+          {draftLoading && (
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-elevated/60 px-3 py-3 text-xs text-muted">
+              <span className="spinner" />
+              Building a draft from project analysis…
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {form.bullet_points.map((bullet, index) => (
+              <div key={`${index}-${bullet.length}`} className="flex items-start gap-3">
+                <div className="pt-2 font-mono text-2xs uppercase tracking-widest text-muted">
+                  {index + 1}
+                </div>
+                <textarea
+                  rows={3}
+                  className="input w-full"
+                  value={bullet}
+                  onChange={(event) => updateBullet(index, event.target.value)}
+                  placeholder="Describe the project impact, scope, and results."
+                />
+                <button
+                  type="button"
+                  className="btn-ghost text-xs"
+                  onClick={() => removeBullet(index)}
+                  disabled={form.bullet_points.length === 1}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="submit"
+            disabled={saving || draftLoading}
+            className="btn-primary text-xs disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {saving ? 'Saving…' : editingProjectId ? 'Save Changes' : 'Save Resume Entry'}
+          </button>
+          <button type="button" className="btn-ghost text-xs" onClick={cancelForm}>
+            Cancel
+          </button>
+        </div>
+      </form>
+    )
+  }
+
   return (
     <div className="animate-fade-up space-y-6">
       <PageHeader
@@ -518,176 +691,7 @@ export default function ResumesPage() {
           {/* ── Entries tab ── */}
           {activeView === 'entries' && (
             <>
-              {showForm && (
-                <form onSubmit={handleSave} className="card space-y-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h2 className="text-sm font-bold">
-                        {editingProjectId ? 'Edit Resume Entry' : 'Build Resume Entry'}
-                      </h2>
-                      <p className="mt-1 text-xs text-muted">
-                        Save polished project bullets now. The PDF preview uses every saved entry.
-                      </p>
-                    </div>
-                    <button type="button" className="btn-ghost text-xs" onClick={cancelForm}>
-                      Cancel
-                    </button>
-                  </div>
-
-                  <InlineError message={formError} />
-
-                  {!editingProjectId && (
-                    <div className="rounded-lg border border-border bg-elevated/70 p-3">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="text-xs font-semibold text-ink">Draft Assist</div>
-                          <p className="mt-1 text-2xs leading-relaxed text-muted">
-                            Use AI when consent allows it, otherwise build from local project analysis.
-                          </p>
-                        </div>
-                        <label className="flex items-center gap-2 text-xs text-ink">
-                          <input
-                            type="checkbox"
-                            checked={useAiAssist}
-                            onChange={(event) => setUseAiAssist(event.target.checked)}
-                            disabled={!llmConfig?.is_allowed || draftLoading}
-                          />
-                          Use AI Assist
-                        </label>
-                      </div>
-                      <p className="mt-2 font-mono text-2xs uppercase tracking-widest text-muted">
-                        {llmConfig?.is_allowed
-                          ? `AI ready${llmConfig.model_preferences?.[0] ? ` · ${llmConfig.model_preferences[0]}` : ''}`
-                          : 'Local analysis only'}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    {editingProjectId ? (
-                      <div className="rounded-lg border border-border bg-elevated/60 px-3 py-2">
-                        <div className="text-2xs uppercase tracking-widest text-muted">Project</div>
-                        <div className="mt-1 text-sm font-semibold text-ink">{form.project_name}</div>
-                      </div>
-                    ) : (
-                      <label className="space-y-1">
-                        <span className="font-mono text-2xs uppercase tracking-widest text-muted">
-                          Project
-                        </span>
-                        <select
-                          value={form.project_id}
-                          onChange={(event) => hydrateDraft(event.target.value)}
-                          className="input"
-                          disabled={draftLoading || availableProjects.length === 0}
-                        >
-                          <option value="">Choose a project…</option>
-                          {availableProjects.map((project) => (
-                            <option key={project.id} value={project.id}>
-                              {project.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    )}
-
-                    <label className="space-y-1">
-                      <span className="font-mono text-2xs uppercase tracking-widest text-muted">
-                        Title
-                      </span>
-                      <input
-                        className="input"
-                        value={form.title}
-                        onChange={(event) => updateField('title', event.target.value)}
-                        placeholder="Project title for the resume"
-                      />
-                    </label>
-                  </div>
-
-                  <label className="space-y-1">
-                    <span className="font-mono text-2xs uppercase tracking-widest text-muted">
-                      Description
-                    </span>
-                    <textarea
-                      rows={3}
-                      className="input w-full"
-                      value={form.description}
-                      onChange={(event) => updateField('description', event.target.value)}
-                      placeholder="Short summary for the entry"
-                    />
-                  </label>
-
-                  <label className="space-y-1">
-                    <span className="font-mono text-2xs uppercase tracking-widest text-muted">
-                      Technologies
-                    </span>
-                    <input
-                      className="input"
-                      value={form.analysis_snapshot}
-                      onChange={(event) => updateField('analysis_snapshot', event.target.value)}
-                      placeholder="React, FastAPI, PostgreSQL"
-                    />
-                  </label>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <div className="font-mono text-2xs uppercase tracking-widest text-muted">
-                          Bullet Points
-                        </div>
-                        {draftStatus && <p className="mt-1 text-2xs text-muted">{draftStatus}</p>}
-                      </div>
-                      <button type="button" className="btn-ghost text-xs" onClick={addBullet}>
-                        + Add Bullet
-                      </button>
-                    </div>
-
-                    {draftLoading && (
-                      <div className="flex items-center gap-2 rounded-lg border border-border bg-elevated/60 px-3 py-3 text-xs text-muted">
-                        <span className="spinner" />
-                        Building a draft from project analysis…
-                      </div>
-                    )}
-
-                    <div className="space-y-3">
-                      {form.bullet_points.map((bullet, index) => (
-                        <div key={`${index}-${bullet.length}`} className="flex items-start gap-3">
-                          <div className="pt-2 font-mono text-2xs uppercase tracking-widest text-muted">
-                            {index + 1}
-                          </div>
-                          <textarea
-                            rows={3}
-                            className="input w-full"
-                            value={bullet}
-                            onChange={(event) => updateBullet(index, event.target.value)}
-                            placeholder="Describe the project impact, scope, and results."
-                          />
-                          <button
-                            type="button"
-                            className="btn-ghost text-xs"
-                            onClick={() => removeBullet(index)}
-                            disabled={form.bullet_points.length === 1}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="submit"
-                      disabled={saving || draftLoading}
-                      className="btn-primary text-xs disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      {saving ? 'Saving…' : editingProjectId ? 'Save Changes' : 'Save Resume Entry'}
-                    </button>
-                    <button type="button" className="btn-ghost text-xs" onClick={cancelForm}>
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              )}
+              {showForm && !editingProjectId && renderForm()}
 
               {loading ? (
                 <div className="flex justify-center py-12">
@@ -696,6 +700,10 @@ export default function ResumesPage() {
               ) : resumes.length > 0 ? (
                 <div className="space-y-4">
                   {resumes.map((item) => {
+                    if (showForm && editingProjectId === item.project_id) {
+                      return <div key={item.project_id}>{renderForm()}</div>
+                    }
+
                     const snapshot = item.analysis_snapshot ?? []
                     const bulletCount = item.bullet_points?.length ?? 0
 
