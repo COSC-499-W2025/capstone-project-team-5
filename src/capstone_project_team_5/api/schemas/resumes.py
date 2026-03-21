@@ -21,6 +21,7 @@ class ResumeProjectResponse(BaseModel):
     description: str | None = None
     analysis_snapshot: list[str] = []
     bullet_points: list[str] = []
+    bullet_source: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -33,6 +34,7 @@ class ResumeProjectCreateRequest(BaseModel):
     description: str = Field("", description="Custom description (e.g. tech stack summary)")
     bullet_points: list[str] = Field(default_factory=list, description="Resume bullet points")
     analysis_snapshot: list[str] = Field(default_factory=list, description="Skills/tools snapshot")
+    bullet_source: str | None = Field(None, description="Source of bullet points: 'AI' or 'Local'")
 
 
 class ResumeProjectUpdateRequest(BaseModel):
@@ -45,6 +47,7 @@ class ResumeProjectUpdateRequest(BaseModel):
     description: str | None = Field(None, description="Custom description")
     bullet_points: list[str] | None = Field(None, description="Resume bullet points")
     analysis_snapshot: list[str] | None = Field(None, description="Skills/tools snapshot")
+    bullet_source: str | None = Field(None, description="Source of bullet points")
 
 
 class ResumeGenerateRequest(BaseModel):

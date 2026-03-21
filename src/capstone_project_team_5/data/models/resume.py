@@ -66,6 +66,9 @@ class ResumeProject(Base):
     # Stores snapshot of key analysis such as practices and tools (stored as JSON string)
     analysis_snapshot: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Source of bullet points: "AI" or "Local"
+    bullet_source: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )

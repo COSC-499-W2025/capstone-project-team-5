@@ -10,6 +10,7 @@ import {
   EMPTY_RESUME_FORM,
   RESUME_TEMPLATE_OPTIONS,
   buildResumeDraft,
+  formatBulletSource,
   formatResumeDate,
   getAvailableResumeProjects,
   hasResumeProfile,
@@ -257,6 +258,7 @@ export default function ResumesPage() {
       description: item.description ?? '',
       analysis_snapshot: (item.analysis_snapshot ?? []).join(', '),
       bullet_points: item.bullet_points?.length ? item.bullet_points : [''],
+      bullet_source: item.bullet_source ?? '',
     })
     setDraftStatus('')
     setFormError('')
@@ -321,6 +323,7 @@ export default function ResumesPage() {
         description: '',
         analysis_snapshot: '',
         bullet_points: [''],
+        bullet_source: '',
       }))
       return
     }
@@ -391,6 +394,7 @@ export default function ResumesPage() {
       description: form.description.trim(),
       bullet_points: nextBullets,
       analysis_snapshot: parseSnapshotInput(form.analysis_snapshot),
+      bullet_source: form.bullet_source || undefined,
     }
 
     try {
@@ -705,18 +709,30 @@ export default function ResumesPage() {
                     }
 
                     const snapshot = item.analysis_snapshot ?? []
-                    const bulletCount = item.bullet_points?.length ?? 0
+                    const sourceLabel = formatBulletSource(item.bullet_source)
 
                     return (
                       <article key={item.project_id} className="card space-y-4">
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div className="min-w-0">
-                            <h2 className="truncate text-lg font-extrabold tracking-tight text-ink">
-                              {item.title || item.project_name}
-                            </h2>
+                            <div className="flex items-center gap-2.5">
+                              <h2 className="truncate text-lg font-extrabold tracking-tight text-ink">
+                                {item.title || item.project_name}
+                              </h2>
+                              {sourceLabel && (
+                                <span
+                                  className={`shrink-0 rounded border px-2 py-0.5 font-mono text-2xs uppercase tracking-widest ${
+                                    item.bullet_source === 'AI'
+                                      ? 'border-violet-400/30 bg-violet-500/10 text-violet-300'
+                                      : 'border-cyan-400/30 bg-cyan-500/10 text-cyan-300'
+                                  }`}
+                                >
+                                  {sourceLabel}
+                                </span>
+                              )}
+                            </div>
                             <div className="mt-1 flex flex-wrap items-center gap-3 font-mono text-2xs uppercase tracking-widest text-muted">
                               <span>{item.project_name}</span>
-                              <span>{bulletCount} bullets</span>
                               <span>Updated {formatResumeDate(item.updated_at)}</span>
                             </div>
                           </div>

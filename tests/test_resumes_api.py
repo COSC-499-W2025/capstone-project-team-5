@@ -110,6 +110,7 @@ def _create_resume(
     description: str = "A cool project",
     bullet_points: list[str] | None = None,
     analysis_snapshot: list[str] | None = None,
+    bullet_source: str | None = None,
 ) -> dict:
     """Helper to POST a resume project and return the JSON response."""
     payload: dict = {
@@ -121,6 +122,8 @@ def _create_resume(
         payload["bullet_points"] = bullet_points
     if analysis_snapshot is not None:
         payload["analysis_snapshot"] = analysis_snapshot
+    if bullet_source is not None:
+        payload["bullet_source"] = bullet_source
     resp = client.post(
         f"/api/users/{username}/resumes",
         json=payload,
@@ -588,3 +591,79 @@ class TestGenerateResumePdf:
             headers=auth_headers("otheruser"),
         )
         assert response.status_code == 403
+
+
+# ---- Bullet Source ----
+
+
+class TestBulletSource:
+    """Tests for bullet_source field in resume API."""
+
+    def test_create_with_bullet_source(
+        self, client: TestClient, test_user: tuple[str, int], test_project: int
+    ) -> None:
+        username, _ = test_user
+        response = client.post(
+            f"/api/users/{username}/resumes",
+            json={
+                "project_id": test_project,
+                "title": "AI Project",
+                "bullet_points": ["Used AI"],
+                "bullet_source": "AI",
+            },
+            headers=auth_headers(username),
+        )
+        assert response.status_code == 201
+        assert response.json()["bullet_source"] == "AI"
+
+    def test_get_returns_bullet_source(
+        self, client: TestClient, test_user: tuple[str, int], test_project: int
+    ) -> None:
+        username, _ = test_user
+        _create_resume(client, username, test_project, title="With Source", bullet_source="Local")
+        response = client.get(
+            f"/api/users/{username}/resumes/{test_project}",
+            headers=auth_headers(username),
+        )
+        assert response.status_code == 200
+        assert response.json()["bullet_source"] == "Local"
+
+    def test_list_returns_bullet_source(
+        self, client: TestClient, test_user: tuple[str, int], test_project: int
+    ) -> None:
+        username, _ = test_user
+        _create_resume(client, username, test_project, title="Listed", bullet_source="AI")
+        response = client.get(
+            f"/api/users/{username}/resumes",
+            headers=auth_headers(username),
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["bullet_source"] == "AI"
+
+    def test_patch_preserves_bullet_source(
+        self, client: TestClient, test_user: tuple[str, int], test_project: int
+    ) -> None:
+        username, _ = test_user
+        _create_resume(client, username, test_project, title="Original", bullet_source="AI")
+        response = client.patch(
+            f"/api/users/{username}/resumes/{test_project}",
+            json={"title": "Updated Title"},
+            headers=auth_headers(username),
+        )
+        assert response.status_code == 200
+        assert response.json()["bullet_source"] == "AI"
+        assert response.json()["title"] == "Updated Title"
+
+    def test_create_without_bullet_source_returns_null(
+        self, client: TestClient, test_user: tuple[str, int], test_project: int
+    ) -> None:
+        username, _ = test_user
+        response = client.post(
+            f"/api/users/{username}/resumes",
+            json={"project_id": test_project, "title": "No Source"},
+            headers=auth_headers(username),
+        )
+        assert response.status_code == 201
+        assert response.json()["bullet_source"] is None
