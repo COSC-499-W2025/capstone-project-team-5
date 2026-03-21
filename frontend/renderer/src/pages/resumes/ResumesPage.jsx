@@ -257,6 +257,7 @@ export default function ResumesPage() {
       description: item.description ?? '',
       analysis_snapshot: (item.analysis_snapshot ?? []).join(', '),
       bullet_points: item.bullet_points?.length ? item.bullet_points : [''],
+      bullet_source: item.bullet_source ?? '',
     })
     setDraftStatus('')
     setFormError('')
@@ -321,6 +322,7 @@ export default function ResumesPage() {
         description: '',
         analysis_snapshot: '',
         bullet_points: [''],
+        bullet_source: '',
       }))
       return
     }
@@ -391,6 +393,7 @@ export default function ResumesPage() {
       description: form.description.trim(),
       bullet_points: nextBullets,
       analysis_snapshot: parseSnapshotInput(form.analysis_snapshot),
+      bullet_source: form.bullet_source || undefined,
     }
 
     try {

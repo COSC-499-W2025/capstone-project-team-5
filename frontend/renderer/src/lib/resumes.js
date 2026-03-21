@@ -13,6 +13,7 @@ export const EMPTY_RESUME_FORM = {
   description: '',
   analysis_snapshot: '',
   bullet_points: [''],
+  bullet_source: '',
 }
 
 function compact(values) {
@@ -102,5 +103,6 @@ export function buildResumeDraft(project, analysis) {
     description: summaryPrefix,
     analysis_snapshot: snapshot.join(', '),
     bullet_points: bulletPoints.length > 0 ? bulletPoints : [''],
+    bullet_source: analysis?.resume_bullet_source ?? '',
   }
 }

@@ -398,6 +398,41 @@ test('caches preview to localStorage and restores on remount', async () => {
   )
 })
 
+test('save payload includes bullet_source from analysis', async () => {
+  renderResumesPage({
+    analyzeProject: jest.fn().mockResolvedValue({
+      ...ANALYSIS_RESULT,
+      resume_bullet_source: 'Local',
+    }),
+  })
+
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: /\+ add resume entry/i })).toBeInTheDocument()
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: /\+ add resume entry/i }))
+  fireEvent.change(getProjectSelect(), { target: { value: '2' } })
+
+  await waitFor(() =>
+    expect(window.api.analyzeProject).toHaveBeenCalled()
+  )
+
+  await waitFor(() =>
+    expect(screen.getAllByDisplayValue('Signal Board').length).toBeGreaterThan(0)
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: /save resume entry/i }))
+
+  await waitFor(() =>
+    expect(window.api.createResume).toHaveBeenCalledWith(
+      'alice',
+      expect.objectContaining({
+        bullet_source: 'Local',
+      })
+    )
+  )
+})
+
 test('deleting all resume entries clears the cached preview', async () => {
   localStorage.setItem('resume_preview_alice', JSON.stringify({
     base64: btoa('fakepdf'),
