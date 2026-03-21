@@ -3,28 +3,43 @@
 from __future__ import annotations
 
 import pytest
+from conftest import auth_headers
 from fastapi.testclient import TestClient
 
 from capstone_project_team_5.api.main import app
 from capstone_project_team_5.data.db import get_session
-from capstone_project_team_5.data.models import Project, UploadRecord
+from capstone_project_team_5.data.models import Project, UploadRecord, User
+
+
+def _create_user(username: str) -> int:
+    with get_session() as session:
+        user = session.query(User).filter(User.username == username).first()
+        if user is None:
+            user = User(username=username, password_hash="hash")
+            session.add(user)
+            session.flush()
+        return user.id
 
 
 @pytest.fixture
 def client() -> TestClient:
     """Create a test client for the FastAPI app."""
-    return TestClient(app)
+    username = "rerank-user"
+    _create_user(username)
+    return TestClient(app, headers=auth_headers(username))
 
 
 @pytest.fixture
 def test_projects(api_db: None) -> list[int]:
     """Create test projects and return their IDs."""
+    user_id = _create_user("rerank-user")
     with get_session() as session:
         # Create an upload record first
         upload = UploadRecord(
             filename="test.zip",
             size_bytes=1000,
             file_count=50,
+            user_id=user_id,
         )
         session.add(upload)
         session.flush()
