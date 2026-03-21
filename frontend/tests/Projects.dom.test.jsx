@@ -79,6 +79,10 @@ function renderProjectsPage({
       : jest.fn().mockResolvedValue(uploadThumbnailResult),
     deleteProjectThumbnail: jest.fn().mockResolvedValue(deleteThumbnailResult),
     getProjectThumbnailUrl: jest.fn((id) => `http://localhost:8000/api/projects/${id}/thumbnail`),
+    getProjectThumbnailObjectUrl: jest.fn((id, revision) =>
+      Promise.resolve(`blob:project-thumb-${id}-${revision ?? 0}`)
+    ),
+    revokeObjectUrl: jest.fn(),
   }
   render(
     <AppContext.Provider value={{ apiOk, uploadHighlights, setUploadHighlights, analysisCache }}>
@@ -323,9 +327,9 @@ test('card gains importance score after successful analysis', async () => {
 test('displays thumbnail image on card when has_thumbnail is true', async () => {
   renderProjectsPage({ projectPayload: [ANALYZED_PROJECT] })
   await waitFor(() => expect(screen.getByText('analyzed-project')).toBeInTheDocument())
-  const img = screen.getByAltText('analyzed-project thumbnail')
+  const img = await screen.findByAltText('analyzed-project thumbnail')
   expect(img).toBeInTheDocument()
-  expect(img.src).toContain('/api/projects/2/thumbnail')
+  expect(img.src).toContain('blob:project-thumb-2-0')
 })
 
 test('does not display thumbnail image on card when has_thumbnail is false', async () => {
@@ -337,7 +341,7 @@ test('does not display thumbnail image on card when has_thumbnail is false', asy
 test('hides card thumbnail when image fails to load', async () => {
   renderProjectsPage({ projectPayload: [ANALYZED_PROJECT] })
   await waitFor(() => expect(screen.getByText('analyzed-project')).toBeInTheDocument())
-  const img = screen.getByAltText('analyzed-project thumbnail')
+  const img = await screen.findByAltText('analyzed-project thumbnail')
   fireEvent.error(img)
   await waitFor(() =>
     expect(screen.queryByAltText('analyzed-project thumbnail')).not.toBeInTheDocument()
@@ -352,7 +356,7 @@ test('shows thumbnail in drawer when project has thumbnail', async () => {
   fireEvent.click(screen.getByRole('button', { name: /analyzed-project/i }))
   await waitFor(() => expect(screen.getByLabelText('Close')).toBeInTheDocument())
   // Thumbnail image appears in both the card and the drawer
-  const imgs = screen.getAllByAltText('analyzed-project thumbnail')
+  const imgs = await screen.findAllByAltText('analyzed-project thumbnail')
   expect(imgs.length).toBeGreaterThanOrEqual(2)
 })
 
@@ -395,7 +399,7 @@ test('clearing thumbnail removes the image from card', async () => {
   renderProjectsPage({ projectPayload: [ANALYZED_PROJECT] })
   await waitFor(() => expect(screen.getByText('analyzed-project')).toBeInTheDocument())
   // Thumbnail is initially visible on the card
-  expect(screen.getByAltText('analyzed-project thumbnail')).toBeInTheDocument()
+  expect(await screen.findByAltText('analyzed-project thumbnail')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: /analyzed-project/i }))
   await waitFor(() => expect(screen.getByText('Clear Thumbnail')).toBeInTheDocument())
   fireEvent.click(screen.getByText('Clear Thumbnail'))
