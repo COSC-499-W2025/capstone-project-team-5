@@ -108,6 +108,103 @@ def multiple_projects(tmp_db):
         return user.username, project_ids
 
 
+class TestBulletSource:
+    """Tests for bullet_source column and service support."""
+
+    def test_resume_project_has_bullet_source_attribute(self, tmp_db):
+        """ResumeProject ORM model should have a bullet_source attribute."""
+        from capstone_project_team_5.data.models.resume import ResumeProject
+
+        assert hasattr(ResumeProject, "bullet_source")
+
+    def test_save_resume_with_bullet_source(self, seeded_user_project):
+        """save_resume persists bullet_source when provided."""
+        username, project_id = seeded_user_project
+        success = save_resume(
+            username=username,
+            project_id=project_id,
+            title="AI Resume",
+            description="desc",
+            bullet_points=["b1"],
+            analysis_snapshot=["Python"],
+            bullet_source="AI",
+        )
+        assert success is True
+        resume = get_resume(username, project_id)
+        assert resume["bullet_source"] == "AI"
+
+    def test_save_resume_bullet_source_defaults_none(self, seeded_user_project):
+        """bullet_source defaults to None when omitted."""
+        username, project_id = seeded_user_project
+        save_resume(
+            username=username,
+            project_id=project_id,
+            title="No source",
+            description="desc",
+            bullet_points=["b1"],
+            analysis_snapshot=["Python"],
+        )
+        resume = get_resume(username, project_id)
+        assert resume["bullet_source"] is None
+
+    def test_get_resume_returns_bullet_source(self, seeded_user_project):
+        """get_resume includes bullet_source in returned dict."""
+        username, project_id = seeded_user_project
+        save_resume(
+            username=username,
+            project_id=project_id,
+            title="Local Resume",
+            description="desc",
+            bullet_points=["b1"],
+            analysis_snapshot=["Python"],
+            bullet_source="Local",
+        )
+        resume = get_resume(username, project_id)
+        assert "bullet_source" in resume
+        assert resume["bullet_source"] == "Local"
+
+    def test_get_all_resumes_includes_bullet_source(self, seeded_user_project):
+        """get_all_resumes includes bullet_source in each dict."""
+        username, project_id = seeded_user_project
+        save_resume(
+            username=username,
+            project_id=project_id,
+            title="R0",
+            description="d0",
+            bullet_points=["b"],
+            analysis_snapshot=["S"],
+            bullet_source="AI",
+        )
+        resumes = get_all_resumes(username)
+        assert len(resumes) == 1
+        assert resumes[0]["bullet_source"] == "AI"
+
+    def test_update_preserves_bullet_source(self, seeded_user_project):
+        """Updating a resume preserves bullet_source when re-provided."""
+        username, project_id = seeded_user_project
+        save_resume(
+            username=username,
+            project_id=project_id,
+            title="Original",
+            description="desc",
+            bullet_points=["b1"],
+            analysis_snapshot=["Python"],
+            bullet_source="AI",
+        )
+        save_resume(
+            username=username,
+            project_id=project_id,
+            title="Updated",
+            description="desc",
+            bullet_points=["b2"],
+            analysis_snapshot=["Python"],
+            bullet_source="AI",
+        )
+        resume = get_resume(username, project_id)
+        assert resume["title"] == "Updated"
+        assert resume["bullet_source"] == "AI"
+
+
 class TestSaveResume:
     """Tests for save_resume function."""
 
