@@ -701,7 +701,6 @@ export default function ResumesPage() {
                 <div className="space-y-4">
                   {resumes.map((item) => {
                     const snapshot = item.analysis_snapshot ?? []
-                    const bulletCount = item.bullet_points?.length ?? 0
                     const sourceLabel = formatBulletSource(item.bullet_source)
 
                     return (
@@ -713,8 +712,17 @@ export default function ResumesPage() {
                             </h2>
                             <div className="mt-1 flex flex-wrap items-center gap-3 font-mono text-2xs uppercase tracking-widest text-muted">
                               <span>{item.project_name}</span>
-                              <span>{bulletCount} bullets</span>
-                              {sourceLabel && <span>{sourceLabel}</span>}
+                              {sourceLabel && (
+                                <span
+                                  className={`rounded border px-2 py-0.5 ${
+                                    item.bullet_source === 'AI'
+                                      ? 'border-violet-400/30 bg-violet-500/10 text-violet-300'
+                                      : 'border-cyan-400/30 bg-cyan-500/10 text-cyan-300'
+                                  }`}
+                                >
+                                  {sourceLabel}
+                                </span>
+                              )}
                               <span>Updated {formatResumeDate(item.updated_at)}</span>
                             </div>
                           </div>
