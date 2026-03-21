@@ -225,6 +225,12 @@ export default function ProjectsPage() {
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
 function ProjectCard({ project, isNew, isMerged, onOpen, onMouseEnter }) {
+  const [showThumbnail, setShowThumbnail] = useState(Boolean(project.has_thumbnail))
+
+  useEffect(() => {
+    setShowThumbnail(Boolean(project.has_thumbnail))
+  }, [project.id, project.has_thumbnail])
+
   const borderOverride = isNew
     ? 'border-success/50'
     : isMerged
@@ -238,11 +244,12 @@ function ProjectCard({ project, isNew, isMerged, onOpen, onMouseEnter }) {
       onMouseEnter={onMouseEnter}
     >
       {/* Thumbnail */}
-      {project.has_thumbnail && (
+      {showThumbnail && (
         <img
           src={window.api.getProjectThumbnailUrl(project.id)}
           alt={`${project.name} thumbnail`}
           className="w-full h-32 object-cover"
+          onError={() => setShowThumbnail(false)}
         />
       )}
 
@@ -384,6 +391,7 @@ function ProjectDrawer({ project, onClose, onAnalysisDone, onThumbnailChange }) 
             src={window.api.getProjectThumbnailUrl(project.id) + (thumbVer ? `?v=${thumbVer}` : '')}
             alt={`${project.name} thumbnail`}
             className="w-full h-40 object-cover shrink-0"
+            onError={() => setHasThumbnail(false)}
           />
         )}
 

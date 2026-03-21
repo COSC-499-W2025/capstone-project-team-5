@@ -334,6 +334,16 @@ test('does not display thumbnail image on card when has_thumbnail is false', asy
   expect(screen.queryByAltText('demo-project thumbnail')).not.toBeInTheDocument()
 })
 
+test('hides card thumbnail when image fails to load', async () => {
+  renderProjectsPage({ projectPayload: [ANALYZED_PROJECT] })
+  await waitFor(() => expect(screen.getByText('analyzed-project')).toBeInTheDocument())
+  const img = screen.getByAltText('analyzed-project thumbnail')
+  fireEvent.error(img)
+  await waitFor(() =>
+    expect(screen.queryByAltText('analyzed-project thumbnail')).not.toBeInTheDocument()
+  )
+})
+
 // ─── ProjectDrawer thumbnail ─────────────────────────────────────────────────
 
 test('shows thumbnail in drawer when project has thumbnail', async () => {
