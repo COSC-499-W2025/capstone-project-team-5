@@ -470,6 +470,42 @@ test('save payload includes bullet_source from analysis', async () => {
   )
 })
 
+test('full flow: analysis bullet_source flows to saved card display', async () => {
+  const apiOverrides = {
+    analyzeProject: jest.fn().mockResolvedValue({
+      ...ANALYSIS_RESULT,
+      resume_bullet_source: 'AI',
+    }),
+    createResume: jest.fn().mockResolvedValue({
+      ...EXISTING_RESUME,
+      project_id: 2,
+      project_name: 'Signal Board',
+      title: 'Signal Board',
+      bullet_source: 'AI',
+      bullet_points: ['Built a real-time board for monitoring deploy health.'],
+    }),
+  }
+
+  renderResumesPage(apiOverrides)
+
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: /\+ add resume entry/i })).toBeInTheDocument()
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: /\+ add resume entry/i }))
+  fireEvent.change(getProjectSelect(), { target: { value: '2' } })
+
+  await waitFor(() =>
+    expect(screen.getAllByDisplayValue('Signal Board').length).toBeGreaterThan(0)
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: /save resume entry/i }))
+
+  await waitFor(() =>
+    expect(screen.getByText('AI-generated')).toBeInTheDocument()
+  )
+})
+
 test('deleting all resume entries clears the cached preview', async () => {
   localStorage.setItem('resume_preview_alice', JSON.stringify({
     base64: btoa('fakepdf'),
