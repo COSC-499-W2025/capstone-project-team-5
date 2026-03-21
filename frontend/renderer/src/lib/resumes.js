@@ -81,6 +81,12 @@ export function getAvailableResumeProjects(projects, resumes, currentProjectId =
   return projects.filter((project) => !usedProjectIds.has(project.id))
 }
 
+export function formatBulletSource(source) {
+  if (source === 'AI') return 'AI-generated'
+  if (source === 'Local') return 'Local analysis'
+  return null
+}
+
 export function buildResumeDraft(project, analysis) {
   const snapshot = unique([
     analysis?.language,

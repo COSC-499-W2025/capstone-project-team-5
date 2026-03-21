@@ -10,6 +10,7 @@ import {
   EMPTY_RESUME_FORM,
   RESUME_TEMPLATE_OPTIONS,
   buildResumeDraft,
+  formatBulletSource,
   formatResumeDate,
   getAvailableResumeProjects,
   hasResumeProfile,
@@ -701,6 +702,7 @@ export default function ResumesPage() {
                   {resumes.map((item) => {
                     const snapshot = item.analysis_snapshot ?? []
                     const bulletCount = item.bullet_points?.length ?? 0
+                    const sourceLabel = formatBulletSource(item.bullet_source)
 
                     return (
                       <article key={item.project_id} className="card space-y-4">
@@ -712,6 +714,7 @@ export default function ResumesPage() {
                             <div className="mt-1 flex flex-wrap items-center gap-3 font-mono text-2xs uppercase tracking-widest text-muted">
                               <span>{item.project_name}</span>
                               <span>{bulletCount} bullets</span>
+                              {sourceLabel && <span>{sourceLabel}</span>}
                               <span>Updated {formatResumeDate(item.updated_at)}</span>
                             </div>
                           </div>

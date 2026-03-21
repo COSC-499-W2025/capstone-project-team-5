@@ -398,6 +398,43 @@ test('caches preview to localStorage and restores on remount', async () => {
   )
 })
 
+test('displays AI-generated badge when bullet_source is AI', async () => {
+  renderResumesPage({
+    getResumes: jest.fn().mockResolvedValue([
+      { ...EXISTING_RESUME, bullet_source: 'AI' },
+    ]),
+  })
+
+  await waitFor(() =>
+    expect(screen.getByText('AI-generated')).toBeInTheDocument()
+  )
+})
+
+test('displays Local analysis badge when bullet_source is Local', async () => {
+  renderResumesPage({
+    getResumes: jest.fn().mockResolvedValue([
+      { ...EXISTING_RESUME, bullet_source: 'Local' },
+    ]),
+  })
+
+  await waitFor(() =>
+    expect(screen.getByText('Local analysis')).toBeInTheDocument()
+  )
+})
+
+test('does not display bullet source badge when bullet_source is null', async () => {
+  renderResumesPage({
+    getResumes: jest.fn().mockResolvedValue([EXISTING_RESUME]),
+  })
+
+  await waitFor(() =>
+    expect(screen.getAllByText('Portfolio Engine').length).toBeGreaterThan(0)
+  )
+
+  expect(screen.queryByText('AI-generated')).not.toBeInTheDocument()
+  expect(screen.queryByText('Local analysis')).not.toBeInTheDocument()
+})
+
 test('save payload includes bullet_source from analysis', async () => {
   renderResumesPage({
     analyzeProject: jest.fn().mockResolvedValue({
