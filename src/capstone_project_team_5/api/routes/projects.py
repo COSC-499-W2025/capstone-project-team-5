@@ -271,8 +271,10 @@ def _get_user_or_404(session: Session, username: str) -> User:
 
 
 def _owned_project_query(session: Session, user_id: int):
-    return session.query(Project).join(UploadRecord, UploadRecord.id == Project.upload_id).filter(
-        UploadRecord.user_id == user_id
+    return (
+        session.query(Project)
+        .join(UploadRecord, UploadRecord.id == Project.upload_id)
+        .filter(UploadRecord.user_id == user_id)
     )
 
 
@@ -1164,7 +1166,9 @@ def analyze_all_projects(
 
     with get_session() as session:
         user = _get_user_or_404(session, current_username)
-        projects = _owned_project_query(session, user.id).order_by(Project.upload_id, Project.id).all()
+        projects = (
+            _owned_project_query(session, user.id).order_by(Project.upload_id, Project.id).all()
+        )
         if not projects:
             return ProjectsAnalyzeAllResponse(analyzed=[], skipped=[])
 

@@ -531,9 +531,7 @@ def test_analysis_skips_when_fingerprint_unchanged(api_db: None) -> None:
     assert upload_response.status_code == 201
     project_id = upload_response.json()["projects"][0]["id"]
 
-    analyze_response = client.post(
-        f"/api/projects/{project_id}/analyze", headers=_auth("testuser")
-    )
+    analyze_response = client.post(f"/api/projects/{project_id}/analyze", headers=_auth("testuser"))
     assert analyze_response.status_code == 200
     with get_session() as session:
         first_count = (
@@ -653,9 +651,7 @@ def test_analyze_project_updates_importance_score() -> None:
     assert upload_response.status_code == 201
     project_id = upload_response.json()["projects"][0]["id"]
 
-    analyze_response = client.post(
-        f"/api/projects/{project_id}/analyze", headers=_auth("testuser")
-    )
+    analyze_response = client.post(f"/api/projects/{project_id}/analyze", headers=_auth("testuser"))
     assert analyze_response.status_code == 200
     analyze_payload = analyze_response.json()
     assert analyze_payload["id"] == project_id
@@ -888,5 +884,3 @@ def test_project_detail_update_delete_are_scoped_to_owner(api_db: None) -> None:
 
     owner_get = owner_client.get(f"/api/projects/{owner_project_id}")
     assert owner_get.status_code == 200
-
-
