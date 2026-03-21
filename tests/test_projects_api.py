@@ -33,13 +33,20 @@ def _create_zip_bytes(entries: list[tuple[str, bytes]]) -> bytes:
 
 
 PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"fake"
+DEFAULT_TEST_USER = "testuser"
 
 
-def _upload_single_project(client: TestClient, name: str) -> int:
+def _auth(username: str = DEFAULT_TEST_USER) -> dict[str, str]:
+    _create_user(username)
+    return auth_headers(username)
+
+
+def _upload_single_project(client: TestClient, name: str, username: str = DEFAULT_TEST_USER) -> int:
     zip_bytes = _create_zip_bytes([(f"{name}/main.py", b"print('hello')\n")])
     response = client.post(
         "/api/projects/upload",
         files={"file": (f"{name}.zip", zip_bytes, "application/zip")},
+        headers=_auth(username),
     )
     assert response.status_code == 201
     return response.json()["projects"][0]["id"]
@@ -86,7 +93,7 @@ def _link_analysis_to_user(
 
 
 def test_upload_projects_returns_metadata(api_db: None) -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     zip_bytes = _create_zip_bytes(
         [
             ("myproject/main.py", b"print('hello')\n"),
@@ -114,7 +121,7 @@ def test_upload_projects_returns_metadata(api_db: None) -> None:
 
 def test_list_projects_pagination(api_db: None) -> None:
     """Test that GET /api/projects returns a paginated response."""
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
 
     # Create some projects
     for name in ["project_a", "project_b", "project_c"]:
@@ -157,7 +164,7 @@ def test_list_projects_pagination(api_db: None) -> None:
 
 def test_list_projects_invalid_pagination_params(api_db: None) -> None:
     """Test that invalid pagination parameters return 422."""
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     assert client.get("/api/projects?limit=0").status_code == 422
     assert client.get("/api/projects?limit=-1").status_code == 422
     assert client.get("/api/projects?offset=-1").status_code == 422
@@ -166,7 +173,7 @@ def test_list_projects_invalid_pagination_params(api_db: None) -> None:
 
 def test_list_projects_empty_database(api_db: None) -> None:
     """Test pagination returns correct response when no projects exist."""
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
 
     response = client.get("/api/projects")
     assert response.status_code == 200
@@ -181,7 +188,7 @@ def test_list_projects_empty_database(api_db: None) -> None:
 
 def test_list_projects_offset_beyond_total(api_db: None) -> None:
     """Test pagination when offset >= total returns empty items."""
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
 
     # Create 2 projects
     for name in ["proj_offset_a", "proj_offset_b"]:
@@ -204,7 +211,7 @@ def test_list_projects_offset_beyond_total(api_db: None) -> None:
 
 
 def test_list_and_get_project() -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     zip_bytes = _create_zip_bytes(
         [
             ("projectA/main.py", b"print('a')\n"),
@@ -240,13 +247,13 @@ def test_list_and_get_project() -> None:
 
 
 def test_get_project_not_found_returns_404() -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     response = client.get("/api/projects/99999")
     assert response.status_code == 404
 
 
 def test_patch_project_updates_fields() -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     zip_bytes = _create_zip_bytes(
         [
             ("projectB/main.py", b"print('b')\n"),
@@ -284,13 +291,13 @@ def test_patch_project_updates_fields() -> None:
 
 
 def test_patch_project_not_found_returns_404() -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     response = client.patch("/api/projects/99999", json={"name": "Nope"})
     assert response.status_code == 404
 
 
 def test_patch_project_rejects_thumbnail_url_field() -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     zip_bytes = _create_zip_bytes(
         [
             ("projectC/main.py", b"print('c')\n"),
@@ -312,7 +319,7 @@ def test_patch_project_rejects_thumbnail_url_field() -> None:
 
 
 def test_thumbnail_get_missing_returns_404() -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     project_id = _upload_single_project(client, "thumb_missing")
 
     response = client.get(f"/api/projects/{project_id}/thumbnail")
@@ -320,7 +327,7 @@ def test_thumbnail_get_missing_returns_404() -> None:
 
 
 def test_thumbnail_upload_and_get() -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     project_id = _upload_single_project(client, "thumb_upload")
 
     upload_response = client.put(
@@ -348,7 +355,7 @@ def test_thumbnail_upload_and_get() -> None:
 
 
 def test_thumbnail_delete_removes() -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     project_id = _upload_single_project(client, "thumb_delete")
 
     upload_response = client.put(
@@ -370,7 +377,7 @@ def test_thumbnail_delete_removes() -> None:
 
 
 def test_upload_appends_to_existing_project_by_name(api_db: None) -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     zip_bytes = _create_zip_bytes([("proj/main.py", b"print('v1')\n")])
     upload_response = client.post(
         "/api/projects/upload",
@@ -401,7 +408,7 @@ def test_upload_appends_to_existing_project_by_name(api_db: None) -> None:
 
 
 def test_upload_with_project_mapping_resolves_ambiguous_name(api_db: None) -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     target_project_id = _upload_single_project(client, "ambig")
     second_project_id = _upload_single_project(client, "othername")
     with get_session() as session:
@@ -425,7 +432,7 @@ def test_upload_with_project_mapping_resolves_ambiguous_name(api_db: None) -> No
 
 
 def test_upload_rejects_invalid_project_mapping_json(api_db: None) -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     zip_bytes = _create_zip_bytes([("proj/main.py", b"print('x')\n")])
     response = client.post(
         "/api/projects/upload",
@@ -437,7 +444,7 @@ def test_upload_rejects_invalid_project_mapping_json(api_db: None) -> None:
 
 
 def test_upload_rejects_unknown_project_name_in_mapping(api_db: None) -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     zip_bytes = _create_zip_bytes([("proj/main.py", b"print('x')\n")])
     response = client.post(
         "/api/projects/upload",
@@ -450,10 +457,11 @@ def test_upload_rejects_unknown_project_name_in_mapping(api_db: None) -> None:
 
 
 def test_upload_returns_409_on_ambiguous_project_name(api_db: None) -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
+    owner_id = _create_user(DEFAULT_TEST_USER)
     with get_session() as session:
-        upload1 = UploadRecord(filename="a.zip", size_bytes=1, file_count=1)
-        upload2 = UploadRecord(filename="b.zip", size_bytes=1, file_count=1)
+        upload1 = UploadRecord(filename="a.zip", size_bytes=1, file_count=1, user_id=owner_id)
+        upload2 = UploadRecord(filename="b.zip", size_bytes=1, file_count=1, user_id=owner_id)
         session.add_all([upload1, upload2])
         session.flush()
         session.add_all(
@@ -489,7 +497,7 @@ def test_upload_returns_409_on_ambiguous_project_name(api_db: None) -> None:
 
 
 def test_dedupes_identical_file_content_across_uploads(api_db: None, tmp_path: Path) -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     content = b"print('same')\n"
     zip_bytes = _create_zip_bytes([("proj/main.py", content)])
     response = client.post(
@@ -514,7 +522,7 @@ def test_dedupes_identical_file_content_across_uploads(api_db: None, tmp_path: P
 
 
 def test_analysis_skips_when_fingerprint_unchanged(api_db: None) -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     zip_bytes = _create_zip_bytes([("proj/main.py", b"print('v1')\n")])
     upload_response = client.post(
         "/api/projects/upload",
@@ -524,7 +532,7 @@ def test_analysis_skips_when_fingerprint_unchanged(api_db: None) -> None:
     project_id = upload_response.json()["projects"][0]["id"]
 
     analyze_response = client.post(
-        f"/api/projects/{project_id}/analyze", headers=auth_headers("testuser")
+        f"/api/projects/{project_id}/analyze", headers=_auth("testuser")
     )
     assert analyze_response.status_code == 200
     with get_session() as session:
@@ -534,7 +542,7 @@ def test_analysis_skips_when_fingerprint_unchanged(api_db: None) -> None:
     assert first_count == 1
 
     analyze_response2 = client.post(
-        f"/api/projects/{project_id}/analyze", headers=auth_headers("testuser")
+        f"/api/projects/{project_id}/analyze", headers=_auth("testuser")
     )
     assert analyze_response2.status_code == 200
     with get_session() as session:
@@ -551,7 +559,7 @@ def test_analysis_skips_when_fingerprint_unchanged(api_db: None) -> None:
     assert upload_response2.status_code == 201
 
     analyze_response3 = client.post(
-        f"/api/projects/{project_id}/analyze", headers=auth_headers("testuser")
+        f"/api/projects/{project_id}/analyze", headers=_auth("testuser")
     )
     assert analyze_response3.status_code == 200
     with get_session() as session:
@@ -564,7 +572,7 @@ def test_analysis_skips_when_fingerprint_unchanged(api_db: None) -> None:
 def test_analyze_all_ignores_invalid_cached_payload(
     api_db: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     zip_bytes = _create_zip_bytes([("proj/main.py", b"print('v1')\n")])
     upload_response = client.post(
         "/api/projects/upload",
@@ -602,7 +610,7 @@ def test_analyze_all_ignores_invalid_cached_payload(
 
 
 def test_delete_project_removes_record() -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     zip_bytes = _create_zip_bytes(
         [
             ("projectD/main.py", b"print('d')\n"),
@@ -624,13 +632,13 @@ def test_delete_project_removes_record() -> None:
 
 
 def test_delete_project_not_found_returns_404() -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     response = client.delete("/api/projects/99999")
     assert response.status_code == 404
 
 
 def test_analyze_project_updates_importance_score() -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     zip_bytes = _create_zip_bytes(
         [
             ("projectE/main.py", b"print('e')\n"),
@@ -646,7 +654,7 @@ def test_analyze_project_updates_importance_score() -> None:
     project_id = upload_response.json()["projects"][0]["id"]
 
     analyze_response = client.post(
-        f"/api/projects/{project_id}/analyze", headers=auth_headers("testuser")
+        f"/api/projects/{project_id}/analyze", headers=_auth("testuser")
     )
     assert analyze_response.status_code == 200
     analyze_payload = analyze_response.json()
@@ -659,7 +667,7 @@ def test_analyze_project_updates_importance_score() -> None:
 
 
 def test_analyze_all_updates_all_projects(api_db: None) -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     zip_bytes = _create_zip_bytes(
         [
             ("projectF/main.py", b"print('f')\n"),
@@ -697,7 +705,7 @@ def test_analyze_all_updates_all_projects(api_db: None) -> None:
 
 
 def test_analyze_all_reports_missing_zip(api_db: None) -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     zip_bytes = _create_zip_bytes(
         [
             ("projectH/main.py", b"print('h')\n"),
@@ -736,7 +744,7 @@ def test_analyze_all_reports_missing_zip(api_db: None) -> None:
 
 
 def test_analyze_project_ai_falls_back_to_local(monkeypatch: pytest.MonkeyPatch) -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     zip_bytes = _create_zip_bytes(
         [
@@ -752,7 +760,7 @@ def test_analyze_project_ai_falls_back_to_local(monkeypatch: pytest.MonkeyPatch)
     project_id = upload_response.json()["projects"][0]["id"]
 
     analyze_response = client.post(
-        f"/api/projects/{project_id}/analyze?use_ai=true", headers=auth_headers("testuser")
+        f"/api/projects/{project_id}/analyze?use_ai=true", headers=_auth("testuser")
     )
     assert analyze_response.status_code == 200
     payload = analyze_response.json()
@@ -760,7 +768,7 @@ def test_analyze_project_ai_falls_back_to_local(monkeypatch: pytest.MonkeyPatch)
 
 
 def test_score_config_endpoints_round_trip() -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
 
     # Default config should have all factors enabled.
     get_resp = client.get("/api/projects/config/score")
@@ -791,7 +799,7 @@ def test_score_config_endpoints_round_trip() -> None:
 
 
 def test_list_saved_projects_returns_user_scoped_saved_data(api_db: None) -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     project_id = _upload_single_project(client, "saved_scope")
     analysis_id = _link_analysis_to_user(project_id=project_id, username="saved-user")
 
@@ -812,7 +820,7 @@ def test_list_saved_projects_returns_user_scoped_saved_data(api_db: None) -> Non
 
 
 def test_list_saved_projects_filters_out_projects_not_linked_to_user(api_db: None) -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     visible_project_id = _upload_single_project(client, "visible_proj")
     hidden_project_id = _upload_single_project(client, "hidden_proj")
     _link_analysis_to_user(project_id=visible_project_id, username="viewer")
@@ -831,7 +839,7 @@ def test_list_saved_projects_filters_out_projects_not_linked_to_user(api_db: Non
 
 
 def test_list_saved_projects_rejects_other_user_access(api_db: None) -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     _create_user("owner")
 
     response = client.get(
@@ -841,3 +849,44 @@ def test_list_saved_projects_rejects_other_user_access(api_db: None) -> None:
 
     assert response.status_code == 403
     assert "own saved analyses" in response.json()["detail"]
+
+
+def test_projects_list_is_scoped_to_authenticated_user(api_db: None) -> None:
+    owner_client = TestClient(app, headers=_auth("owner-user"))
+    viewer_client = TestClient(app, headers=_auth("viewer-user"))
+
+    owner_project_id = _upload_single_project(owner_client, "owner_only_proj", "owner-user")
+
+    owner_list = owner_client.get("/api/projects")
+    assert owner_list.status_code == 200
+    owner_ids = {item["id"] for item in owner_list.json()["items"]}
+    assert owner_project_id in owner_ids
+
+    viewer_list = viewer_client.get("/api/projects")
+    assert viewer_list.status_code == 200
+    viewer_ids = {item["id"] for item in viewer_list.json()["items"]}
+    assert owner_project_id not in viewer_ids
+
+
+def test_project_detail_update_delete_are_scoped_to_owner(api_db: None) -> None:
+    owner_client = TestClient(app, headers=_auth("owner-user-2"))
+    other_client = TestClient(app, headers=_auth("other-user-2"))
+
+    owner_project_id = _upload_single_project(owner_client, "owner_project_2", "owner-user-2")
+
+    forbidden_get = other_client.get(f"/api/projects/{owner_project_id}")
+    assert forbidden_get.status_code == 404
+
+    forbidden_patch = other_client.patch(
+        f"/api/projects/{owner_project_id}",
+        json={"name": "Should Not Update"},
+    )
+    assert forbidden_patch.status_code == 404
+
+    forbidden_delete = other_client.delete(f"/api/projects/{owner_project_id}")
+    assert forbidden_delete.status_code == 404
+
+    owner_get = owner_client.get(f"/api/projects/{owner_project_id}")
+    assert owner_get.status_code == 200
+
+
