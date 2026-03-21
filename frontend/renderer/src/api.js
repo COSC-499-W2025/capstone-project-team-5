@@ -227,6 +227,29 @@ export const api = {
   getProjectThumbnailUrl: (projectId) =>
     `${API_BASE}/api/projects/${projectId}/thumbnail`,
 
+  getProjectThumbnailObjectUrl: async (projectId, revision = null) => {
+    const headers = {};
+    if (_token) headers['Authorization'] = `Bearer ${_token}`;
+
+    const query = buildQueryString({ v: revision });
+    const res = await fetch(`${API_BASE}/api/projects/${projectId}/thumbnail${query}`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!res.ok) {
+      const parsedBody = await parseResponseBody(res);
+      throw httpError(parsedBody, res.status);
+    }
+
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  },
+
+  revokeObjectUrl: (objectUrl) => {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+  },
+
   // Project analysis
   analyzeProject: (projectId, options = {}) =>
     request(
