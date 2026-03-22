@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppContext } from './context/AppContext'
 import { useAppBootstrap } from './hooks/useAppBootstrap'
 import ConsentSetup from '../pages/consents/ConsentSetup'
 import AppShell from '../layouts/AppShell'
 import LoadingScreen from '../components/LoadingScreen'
 import SpotlightTour from '../components/onboarding/SpotlightTour'
+import GuidedSetup from '../components/onboarding/GuidedSetup'
 
 const INITIAL_UPLOAD_HIGHLIGHTS = {
   created: [],
@@ -15,6 +16,15 @@ export default function AppRoot() {
   const [page, setPage] = useState('dashboard')
   const [uploadHighlights, setUploadHighlights] = useState(INITIAL_UPLOAD_HIGHLIGHTS)
   const [showTour, setShowTour] = useState(false)
+  const [tourInitialStep, setTourInitialStep] = useState(0)
+  const [showSetup, setShowSetup] = useState(false)
+
+  const startSetup = useCallback(() => {
+    setShowTour(false)
+    window.api.updateTutorialStatus({ completed: true }).catch(() => {})
+    window.api.updateSetupStatus({ completed: false, step: 0 }).catch(() => {})
+    setShowSetup(true)
+  }, [])
 
   const analysisCache = useRef({})
 
@@ -70,10 +80,12 @@ export default function AppRoot() {
         logout,
       }}
     >
-      <AppShell page={page} setPage={setPage} apiOk={apiOk} user={user} logout={logout} onStartTour={() => setShowTour(true)} />
+      <AppShell page={page} setPage={setPage} apiOk={apiOk} user={user} logout={logout} onStartTour={() => { setTourInitialStep(1); setShowTour(true) }} onStartSetup={startSetup} />
       {showTour && (
         <SpotlightTour
           setPage={setPage}
+          initialStep={tourInitialStep}
+          onStartSetup={startSetup}
           onComplete={() => {
             window.api.updateTutorialStatus({ completed: true }).catch(() => {})
             setShowTour(false)
@@ -83,6 +95,20 @@ export default function AppRoot() {
             setShowTour(false)
           }}
           onDismiss={() => setShowTour(false)}
+        />
+      )}
+      {showSetup && (
+        <GuidedSetup
+          setPage={setPage}
+          onComplete={() => {
+            window.api.updateSetupStatus({ completed: true, step: 6 }).catch(() => {})
+            setShowSetup(false)
+          }}
+          onDismiss={() => setShowSetup(false)}
+          onSkip={() => {
+            window.api.updateSetupStatus({ completed: true, step: 0 }).catch(() => {})
+            setShowSetup(false)
+          }}
         />
       )}
     </AppContext.Provider>

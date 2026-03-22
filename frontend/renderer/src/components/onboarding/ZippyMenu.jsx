@@ -5,7 +5,7 @@ import { PAGE_DESCRIPTIONS, DEFAULT_DESCRIPTION } from './pageDescriptions'
 
 const springSnappy = { type: 'spring', stiffness: 400, damping: 30 }
 
-export default function ZippyMenu({ currentPage, onStartTour }) {
+export default function ZippyMenu({ currentPage, onStartTour, onStartSetup }) {
   const [isOpen, setIsOpen] = useState(false)
   const [view, setView] = useState('menu') // 'menu' | 'explain'
   const [isHovered, setIsHovered] = useState(false)
@@ -18,6 +18,11 @@ export default function ZippyMenu({ currentPage, onStartTour }) {
   }, [])
 
   const toggle = useCallback(() => {
+    // If GuidedSetup is minimized, restore it instead of opening popover
+    if (window.__guidedSetupMinimized && window.__guidedSetupRestore) {
+      window.__guidedSetupRestore()
+      return
+    }
     setIsOpen((prev) => {
       if (prev) setView('menu')
       return !prev
@@ -55,6 +60,11 @@ export default function ZippyMenu({ currentPage, onStartTour }) {
     close()
     onStartTour()
   }, [close, onStartTour])
+
+  const handleStartSetup = useCallback(() => {
+    close()
+    onStartSetup?.()
+  }, [close, onStartSetup])
 
   const handleExplain = useCallback(() => {
     setView('explain')
@@ -113,6 +123,16 @@ export default function ZippyMenu({ currentPage, onStartTour }) {
                     </span>
                     Explain this page
                   </button>
+                  {onStartSetup && (
+                    <button
+                      type="button"
+                      onClick={handleStartSetup}
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-ink whitespace-nowrap hover:bg-border transition-colors"
+                    >
+                      <span className="flex w-5 items-center justify-center text-accent text-xs">&#9881;</span>
+                      Recommended Setup
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={handleStartTour}

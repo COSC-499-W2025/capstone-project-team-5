@@ -1,9 +1,17 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Zippy from './Zippy'
 import { PAGE_DESCRIPTIONS } from './pageDescriptions'
-
-const SIDEBAR_WIDTH = 220
+import {
+  SIDEBAR_WIDTH,
+  WIDGET_W,
+  WIDGET_H,
+  springSmooth,
+  springPlayful,
+  useTargetRect,
+  useWindowSize,
+  SidebarOverlay,
+} from './tourPrimitives'
 
 const TOUR_STEPS = [
   {
@@ -11,7 +19,7 @@ const TOUR_STEPS = [
     target: null,
     expression: 'wave',
     message:
-      "Hey there! I'm Zippy, your guide to Zip2Job. I'll walk you through everything so you can turn your code into a killer resume. Let's go!",
+      "Hey there! I'm Zippy, your guide to Zip2Job! I can help you get started in two ways \u2014 take a quick tour of the app, or jump right into setting up your resume. You can always find me in the sidebar to do either one later!",
   },
   { id: 'dashboard', target: 'dashboard', ...PAGE_DESCRIPTIONS.dashboard },
   { id: 'projects', target: 'projects', ...PAGE_DESCRIPTIONS.projects },
@@ -34,12 +42,6 @@ const TOUR_STEPS = [
 
 const TOTAL_TAB_STEPS = TOUR_STEPS.filter((s) => s.target && s.target !== 'zippy-tour').length
 
-/* ── Spring presets ─────────────────────────────────────────────────── */
-const springSnappy = { type: 'spring', stiffness: 400, damping: 30 }
-const springBouncy = { type: 'spring', stiffness: 200, damping: 15 }
-const springSmooth = { type: 'spring', stiffness: 300, damping: 25 }
-const springPlayful = { type: 'spring', stiffness: 250, damping: 20 }
-
 /* ── Per-step Zippy poses (offsets relative to default position) ───── */
 const ZIPPY_POSES = [
   { x: 0, y: 0, rotate: 0 },        // welcome: centered
@@ -56,54 +58,12 @@ const ZIPPY_POSES = [
   { x: 0, y: 0, rotate: 0 },         // done: back to center
 ]
 
-/* ── Hook: track a DOM element's rect ───────────────────────────────── */
-function useTargetRect(targetId) {
-  const [rect, setRect] = useState(null)
-
-  const update = useCallback(() => {
-    if (!targetId) {
-      setRect(null)
-      return
-    }
-    const el = document.querySelector(`[data-tour-id="${targetId}"]`)
-    if (el) {
-      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-      setRect(el.getBoundingClientRect())
-    } else {
-      setRect(null)
-    }
-  }, [targetId])
-
-  useLayoutEffect(() => {
-    update()
-  }, [update])
-
-  useEffect(() => {
-    if (!targetId) return
-    const onResize = () => update()
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [targetId, update])
-
-  return rect
-}
-
-export default function SpotlightTour({ onComplete, onSkip, onDismiss, setPage }) {
-  const [step, setStep] = useState(0)
+export default function SpotlightTour({ onComplete, onSkip, onDismiss, onStartSetup, setPage, initialStep = 0 }) {
+  const [step, setStep] = useState(initialStep)
   const bubbleRef = useRef(null)
   const current = TOUR_STEPS[step]
   const rect = useTargetRect(current.target)
-
-  // Track viewport size for centering calculations
-  const [winSize, setWinSize] = useState(() => ({
-    w: window.innerWidth,
-    h: window.innerHeight,
-  }))
-  useEffect(() => {
-    const onResize = () => setWinSize({ w: window.innerWidth, h: window.innerHeight })
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
+  const winSize = useWindowSize()
 
   const isFirst = step === 0
   const isLast = step === TOUR_STEPS.length - 1
@@ -156,10 +116,6 @@ export default function SpotlightTour({ onComplete, onSkip, onDismiss, setPage }
 
   const spotlightPad = 6
 
-  /* ── Positioning: center on content area, slide to sidebar for done ── */
-  const WIDGET_W = 440
-  const WIDGET_H = 260
-
   // Center of the content area (right of sidebar)
   const contentCenterL = SIDEBAR_WIDTH + (winSize.w - SIDEBAR_WIDTH) / 2 - WIDGET_W / 2
   const contentCenterT = winSize.h / 2 - WIDGET_H / 2
@@ -181,41 +137,7 @@ export default function SpotlightTour({ onComplete, onSkip, onDismiss, setPage }
   return (
     <>
       {/* Sidebar overlay with accent glow on nav item */}
-      <AnimatePresence>
-        {(isNavStep || isDone) && (
-          <motion.div
-            key="sidebar-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed top-0 left-0 z-[9999] pointer-events-none"
-            style={{ width: SIDEBAR_WIDTH, height: '100vh' }}
-          >
-            {/* Light dim */}
-            <div className="absolute inset-0 bg-black/30" />
-
-            {/* Glowing highlight ring on nav item */}
-            {rect && (
-              <motion.div
-                layoutId="spotlight-glow"
-                className="absolute rounded-lg"
-                style={{
-                  top: rect.top - spotlightPad,
-                  left: rect.left - spotlightPad,
-                  width: rect.width + spotlightPad * 2,
-                  height: rect.height + spotlightPad * 2,
-                  border: '2px solid #f5a623',
-                  boxShadow: '0 0 12px 2px rgba(245,166,35,0.5), inset 0 0 8px rgba(245,166,35,0.15)',
-                  background: 'rgba(245,166,35,0.08)',
-                  zIndex: 1,
-                }}
-                transition={springSnappy}
-              />
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <SidebarOverlay rect={rect} spotlightPad={spotlightPad} visible={isNavStep || isDone} />
 
       {/* Subtle scrim for welcome step only */}
       <AnimatePresence>
@@ -274,13 +196,34 @@ export default function SpotlightTour({ onComplete, onSkip, onDismiss, setPage }
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={next}
-                className="btn-primary px-4 py-1.5 text-xs font-semibold"
-              >
-                {isLast ? 'Get Started!' : isFirst ? "Let's Go!" : 'Next \u2192'}
-              </button>
+              {isFirst ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="btn-primary px-4 py-1.5 text-xs font-semibold"
+                  >
+                    Take a Tour
+                  </button>
+                  {onStartSetup && (
+                    <button
+                      type="button"
+                      onClick={onStartSetup}
+                      className="btn-primary px-4 py-1.5 text-xs font-semibold"
+                    >
+                      Recommended Setup
+                    </button>
+                  )}
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={next}
+                  className="btn-primary px-4 py-1.5 text-xs font-semibold"
+                >
+                  {isLast ? 'Get Started!' : 'Next \u2192'}
+                </button>
+              )}
 
               <div className="ml-auto flex gap-3">
                 {!isLast && (
@@ -298,7 +241,7 @@ export default function SpotlightTour({ onComplete, onSkip, onDismiss, setPage }
                     onClick={onSkip}
                     className="text-xs text-muted hover:text-ink transition-colors"
                   >
-                    Skip Tour
+                    Skip
                   </button>
                 )}
               </div>
