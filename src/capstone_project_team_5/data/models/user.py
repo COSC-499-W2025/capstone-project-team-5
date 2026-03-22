@@ -61,5 +61,5 @@ class User(Base):
         "WorkExperience", back_populates="user", cascade="all, delete-orphan"
     )
     uploads: Mapped[list[UploadRecord]] = relationship(
-    	"UploadRecord", back_populates="user", cascade="all, delete-orphan"
-  	)
+        "UploadRecord", back_populates="user", cascade="all, delete-orphan"
+    )
