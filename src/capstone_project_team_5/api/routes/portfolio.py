@@ -1,5 +1,7 @@
 """Portfolio editing routes for the API."""
 
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 import html as _hl
@@ -24,7 +26,13 @@ from capstone_project_team_5.api.schemas.portfolio import (
     PortfolioUpdateRequest,
 )
 from capstone_project_team_5.data.db import get_session
-from capstone_project_team_5.data.models import CodeAnalysis, Portfolio, PortfolioItem, Project, User
+from capstone_project_team_5.data.models import (
+    CodeAnalysis,
+    Portfolio,
+    PortfolioItem,
+    Project,
+    User,
+)
 from capstone_project_team_5.services.project_thumbnail import has_project_thumbnail
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
@@ -290,8 +298,7 @@ def add_project_to_portfolio(
     response_model=PortfolioShareResponse,
     summary="Generate a share link for a portfolio",
     description=(
-        "Generate a unique share token for the portfolio. "
-        "Subsequent calls return the same token."
+        "Generate a unique share token for the portfolio. Subsequent calls return the same token."
     ),
 )
 def generate_share_link(portfolio_id: int) -> PortfolioShareResponse:
@@ -340,9 +347,7 @@ def revoke_share_link(portfolio_id: int) -> Response:
 def get_shared_portfolio(share_token: str) -> HTMLResponse:
     """Render a portfolio dashboard by share token (no auth required)."""
     with get_session() as session:
-        portfolio = (
-            session.query(Portfolio).filter(Portfolio.share_token == share_token).first()
-        )
+        portfolio = session.query(Portfolio).filter(Portfolio.share_token == share_token).first()
         if portfolio is None:
             return HTMLResponse(
                 content=_render_404_html(
@@ -389,15 +394,17 @@ def get_shared_portfolio(share_token: str) -> HTMLResponse:
                 if item.project_id and has_project_thumbnail(item.project_id)
                 else None
             )
-            item_list.append({
-                "title": item.title,
-                "markdown": md,
-                "bullets": analysis_bullets,
-                "thumbnail_url": thumbnail_url,
-                "is_text_block": bool(getattr(item, "is_text_block", False)),
-                "is_user_edited": bool(item.is_user_edited),
-                "updated_at": item.updated_at.strftime("%b %d, %Y"),
-            })
+            item_list.append(
+                {
+                    "title": item.title,
+                    "markdown": md,
+                    "bullets": analysis_bullets,
+                    "thumbnail_url": thumbnail_url,
+                    "is_text_block": bool(getattr(item, "is_text_block", False)),
+                    "is_user_edited": bool(item.is_user_edited),
+                    "updated_at": item.updated_at.strftime("%b %d, %Y"),
+                }
+            )
 
         html = _render_portfolio_html(
             name=portfolio.name,
@@ -413,6 +420,7 @@ def get_shared_portfolio(share_token: str) -> HTMLResponse:
 
 # ── Minimal 404 page ──────────────────────────────────────────────────────────
 
+
 def _render_404_html(title: str = "Not found", message: str = "This page doesn't exist.") -> str:
     """Return a minimal self-contained 404 HTML page."""
     t = _hl.escape(title)
@@ -421,7 +429,7 @@ def _render_404_html(title: str = "Not found", message: str = "This page doesn't
         '<!DOCTYPE html><html lang="en"><head>'
         '<meta charset="UTF-8"/>'
         '<meta name="viewport" content="width=device-width,initial-scale=1.0"/>'
-        f'<title>{t}</title>'
+        f"<title>{t}</title>"
         "<style>"
         "*{box-sizing:border-box;margin:0;padding:0}"
         "body{background:#0f1117;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
@@ -435,7 +443,7 @@ def _render_404_html(title: str = "Not found", message: str = "This page doesn't
         f'<div class="code">404 :"(</div>'
         f'<div class="title">{t}</div>'
         f'<p class="msg">{m}</p>'
-        f'</div></body></html>'
+        f"</div></body></html>"
     )
 
 
@@ -541,6 +549,7 @@ footer{text-align:center;padding:24px;font-size:11px;font-family:var(--mono);col
 
 # ── Python-side rendering helpers (no JavaScript needed for item output) ──────
 
+
 def _item_tags(md: str) -> list[str]:
     seen: set[str] = set()
     result: list[str] = []
@@ -609,7 +618,9 @@ def _render_grid(items: list[dict]) -> str:
         analysis_bullets = item.get("bullets") or []
         bullets_html = _analysis_bullets_el(analysis_bullets) or _bullets_el(md)
         thumb = item.get("thumbnail_url")
-        thumb_html = f'<img class="thumb" src="{_hl.escape(thumb)}" alt="" loading="lazy"/>' if thumb else ""
+        thumb_html = (
+            f'<img class="thumb" src="{_hl.escape(thumb)}" alt="" loading="lazy"/>' if thumb else ""
+        )
         wc = _item_wc(md)
 
         # Clean summary card
@@ -628,7 +639,11 @@ def _render_grid(items: list[dict]) -> str:
         # Hidden data store for modal — style="display:none" is more robust than hidden attribute
         modals += (
             f'<div id="md-{i}" style="display:none">'
-            + (f'<img class="thumb" src="{_hl.escape(thumb)}" alt="" style="border-radius:0;margin-bottom:0"/>' if thumb else "")
+            + (
+                f'<img class="thumb" src="{_hl.escape(thumb)}" alt="" style="border-radius:0;margin-bottom:0"/>'
+                if thumb
+                else ""
+            )
             + '<div class="modal-header">'
             + f'<div class="modal-title">{_hl.escape(title)}</div>'
             + '<button class="modal-close" onclick="closeModal()">&#x2715;</button>'
@@ -658,23 +673,21 @@ def _render_showcase(items: list[dict]) -> str:
         analysis_bullets = item.get("bullets") or []
         bullets_html = _analysis_bullets_el(analysis_bullets) or _bullets_el(md)
         thumb = item.get("thumbnail_url")
-        thumb_html = f'<img class="thumb-sm" src="{_hl.escape(thumb)}" alt="" loading="lazy"/>' if thumb else ""
+        thumb_html = (
+            f'<img class="thumb-sm" src="{_hl.escape(thumb)}" alt="" loading="lazy"/>'
+            if thumb
+            else ""
+        )
         # Showcase main: bullets take priority; fall back to full markdown render
         if bullets_html:
             main_html = (
                 f'<div class="showcase-main">'
-                f'<p class="showcase-summary">{_hl.escape(md)}</p>'
-                + bullets_html
-                + "</div>"
+                f'<p class="showcase-summary">{_hl.escape(md)}</p>' + bullets_html + "</div>"
             )
         else:
-            main_html = (
-                f'<div class="showcase-main markdown-body md-render" data-md="{_hl.escape(md)}"></div>'
-            )
+            main_html = f'<div class="showcase-main markdown-body md-render" data-md="{_hl.escape(md)}"></div>'
         cards += (
-            '<div class="showcase-card">'
-            + thumb_html
-            + '<div class="showcase-inner">'
+            '<div class="showcase-card">' + thumb_html + '<div class="showcase-inner">'
             '<div class="showcase-sidebar">'
             f'<div class="item-idx">{idx}</div>'
             f'<div class="item-title">{_hl.escape(title)}</div>'
@@ -683,9 +696,7 @@ def _render_showcase(items: list[dict]) -> str:
             + '<div class="stats-col">'
             f'<div class="stat-item"><div class="stat-num">{wc}</div><div class="stat-lbl">words</div></div>'
             f'<div class="stat-item"><div class="stat-num">{_rt(wc)}</div><div class="stat-lbl">read</div></div>'
-            "</div></div>"
-            + main_html
-            + "</div></div>"
+            "</div></div>" + main_html + "</div></div>"
         )
     return cards
 
@@ -699,14 +710,18 @@ def _render_timeline(items: list[dict]) -> str:
         analysis_bullets = item.get("bullets") or []
         bullets_html = _analysis_bullets_el(analysis_bullets) or _bullets_el(md)
         thumb = item.get("thumbnail_url")
-        thumb_html = f'<img class="thumb" src="{_hl.escape(thumb)}" alt="" loading="lazy"/>' if thumb else ""
+        thumb_html = (
+            f'<img class="thumb" src="{_hl.escape(thumb)}" alt="" loading="lazy"/>' if thumb else ""
+        )
         rows += (
             '<div class="timeline-item">'
             f'<div class="timeline-dot">{i + 1}</div>'
             '<div class="timeline-card">'
             f'<div class="tl-header"><div class="item-title">{_hl.escape(title)}</div>'
             f'<div class="item-date">{_hl.escape(item["updated_at"])}</div></div>'
-            + thumb_html + _tags_el(md) + bullets_html
+            + thumb_html
+            + _tags_el(md)
+            + bullets_html
             + '<details class="md-expand"><summary>view full content</summary>'
             f'<div class="markdown-body md-render" data-md="{_hl.escape(md)}"></div>'
             "</details></div></div>"
@@ -750,8 +765,12 @@ def _render_portfolio_html(
             title_e = _hl.escape(it.get("title", "") or "")
             md_e = _hl.escape(it.get("markdown", "") or "")
             segments.append(
-                f'<div class="text-section">'
-                + (f'<h2 class="text-section-title">{title_e}</h2>' if title_e and title_e != "Text block" else "")
+                '<div class="text-section">'
+                + (
+                    f'<h2 class="text-section-title">{title_e}</h2>'
+                    if title_e and title_e != "Text block"
+                    else ""
+                )
                 + f'<div class="markdown-body md-render" data-md="{md_e}"></div>'
                 + "</div>"
             )
@@ -814,7 +833,7 @@ def _render_portfolio_html(
 
     modal_overlay = (
         '<div id="modal-overlay" style="display:none;position:fixed;inset:0;'
-        'background:rgba(0,0,0,.6);align-items:center;justify-content:center;'
+        "background:rgba(0,0,0,.6);align-items:center;justify-content:center;"
         'z-index:9999;padding:24px" onclick="if(event.target===this)closeModal()">'
         '<div class="modal-box" id="modal-inner"></div>'
         "</div>"
@@ -971,12 +990,16 @@ def remove_portfolio_item(portfolio_id: int, item_id: int) -> Response:
     summary="Add a text block to a portfolio",
     description="Create a free-form text/markdown block inside a portfolio.",
 )
-def create_text_block(portfolio_id: int, request: PortfolioTextBlockRequest) -> PortfolioItemResponse:
+def create_text_block(
+    portfolio_id: int, request: PortfolioTextBlockRequest
+) -> PortfolioItemResponse:
     """Create a text block (no project) in a portfolio."""
     with get_session() as session:
         portfolio = session.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
         if portfolio is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Portfolio not found.")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Portfolio not found."
+            )
 
         encoded = json.dumps({"markdown": request.markdown})
         item = PortfolioItem(
@@ -1022,7 +1045,9 @@ def update_portfolio_item(
             .first()
         )
         if item is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Portfolio item not found.")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Portfolio item not found."
+            )
 
         if request.title is not None:
             item.title = request.title

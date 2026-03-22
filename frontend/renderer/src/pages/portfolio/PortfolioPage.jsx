@@ -774,6 +774,13 @@ export default function PortfolioPage() {
             >
               <button
                 type="button"
+                onClick={() => openPortfolio(portfolio)}
+                className="btn-ghost px-3 py-1 text-xs"
+              >
+                View →
+              </button>
+              <button
+                type="button"
                 onClick={() => setShareModalPortfolio(portfolio)}
                 className="btn-ghost px-3 py-1 text-xs"
               >

@@ -243,6 +243,7 @@ def test_delete_portfolio() -> None:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _create_portfolio(client: TestClient, username: str, name: str = "Test Portfolio") -> int:
     """Create a user and portfolio, return portfolio_id."""
     _create_user(username)
@@ -264,6 +265,7 @@ def _create_project(client: TestClient) -> int:
 
 
 # ── Share / revoke ─────────────────────────────────────────────────────────────
+
 
 def test_share_portfolio_generates_token() -> None:
     client = TestClient(app)
@@ -324,6 +326,7 @@ def test_get_shared_portfolio_invalid_token_returns_404() -> None:
 
 # ── Update portfolio metadata ──────────────────────────────────────────────────
 
+
 def test_update_portfolio_template() -> None:
     client = TestClient(app)
     portfolio_id = _create_portfolio(client, "template-user-1")
@@ -364,7 +367,10 @@ def test_get_portfolio_info_returns_metadata() -> None:
     client = TestClient(app)
     portfolio_id = _create_portfolio(client, "info-user-1", "Info Portfolio")
 
-    client.patch(f"/api/portfolio/{portfolio_id}", json={"template": "showcase", "description": "desc"})
+    client.patch(
+        f"/api/portfolio/{portfolio_id}",
+        json={"template": "showcase", "description": "desc"},
+    )
     token = client.post(f"/api/portfolio/{portfolio_id}/share").json()["share_token"]
 
     resp = client.get(f"/api/portfolio/{portfolio_id}/info")
@@ -377,6 +383,7 @@ def test_get_portfolio_info_returns_metadata() -> None:
 
 
 # ── Text blocks ────────────────────────────────────────────────────────────────
+
 
 def test_create_text_block() -> None:
     client = TestClient(app)
@@ -412,6 +419,7 @@ def test_text_block_appears_in_item_list() -> None:
 
 
 # ── Item update / remove / reorder ────────────────────────────────────────────
+
 
 def test_update_portfolio_item_content() -> None:
     client = TestClient(app)
@@ -463,9 +471,18 @@ def test_reorder_portfolio_items() -> None:
     username = "reorder-user-1"
     portfolio_id = _create_portfolio(client, username)
 
-    block_a = client.post(f"/api/portfolio/{portfolio_id}/blocks", json={"title": "A", "markdown": ""}).json()["id"]
-    block_b = client.post(f"/api/portfolio/{portfolio_id}/blocks", json={"title": "B", "markdown": ""}).json()["id"]
-    block_c = client.post(f"/api/portfolio/{portfolio_id}/blocks", json={"title": "C", "markdown": ""}).json()["id"]
+    block_a = client.post(
+        f"/api/portfolio/{portfolio_id}/blocks",
+        json={"title": "A", "markdown": ""},
+    ).json()["id"]
+    block_b = client.post(
+        f"/api/portfolio/{portfolio_id}/blocks",
+        json={"title": "B", "markdown": ""},
+    ).json()["id"]
+    block_c = client.post(
+        f"/api/portfolio/{portfolio_id}/blocks",
+        json={"title": "C", "markdown": ""},
+    ).json()["id"]
 
     # Reverse the order.
     reorder_resp = client.post(
