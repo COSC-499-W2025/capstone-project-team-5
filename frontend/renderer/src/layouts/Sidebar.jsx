@@ -1,7 +1,7 @@
 import { NAV_ITEMS } from '../app/navigation/navItems'
 import ZippyMenu from '../components/onboarding/ZippyMenu'
 
-export default function Sidebar({ current, onNav, apiOk, user, onLogout, onStartTour }) {
+export default function Sidebar({ current, onNav, apiOk, user, onLogout, onStartTour, onStartSetup }) {
   return (
     <aside className="flex min-w-[220px] w-[220px] flex-col border-r border-border bg-surface">
       <div className="border-b border-border px-5 py-6">
@@ -29,7 +29,7 @@ export default function Sidebar({ current, onNav, apiOk, user, onLogout, onStart
 
         {onStartTour && (
           <div className="mt-auto pt-2">
-            <ZippyMenu currentPage={current} onStartTour={onStartTour} />
+            <ZippyMenu currentPage={current} onStartTour={onStartTour} onStartSetup={onStartSetup} />
           </div>
         )}
       </nav>

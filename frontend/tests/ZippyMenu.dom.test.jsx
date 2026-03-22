@@ -35,10 +35,11 @@ import ZippyMenu from '../renderer/src/components/onboarding/ZippyMenu'
 import { PAGE_DESCRIPTIONS, DEFAULT_DESCRIPTION } from '../renderer/src/components/onboarding/pageDescriptions'
 
 // ── Render helper ──────────────────────────────────────────────────────────
-function renderMenu({ currentPage = 'dashboard', onStartTour } = {}) {
+function renderMenu({ currentPage = 'dashboard', onStartTour, onStartSetup } = {}) {
   const startTour = onStartTour ?? jest.fn()
-  render(<ZippyMenu currentPage={currentPage} onStartTour={startTour} />)
-  return { startTour }
+  const startSetup = onStartSetup ?? jest.fn()
+  render(<ZippyMenu currentPage={currentPage} onStartTour={startTour} onStartSetup={startSetup} />)
+  return { startTour, startSetup }
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────
@@ -53,11 +54,12 @@ test('popover is hidden initially', () => {
   expect(screen.queryByRole('menu')).not.toBeInTheDocument()
 })
 
-test('clicking trigger opens the popover with both options', () => {
+test('clicking trigger opens the popover with all options', () => {
   renderMenu()
   fireEvent.click(screen.getByText('Zippy'))
   expect(screen.getByRole('menu')).toBeInTheDocument()
   expect(screen.getByText('Explain this page')).toBeInTheDocument()
+  expect(screen.getByText('Recommended Setup')).toBeInTheDocument()
   expect(screen.getByText('Start tour')).toBeInTheDocument()
 })
 
@@ -66,6 +68,14 @@ test('"Start tour" calls onStartTour and closes the popover', () => {
   fireEvent.click(screen.getByText('Zippy'))
   fireEvent.click(screen.getByText('Start tour'))
   expect(startTour).toHaveBeenCalledTimes(1)
+  expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+})
+
+test('"Recommended Setup" calls onStartSetup and closes the popover', () => {
+  const { startSetup } = renderMenu()
+  fireEvent.click(screen.getByText('Zippy'))
+  fireEvent.click(screen.getByText('Recommended Setup'))
+  expect(startSetup).toHaveBeenCalledTimes(1)
   expect(screen.queryByRole('menu')).not.toBeInTheDocument()
 })
 
@@ -84,6 +94,7 @@ test('Back button returns to menu view', () => {
 
   fireEvent.click(screen.getByText(/Back/))
   expect(screen.getByText('Explain this page')).toBeInTheDocument()
+  expect(screen.getByText('Recommended Setup')).toBeInTheDocument()
   expect(screen.getByText('Start tour')).toBeInTheDocument()
 })
 
@@ -126,5 +137,6 @@ test('closing and reopening resets to menu view', () => {
   // Reopen — should show menu, not explain
   fireEvent.click(screen.getByText('Zippy'))
   expect(screen.getByText('Explain this page')).toBeInTheDocument()
+  expect(screen.getByText('Recommended Setup')).toBeInTheDocument()
   expect(screen.getByText('Start tour')).toBeInTheDocument()
 })
