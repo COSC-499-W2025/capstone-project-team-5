@@ -635,6 +635,11 @@ function AnalysisDetail({ data }) {
 
 function AuthenticatedThumbnail({ projectId, revision, alt, className, onLoadError }) {
   const [src, setSrc] = useState('')
+  const onLoadErrorRef = useRef(onLoadError)
+
+  useEffect(() => {
+    onLoadErrorRef.current = onLoadError
+  }, [onLoadError])
 
   useEffect(() => {
     let cancelled = false
@@ -656,7 +661,7 @@ function AuthenticatedThumbnail({ projectId, revision, alt, className, onLoadErr
       } catch (err) {
         if (!cancelled) {
           setSrc('')
-          onLoadError?.(err)
+          onLoadErrorRef.current?.(err)
         }
       }
     }
@@ -674,7 +679,7 @@ function AuthenticatedThumbnail({ projectId, revision, alt, className, onLoadErr
         }
       }
     }
-  }, [projectId, revision, onLoadError])
+  }, [projectId, revision])
 
   if (!src) {
     return null
@@ -693,7 +698,7 @@ function AuthenticatedThumbnail({ projectId, revision, alt, className, onLoadErr
           URL.revokeObjectURL(failedUrl)
         }
         setSrc('')
-        onLoadError?.(new Error('Failed to render thumbnail image.'))
+        onLoadErrorRef.current?.(new Error('Failed to render thumbnail image.'))
       }}
     />
   )
