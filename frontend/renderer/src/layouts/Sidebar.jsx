@@ -1,5 +1,5 @@
 import { NAV_ITEMS } from '../app/navigation/navItems'
-import Zippy from '../components/onboarding/Zippy'
+import ZippyMenu from '../components/onboarding/ZippyMenu'
 
 export default function Sidebar({ current, onNav, apiOk, user, onLogout, onStartTour }) {
   return (
@@ -26,6 +26,12 @@ export default function Sidebar({ current, onNav, apiOk, user, onLogout, onStart
             {item.label}
           </button>
         ))}
+
+        {onStartTour && (
+          <div className="mt-auto pt-2">
+            <ZippyMenu currentPage={current} onStartTour={onStartTour} />
+          </div>
+        )}
       </nav>
 
       <div className="space-y-1.5 border-t border-border px-5 py-4">
@@ -40,16 +46,6 @@ export default function Sidebar({ current, onNav, apiOk, user, onLogout, onStart
           />
           {apiOk ? 'api online' : 'api offline'}
         </div>
-        {onStartTour && (
-          <button
-            type="button"
-            data-tour-id="zippy-tour"
-            onClick={onStartTour}
-            className="mt-1 flex w-full items-center gap-1.5 text-left font-mono text-2xs text-muted hover:text-ink transition-colors"
-          >
-            <Zippy size="sm" /> Zippy
-          </button>
-        )}
         {onLogout && (
           <button
             type="button"

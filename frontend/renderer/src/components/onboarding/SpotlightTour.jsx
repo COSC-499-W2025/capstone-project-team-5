@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Zippy from './Zippy'
+import { PAGE_DESCRIPTIONS } from './pageDescriptions'
 
 const SIDEBAR_WIDTH = 220
 
@@ -12,76 +13,16 @@ const TOUR_STEPS = [
     message:
       "Hey there! I'm Zippy, your guide to Zip2Job. I'll walk you through everything so you can turn your code into a killer resume. Let's go!",
   },
-  {
-    id: 'dashboard',
-    target: 'dashboard',
-    expression: 'pointing',
-    message:
-      'This is your command center! Upload a .zip of your code repo here to get started. Once uploaded, I\'ll analyze it and pull out the good stuff \u2014 languages, frameworks, and skills.',
-  },
-  {
-    id: 'projects',
-    target: 'projects',
-    expression: 'excited',
-    message:
-      'All your uploaded projects show up here. Click on any project to edit its name, add a description, or re-run the analysis. You can also rank your projects by importance.',
-  },
-  {
-    id: 'analyses',
-    target: 'analyses',
-    expression: 'happy',
-    message:
-      'This is where the magic happens! See exactly what was detected in your code \u2014 languages used, design patterns, complexity metrics. You can edit or tweak any analysis result.',
-  },
-  {
-    id: 'skills',
-    target: 'skills',
-    expression: 'pointing',
-    message:
-      'Your skill inventory! Every technology and framework detected across all your projects gets collected here. These feed directly into your resume and portfolio.',
-  },
-  {
-    id: 'experience',
-    target: 'experience',
-    expression: 'wave',
-    message:
-      'Add your work history \u2014 jobs, internships, co-ops. Include bullet points about what you did. These show up on your generated resume alongside your projects.',
-  },
-  {
-    id: 'education',
-    target: 'education',
-    expression: 'excited',
-    message:
-      "Add your degrees, certifications, and coursework. Include your GPA if you'd like. This section goes right onto your resume.",
-  },
-  {
-    id: 'profile',
-    target: 'profile',
-    expression: 'happy',
-    message:
-      "Fill this in first! Your name, email, phone, LinkedIn, and GitHub go here. Without a profile, resume PDF generation won't work.",
-  },
-  {
-    id: 'portfolio',
-    target: 'portfolio',
-    expression: 'pointing',
-    message:
-      'Generate a portfolio website that showcases your top projects with descriptions, skills, and thumbnails. Perfect for sharing with recruiters.',
-  },
-  {
-    id: 'resumes',
-    target: 'resumes',
-    expression: 'excited',
-    message:
-      'The grand finale! Pick a template, select your projects, and generate a polished PDF resume. AI can even write your bullet points if you enable it in Consents.',
-  },
-  {
-    id: 'consents',
-    target: 'consents',
-    expression: 'wave',
-    message:
-      'Control your privacy here. Toggle AI features on or off, manage which external services can access your data, and set file ignore patterns.',
-  },
+  { id: 'dashboard', target: 'dashboard', ...PAGE_DESCRIPTIONS.dashboard },
+  { id: 'projects', target: 'projects', ...PAGE_DESCRIPTIONS.projects },
+  { id: 'analyses', target: 'analyses', ...PAGE_DESCRIPTIONS.analyses },
+  { id: 'skills', target: 'skills', ...PAGE_DESCRIPTIONS.skills },
+  { id: 'experience', target: 'experience', ...PAGE_DESCRIPTIONS.experience },
+  { id: 'education', target: 'education', ...PAGE_DESCRIPTIONS.education },
+  { id: 'profile', target: 'profile', ...PAGE_DESCRIPTIONS.profile },
+  { id: 'portfolio', target: 'portfolio', ...PAGE_DESCRIPTIONS.portfolio },
+  { id: 'resumes', target: 'resumes', ...PAGE_DESCRIPTIONS.resumes },
+  { id: 'consents', target: 'consents', ...PAGE_DESCRIPTIONS.consents },
   {
     id: 'done',
     target: 'zippy-tour',
