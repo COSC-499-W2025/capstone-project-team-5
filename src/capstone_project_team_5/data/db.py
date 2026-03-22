@@ -17,7 +17,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import URL, Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -78,6 +78,23 @@ def _ensure_tables_created() -> None:
     )
 
     Base.metadata.create_all(bind=_engine)
+    _run_migrations(_engine)
+
+
+def _run_migrations(engine: Engine) -> None:
+    """Run manual column migrations for existing databases.
+
+    Since the project uses create_all() (no Alembic), new columns on existing
+    tables require explicit ALTER TABLE statements.  Each migration is
+    idempotent — it checks whether the column already exists before altering.
+    """
+    inspector = inspect(engine)
+    columns = [c["name"] for c in inspector.get_columns("users")]
+    if "tutorial_completed" not in columns:
+        with engine.begin() as conn:
+            conn.execute(
+                text("ALTER TABLE users ADD COLUMN tutorial_completed BOOLEAN NOT NULL DEFAULT 0")
+            )
 
 
 def _get_session_factory() -> sessionmaker[Session]:

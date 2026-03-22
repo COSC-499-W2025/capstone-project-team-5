@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Integer, String
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from capstone_project_team_5.data.db import Base
@@ -41,6 +41,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )
+    tutorial_completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     portfolio_items: Mapped[list[PortfolioItem]] = relationship(
         "PortfolioItem", back_populates="user", cascade="all, delete-orphan"
     )

@@ -54,6 +54,18 @@ class UserProfileCreateRequest(BaseModel):
     website: str | None = Field(None, description="Personal website URL")
 
 
+class TutorialStatusResponse(BaseModel):
+    """Response schema for tutorial completion status."""
+
+    completed: bool
+
+
+class TutorialStatusUpdate(BaseModel):
+    """Request schema for updating tutorial completion status."""
+
+    completed: bool
+
+
 class UserProfileUpdateRequest(BaseModel):
     """Request schema for updating a user profile."""
 
