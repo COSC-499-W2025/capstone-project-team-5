@@ -96,20 +96,3 @@ def authenticate_user(username: str, password: str) -> tuple[bool, str | None]:
         return False, f"Authentication failed: {exc}"
 
     return True, None
-
-
-def get_tutorial_status(username: str) -> bool:
-    """Return the tutorial completion flag for the given user."""
-    with get_session() as session:
-        user = session.query(User).filter(User.username == username).first()
-        if user is None:
-            return False
-        return user.tutorial_completed
-
-
-def update_tutorial_status(username: str, *, completed: bool) -> None:
-    """Set the tutorial completion flag for the given user."""
-    with get_session() as session:
-        user = session.query(User).filter(User.username == username).first()
-        if user is not None:
-            user.tutorial_completed = completed

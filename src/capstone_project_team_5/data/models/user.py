@@ -42,6 +42,8 @@ class User(Base):
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )
     tutorial_completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    setup_completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    setup_step: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     portfolio_items: Mapped[list[PortfolioItem]] = relationship(
         "PortfolioItem", back_populates="user", cascade="all, delete-orphan"
     )

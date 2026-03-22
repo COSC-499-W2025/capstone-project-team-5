@@ -95,6 +95,14 @@ def _run_migrations(engine: Engine) -> None:
             conn.execute(
                 text("ALTER TABLE users ADD COLUMN tutorial_completed BOOLEAN NOT NULL DEFAULT 0")
             )
+    if "setup_completed" not in columns:
+        with engine.begin() as conn:
+            conn.execute(
+                text("ALTER TABLE users ADD COLUMN setup_completed BOOLEAN NOT NULL DEFAULT 0")
+            )
+    if "setup_step" not in columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN setup_step INTEGER NOT NULL DEFAULT 0"))
 
 
 def _get_session_factory() -> sessionmaker[Session]:
