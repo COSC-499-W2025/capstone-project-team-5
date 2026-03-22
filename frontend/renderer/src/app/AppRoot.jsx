@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AppContext } from './context/AppContext'
 import { useAppBootstrap } from './hooks/useAppBootstrap'
 import ConsentSetup from '../pages/consents/ConsentSetup'
 import AppShell from '../layouts/AppShell'
 import LoadingScreen from '../components/LoadingScreen'
+import SpotlightTour from '../components/onboarding/SpotlightTour'
 
 const INITIAL_UPLOAD_HIGHLIGHTS = {
   created: [],
@@ -13,6 +14,7 @@ const INITIAL_UPLOAD_HIGHLIGHTS = {
 export default function AppRoot() {
   const [page, setPage] = useState('dashboard')
   const [uploadHighlights, setUploadHighlights] = useState(INITIAL_UPLOAD_HIGHLIGHTS)
+  const [showTour, setShowTour] = useState(false)
 
   const analysisCache = useRef({})
 
@@ -24,6 +26,17 @@ export default function AppRoot() {
     setUser,
     logout,
   } = useAppBootstrap()
+
+  useEffect(() => {
+    if (consentReady) {
+      window.api
+        .getTutorialStatus()
+        .then((res) => {
+          if (!res.completed) setShowTour(true)
+        })
+        .catch(() => {})
+    }
+  }, [consentReady])
 
   if (consentReady === null) {
     return <LoadingScreen message="Starting…" />
@@ -57,7 +70,21 @@ export default function AppRoot() {
         logout,
       }}
     >
-      <AppShell page={page} setPage={setPage} apiOk={apiOk} user={user} logout={logout} />
+      <AppShell page={page} setPage={setPage} apiOk={apiOk} user={user} logout={logout} onStartTour={() => setShowTour(true)} />
+      {showTour && (
+        <SpotlightTour
+          setPage={setPage}
+          onComplete={() => {
+            window.api.updateTutorialStatus({ completed: true }).catch(() => {})
+            setShowTour(false)
+          }}
+          onSkip={() => {
+            window.api.updateTutorialStatus({ completed: true }).catch(() => {})
+            setShowTour(false)
+          }}
+          onDismiss={() => setShowTour(false)}
+        />
+      )}
     </AppContext.Provider>
   )
 }

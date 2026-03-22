@@ -34,6 +34,13 @@ export default {
       animation: {
         'fade-up': 'fadeUp 0.2s ease forwards',
         'pulse-dot': 'pulseDot 2s ease-in-out infinite',
+        'zippy-bounce': 'zippyBounce 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards',
+        'zippy-wobble': 'zippyWobble 2.5s ease-in-out infinite',
+        'zippy-wave': 'zippyWave 0.6s ease-in-out infinite',
+
+        'zippy-hop': 'zippyHop 2s ease-in-out infinite',
+        'zippy-excited': 'zippyExcited 0.4s ease-in-out infinite',
+        'zippy-point': 'zippyPoint 0.5s ease-out forwards',
       },
       keyframes: {
         fadeUp: {
@@ -43,6 +50,32 @@ export default {
         pulseDot: {
           '0%, 100%': { opacity: 1 },
           '50%':      { opacity: 0.4 },
+        },
+        zippyBounce: {
+          from: { opacity: 0, transform: 'scale(0.3) translateY(20px)' },
+          to:   { opacity: 1, transform: 'scale(1) translateY(0)' },
+        },
+        zippyWobble: {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '25%':      { transform: 'rotate(-3deg)' },
+          '75%':      { transform: 'rotate(3deg)' },
+        },
+        zippyWave: {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '50%':      { transform: 'rotate(-20deg)' },
+        },
+
+        zippyHop: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%':      { transform: 'translateY(-4px)' },
+        },
+        zippyExcited: {
+          '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+          '50%':      { transform: 'translateY(-3px) rotate(2deg)' },
+        },
+        zippyPoint: {
+          from: { transform: 'rotate(0deg)' },
+          to:   { transform: 'rotate(-30deg)' },
         },
       },
     },

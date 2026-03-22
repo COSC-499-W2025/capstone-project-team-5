@@ -180,6 +180,10 @@ contextBridge.exposeInMainWorld('api', {
   // Users
   getCurrentUser: () => request('GET', '/api/users/me'),
 
+  // Tutorial
+  getTutorialStatus: () => request('GET', '/api/users/me/tutorial-status'),
+  updateTutorialStatus: (data) => request('PATCH', '/api/users/me/tutorial-status', data),
+
   getProfile: (username) =>
     request('GET', `/api/users/${username}/profile`),
 
