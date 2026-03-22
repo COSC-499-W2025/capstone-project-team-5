@@ -58,7 +58,13 @@ export default function ProfilePage() {
   const {
     data, form, error, formError, loading, saving, exists, showForm,
     openCreate, openEdit, cancelForm, setField, handleSave,
-  } = useSingletonForm({ emptyForm: EMPTY_FORM, api: API, validate, buildPayload })
+  } = useSingletonForm({
+    emptyForm: EMPTY_FORM,
+    api: API,
+    validate,
+    buildPayload,
+    onSaveSuccess: () => window.dispatchEvent(new CustomEvent('z2j:profile-saved')),
+  })
   return (
     <div className="animate-fade-up space-y-6">
       <PageHeader

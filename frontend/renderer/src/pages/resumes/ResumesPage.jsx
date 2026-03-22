@@ -416,6 +416,9 @@ export default function ResumesPage() {
       }
 
       markPreviewStale()
+      if (!editingProjectId) {
+        window.dispatchEvent(new CustomEvent('z2j:resume-saved'))
+      }
       cancelForm()
     } catch (saveError) {
       setFormError(saveError?.message || 'Failed to save the resume entry.')
