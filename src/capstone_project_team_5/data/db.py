@@ -17,7 +17,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -68,6 +68,26 @@ def _ensure_tables_created() -> None:
     )
 
     Base.metadata.create_all(bind=_engine)
+    _run_migrations()
+
+
+def _run_migrations() -> None:
+    """Apply incremental schema changes to existing databases."""
+    with _engine.connect() as conn:
+        migrations = [
+            "ALTER TABLE portfolios ADD COLUMN share_token TEXT UNIQUE",
+            "ALTER TABLE portfolios ADD COLUMN template TEXT NOT NULL DEFAULT 'grid'",
+            "ALTER TABLE portfolios ADD COLUMN color_theme TEXT NOT NULL DEFAULT 'dark'",
+            "ALTER TABLE portfolios ADD COLUMN description TEXT",
+            "ALTER TABLE portfolio_items ADD COLUMN is_text_block INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE portfolio_items ADD COLUMN display_order INTEGER NOT NULL DEFAULT 0",
+        ]
+        for stmt in migrations:
+            try:
+                conn.execute(text(stmt))
+                conn.commit()
+            except Exception:
+                pass  # Column already exists
 
 
 def _get_session_factory() -> sessionmaker[Session]:

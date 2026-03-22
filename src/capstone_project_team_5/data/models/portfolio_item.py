@@ -58,6 +58,8 @@ class PortfolioItem(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
     is_user_edited: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_text_block: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     source_analysis_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("code_analyses.id", ondelete="SET NULL"), nullable=True

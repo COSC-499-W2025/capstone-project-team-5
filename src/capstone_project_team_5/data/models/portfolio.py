@@ -31,6 +31,10 @@ class Portfolio(Base):
         nullable=False,
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
+    share_token: Mapped[str | None] = mapped_column(String, unique=True, nullable=True, index=True)
+    template: Mapped[str] = mapped_column(String, nullable=False, default="grid")
+    color_theme: Mapped[str] = mapped_column(String, nullable=False, default="dark")
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
