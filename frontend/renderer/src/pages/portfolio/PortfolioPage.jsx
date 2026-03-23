@@ -517,10 +517,12 @@ export default function PortfolioPage() {
             />
             <button
               type="button"
-              disabled={!shareUrl}
-              onClick={() => shareUrl && window.open(shareUrl, '_blank')}
-              title={shareUrl ? 'Open shared page in browser' : 'Publish first to preview'}
-              className="btn-ghost px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-30"
+              onClick={() => {
+                const url = window.api.getPortfolioPreviewUrl(selectedPortfolio.id);
+                window.open(url, '_blank');
+              }}
+              title="Preview portfolio in browser"
+              className="btn-ghost px-3 py-1.5 text-xs"
             >
               Preview ↗
             </button>

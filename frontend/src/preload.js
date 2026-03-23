@@ -316,6 +316,9 @@ contextBridge.exposeInMainWorld('api', {
   createPortfolioItem: (data) =>
     request('POST', '/api/portfolio/items', data),
 
+  getPortfolioPreviewUrl: (portfolioId) =>
+    `${API_BASE}/api/portfolio/${portfolioId}/preview`,
+
   sharePortfolio: (portfolioId) =>
     request('POST', `/api/portfolio/${portfolioId}/share`),
 

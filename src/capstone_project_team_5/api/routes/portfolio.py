@@ -338,6 +338,94 @@ def revoke_share_link(portfolio_id: int) -> Response:
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+def _render_portfolio_for_id(portfolio_id: int, session: Session) -> HTMLResponse | None:
+    """Shared helper: build the HTML response for a portfolio by its DB id.
+
+    Returns None if the portfolio does not exist.
+    """
+    portfolio = session.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
+    if portfolio is None:
+        return None
+
+    owner = session.query(User).filter(User.id == portfolio.user_id).first()
+    owner_name = owner.username if owner else "unknown"
+
+    items = (
+        session.query(PortfolioItem)
+        .filter(PortfolioItem.portfolio_id == portfolio.id)
+        .order_by(PortfolioItem.display_order.asc(), PortfolioItem.updated_at.desc())
+        .all()
+    )
+
+    item_list: list[dict] = []
+    for item in items:
+        md = _extract_markdown(item.content)
+        analysis_bullets: list[str] = []
+        if not item.is_user_edited and item.project_id:
+            analysis = (
+                session.query(CodeAnalysis)
+                .filter(CodeAnalysis.project_id == item.project_id)
+                .order_by(CodeAnalysis.created_at.desc())
+                .first()
+            )
+            if analysis:
+                if analysis.summary_text and analysis.summary_text.strip():
+                    md = analysis.summary_text.strip()
+                try:
+                    metrics = json.loads(analysis.metrics_json or "{}")
+                except Exception:
+                    metrics = {}
+                raw_bullets = metrics.get("ai_bullets") or metrics.get("resume_bullets") or []
+                if isinstance(raw_bullets, list):
+                    analysis_bullets = [str(b) for b in raw_bullets if b][:6]
+        thumbnail_url = (
+            f"/api/projects/{item.project_id}/thumbnail"
+            if item.project_id and has_project_thumbnail(item.project_id)
+            else None
+        )
+        item_list.append({
+            "title": item.title,
+            "markdown": md,
+            "bullets": analysis_bullets,
+            "thumbnail_url": thumbnail_url,
+            "is_text_block": bool(getattr(item, "is_text_block", False)),
+            "is_user_edited": bool(item.is_user_edited),
+            "updated_at": item.updated_at.strftime("%b %d, %Y"),
+        })
+
+    html = _render_portfolio_html(
+        name=portfolio.name,
+        owner=owner_name,
+        description=portfolio.description or "",
+        items=item_list,
+        created_at=portfolio.created_at.strftime("%B %d, %Y"),
+        template=portfolio.template or "grid",
+        color_theme=portfolio.color_theme or "dark",
+    )
+    return HTMLResponse(content=html)
+
+
+@router.get(
+    "/{portfolio_id}/preview",
+    response_class=HTMLResponse,
+    summary="Preview a portfolio",
+    description="Render the portfolio HTML page without requiring a share token.",
+)
+def preview_portfolio(portfolio_id: int) -> HTMLResponse:
+    """Render a portfolio dashboard for previewing (no share token needed)."""
+    with get_session() as session:
+        response = _render_portfolio_for_id(portfolio_id, session)
+        if response is None:
+            return HTMLResponse(
+                content=_render_404_html(
+                    title="Portfolio not found",
+                    message="This portfolio does not exist.",
+                ),
+                status_code=404,
+            )
+        return response
+
+
 @router.get(
     "/shared/{share_token}",
     response_class=HTMLResponse,
@@ -356,66 +444,8 @@ def get_shared_portfolio(share_token: str) -> HTMLResponse:
                 ),
                 status_code=404,
             )
-
-        owner = session.query(User).filter(User.id == portfolio.user_id).first()
-        owner_name = owner.username if owner else "unknown"
-
-        items = (
-            session.query(PortfolioItem)
-            .filter(PortfolioItem.portfolio_id == portfolio.id)
-            .order_by(PortfolioItem.display_order.asc(), PortfolioItem.updated_at.desc())
-            .all()
-        )
-
-        item_list: list[dict] = []
-        for item in items:
-            md = _extract_markdown(item.content)
-            analysis_bullets: list[str] = []
-            if not item.is_user_edited and item.project_id:
-                analysis = (
-                    session.query(CodeAnalysis)
-                    .filter(CodeAnalysis.project_id == item.project_id)
-                    .order_by(CodeAnalysis.created_at.desc())
-                    .first()
-                )
-                if analysis:
-                    if analysis.summary_text and analysis.summary_text.strip():
-                        md = analysis.summary_text.strip()
-                    try:
-                        metrics = json.loads(analysis.metrics_json or "{}")
-                    except Exception:
-                        metrics = {}
-                    # Prefer AI bullets, fall back to resume bullets
-                    raw_bullets = metrics.get("ai_bullets") or metrics.get("resume_bullets") or []
-                    if isinstance(raw_bullets, list):
-                        analysis_bullets = [str(b) for b in raw_bullets if b][:6]
-            thumbnail_url = (
-                f"/api/projects/{item.project_id}/thumbnail"
-                if item.project_id and has_project_thumbnail(item.project_id)
-                else None
-            )
-            item_list.append(
-                {
-                    "title": item.title,
-                    "markdown": md,
-                    "bullets": analysis_bullets,
-                    "thumbnail_url": thumbnail_url,
-                    "is_text_block": bool(getattr(item, "is_text_block", False)),
-                    "is_user_edited": bool(item.is_user_edited),
-                    "updated_at": item.updated_at.strftime("%b %d, %Y"),
-                }
-            )
-
-        html = _render_portfolio_html(
-            name=portfolio.name,
-            owner=owner_name,
-            description=portfolio.description or "",
-            items=item_list,
-            created_at=portfolio.created_at.strftime("%B %d, %Y"),
-            template=portfolio.template or "grid",
-            color_theme=portfolio.color_theme or "dark",
-        )
-        return HTMLResponse(content=html)
+        response = _render_portfolio_for_id(portfolio.id, session)
+        return response  # type: ignore[return-value]
 
 
 # ── Minimal 404 page ──────────────────────────────────────────────────────────
