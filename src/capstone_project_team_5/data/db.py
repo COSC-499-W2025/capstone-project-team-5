@@ -93,8 +93,14 @@ def _run_migrations() -> None:
     # --- users table ---
     user_cols = [c["name"] for c in inspector.get_columns("users")]
     user_migrations = [
-        ("tutorial_completed", "ALTER TABLE users ADD COLUMN tutorial_completed BOOLEAN NOT NULL DEFAULT 0"),
-        ("setup_completed", "ALTER TABLE users ADD COLUMN setup_completed BOOLEAN NOT NULL DEFAULT 0"),
+        (
+            "tutorial_completed",
+            "ALTER TABLE users ADD COLUMN tutorial_completed BOOLEAN NOT NULL DEFAULT 0",
+        ),
+        (
+            "setup_completed",
+            "ALTER TABLE users ADD COLUMN setup_completed BOOLEAN NOT NULL DEFAULT 0",
+        ),
         ("setup_step", "ALTER TABLE users ADD COLUMN setup_step INTEGER NOT NULL DEFAULT 0"),
     ]
     for col, stmt in user_migrations:
