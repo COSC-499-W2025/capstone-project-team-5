@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../../app/context/AppContext'
+import ActivityHeatmap from '../../components/ActivityHeatmap'
 import PageHeader from '../../components/PageHeader'
 import { getProjectItems } from '../../lib/projects'
 
@@ -408,6 +409,8 @@ export default function DashboardPage() {
           )
         })}
       </div>
+
+      <ActivityHeatmap />
 
       <div>
         <div className="divider-label">Quick Actions</div>

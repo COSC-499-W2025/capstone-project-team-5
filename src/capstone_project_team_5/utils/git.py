@@ -340,6 +340,30 @@ def list_changed_files(
     return [line.strip() for line in output.splitlines() if line.strip()]
 
 
+def get_commit_frequency_by_author(
+    repo: Path | str,
+    author: str | None = None,
+) -> dict[str, int]:
+    """Return a ``{YYYY-MM-DD: commit_count}`` map for the given repo.
+
+    When *author* is provided only commits whose author name matches
+    (case-insensitive) are counted.  Pass ``None`` to count all commits.
+    """
+    output = run_git(repo, "log", "--pretty=format:%ad|%an", "--date=short", "HEAD")
+    counts: dict[str, int] = {}
+    lower_author = author.strip().lower() if author else None
+    for line in output.splitlines():
+        if "|" not in line:
+            continue
+        date_key, commit_author = line.split("|", 1)
+        date_key = date_key.strip()
+        if lower_author is not None and commit_author.strip().lower() != lower_author:
+            continue
+        if len(date_key) == 10:  # YYYY-MM-DD
+            counts[date_key] = counts.get(date_key, 0) + 1
+    return counts
+
+
 def list_commit_dates(repo: Path | str, *, rev_range: str = "HEAD") -> list[datetime.datetime]:
     """Return commit datetimes for ``rev_range`` parsed as tz-aware values.
 
@@ -376,6 +400,7 @@ __all__ = [
     "render_weekly_activity_chart_for_range",
     "list_changed_files",
     "list_commit_dates",
+    "get_commit_frequency_by_author",
 ]
 
 
