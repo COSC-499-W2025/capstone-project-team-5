@@ -26,6 +26,7 @@ from capstone_project_team_5.skill_detection import extract_project_tools_practi
 from capstone_project_team_5.utils.git import (
     AuthorContribution,
     get_author_contributions,
+    get_commit_frequency_by_author,
     get_current_git_identity,
     get_weekly_activity,
     is_git_repo,
@@ -198,6 +199,7 @@ def analyze_projects_structured(
         git_author_contribs: list[dict[str, int | str]] = []
         git_current_contrib: dict[str, int] | None = None
         git_activity_chart: list[str] = []
+        git_commit_frequency: dict[str, int] = {}
 
         if git_is_repo:
             current_name, _current_email = get_current_git_identity(project_path)
@@ -258,7 +260,29 @@ def analyze_projects_structured(
             except RuntimeError:
                 git_activity_chart = []
 
-        save_code_analysis_to_db(project.name, project.rel_path, analysis, username=current_user)
+            try:
+                git_commit_frequency = get_commit_frequency_by_author(
+                    project_path, author=git_current_author
+                )
+            except RuntimeError:
+                git_commit_frequency = {}
+
+        git_data: dict = {
+            "is_repo": git_is_repo,
+            "current_author": git_current_author,
+            "author_contributions": git_author_contribs,
+            "current_author_contribution": git_current_contrib,
+            "activity_chart": git_activity_chart,
+            "commit_frequency": git_commit_frequency,
+        }
+
+        save_code_analysis_to_db(
+            project.name,
+            project.rel_path,
+            analysis,
+            username=current_user,
+            extra_metrics={"git": git_data},
+        )
         skill_timeline = _get_skill_timeline_for_project(project.name, project.rel_path)
 
         analyses.append(
@@ -296,13 +320,7 @@ def analyze_projects_structured(
                 "resume_bullets": resume_bullets,
                 "resume_bullet_source": resume_source,
                 "skill_timeline": skill_timeline,
-                "git": {
-                    "is_repo": git_is_repo,
-                    "current_author": git_current_author,
-                    "author_contributions": git_author_contribs,
-                    "current_author_contribution": git_current_contrib,
-                    "activity_chart": git_activity_chart,
-                },
+                "git": git_data,
                 "user_role": analysis.user_role,
                 "user_contribution_percentage": analysis.user_contribution_percentage,
                 "role_justification": analysis.role_justification,

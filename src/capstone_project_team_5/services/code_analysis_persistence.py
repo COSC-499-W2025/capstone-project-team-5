@@ -22,6 +22,7 @@ def save_code_analysis_to_db(
     project_rel_path: str,
     analysis: ProjectAnalysis,
     username: str | None = None,
+    extra_metrics: dict | None = None,
 ) -> None:
     """Save code analysis results to the database (language-agnostic).
 
@@ -86,6 +87,9 @@ def save_code_analysis_to_db(
             if not metrics_json:
                 # No language-specific data available, use generic aggregated data
                 metrics_json, summary_text = _prepare_generic_data(analysis)
+
+            if extra_metrics:
+                metrics_json = {**(metrics_json or {}), **extra_metrics}
 
             # Create and save analysis
             code_analysis = CodeAnalysis(

@@ -216,6 +216,7 @@ class GitSummary(BaseModel):
     author_contributions: list[GitAuthorContribution]
     current_author_contribution: GitContribution | None
     activity_chart: list[str]
+    commit_frequency: dict[str, int] | None = None
 
 
 class SkillTimelineEntry(BaseModel):
