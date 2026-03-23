@@ -347,36 +347,6 @@ contextBridge.exposeInMainWorld('api', {
   createPortfolioItem: (data) =>
     request('POST', '/api/portfolio/items', data),
 
-  getPortfolioPreviewUrl: (portfolioId) =>
-    `${API_BASE}/api/portfolio/${portfolioId}/preview`,
-
-  sharePortfolio: (portfolioId) =>
-    request('POST', `/api/portfolio/${portfolioId}/share`),
-
-  revokePortfolioShare: (portfolioId) =>
-    request('DELETE', `/api/portfolio/${portfolioId}/share`),
-
-  getSharedPortfolio: (shareToken) =>
-    request('GET', `/api/portfolio/shared/${shareToken}`),
-
-  getPortfolioInfo: (portfolioId) =>
-    request('GET', `/api/portfolio/${portfolioId}/info`),
-
-  removePortfolioItem: (portfolioId, itemId) =>
-    request('DELETE', `/api/portfolio/${portfolioId}/items/${itemId}`),
-
-  addTextBlock: (portfolioId, data) =>
-    request('POST', `/api/portfolio/${portfolioId}/blocks`, data),
-
-  updatePortfolioItem: (portfolioId, itemId, data) =>
-    request('PATCH', `/api/portfolio/${portfolioId}/items/${itemId}`, data),
-
-  reorderPortfolioItems: (portfolioId, itemIds) =>
-    request('POST', `/api/portfolio/${portfolioId}/reorder`, { item_ids: itemIds }),
-
-  updatePortfolio: (portfolioId, data) =>
-    request('PATCH', `/api/portfolio/${portfolioId}`, data),
-
   // Resumes
   getResumes: (username) =>
     request('GET', `/api/users/${username}/resumes`),

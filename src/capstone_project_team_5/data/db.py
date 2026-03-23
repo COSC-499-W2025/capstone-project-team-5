@@ -78,46 +78,31 @@ def _ensure_tables_created() -> None:
     )
 
     Base.metadata.create_all(bind=_engine)
-    _run_migrations()
+    _run_migrations(_engine)
 
 
-def _run_migrations() -> None:
-    """Apply incremental schema changes to existing databases.
+def _run_migrations(engine: Engine) -> None:
+    """Run manual column migrations for existing databases.
 
     Since the project uses create_all() (no Alembic), new columns on existing
-    tables require explicit ALTER TABLE statements. Each migration is
-    idempotent — failures (column already exists) are silently ignored.
+    tables require explicit ALTER TABLE statements.  Each migration is
+    idempotent — it checks whether the column already exists before altering.
     """
-    inspector = inspect(_engine)
-
-    # --- users table ---
-    user_cols = [c["name"] for c in inspector.get_columns("users")]
-    user_migrations = [
-        ("tutorial_completed", "ALTER TABLE users ADD COLUMN tutorial_completed BOOLEAN NOT NULL DEFAULT 0"),
-        ("setup_completed", "ALTER TABLE users ADD COLUMN setup_completed BOOLEAN NOT NULL DEFAULT 0"),
-        ("setup_step", "ALTER TABLE users ADD COLUMN setup_step INTEGER NOT NULL DEFAULT 0"),
-    ]
-    for col, stmt in user_migrations:
-        if col not in user_cols:
-            with _engine.begin() as conn:
-                conn.execute(text(stmt))
-
-    # --- portfolios / portfolio_items tables ---
-    portfolio_migrations = [
-        "ALTER TABLE portfolios ADD COLUMN share_token TEXT UNIQUE",
-        "ALTER TABLE portfolios ADD COLUMN template TEXT NOT NULL DEFAULT 'grid'",
-        "ALTER TABLE portfolios ADD COLUMN color_theme TEXT NOT NULL DEFAULT 'dark'",
-        "ALTER TABLE portfolios ADD COLUMN description TEXT",
-        "ALTER TABLE portfolio_items ADD COLUMN is_text_block INTEGER NOT NULL DEFAULT 0",
-        "ALTER TABLE portfolio_items ADD COLUMN display_order INTEGER NOT NULL DEFAULT 0",
-    ]
-    with _engine.connect() as conn:
-        for stmt in portfolio_migrations:
-            try:
-                conn.execute(text(stmt))
-                conn.commit()
-            except Exception:
-                pass  # Column already exists
+    inspector = inspect(engine)
+    columns = [c["name"] for c in inspector.get_columns("users")]
+    if "tutorial_completed" not in columns:
+        with engine.begin() as conn:
+            conn.execute(
+                text("ALTER TABLE users ADD COLUMN tutorial_completed BOOLEAN NOT NULL DEFAULT 0")
+            )
+    if "setup_completed" not in columns:
+        with engine.begin() as conn:
+            conn.execute(
+                text("ALTER TABLE users ADD COLUMN setup_completed BOOLEAN NOT NULL DEFAULT 0")
+            )
+    if "setup_step" not in columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN setup_step INTEGER NOT NULL DEFAULT 0"))
 
 
 def _get_session_factory() -> sessionmaker[Session]:
