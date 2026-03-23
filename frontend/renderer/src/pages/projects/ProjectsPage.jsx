@@ -125,11 +125,26 @@ export default function ProjectsPage() {
 
   function handleThumbnailChange(projectId, hasThumbnail) {
     const thumbnailUrl = hasThumbnail ? `/api/projects/${projectId}/thumbnail` : null
+    const thumbnailRev = hasThumbnail ? Date.now() : null
     const update = (p) =>
-      p.id === projectId ? { ...p, has_thumbnail: hasThumbnail, thumbnail_url: thumbnailUrl } : p
+      p.id === projectId
+        ? {
+            ...p,
+            has_thumbnail: hasThumbnail,
+            thumbnail_url: thumbnailUrl,
+            thumbnail_rev: thumbnailRev,
+          }
+        : p
     setProjects((prev) => prev.map(update))
     setOpen((prev) =>
-      prev?.id === projectId ? { ...prev, has_thumbnail: hasThumbnail, thumbnail_url: thumbnailUrl } : prev
+      prev?.id === projectId
+        ? {
+            ...prev,
+            has_thumbnail: hasThumbnail,
+            thumbnail_url: thumbnailUrl,
+            thumbnail_rev: thumbnailRev,
+          }
+        : prev
     )
   }
 
@@ -225,6 +240,12 @@ export default function ProjectsPage() {
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
 function ProjectCard({ project, isNew, isMerged, onOpen, onMouseEnter }) {
+  const [showThumbnail, setShowThumbnail] = useState(Boolean(project.has_thumbnail))
+
+  useEffect(() => {
+    setShowThumbnail(Boolean(project.has_thumbnail))
+  }, [project.id, project.has_thumbnail, project.thumbnail_rev])
+
   const borderOverride = isNew
     ? 'border-success/50'
     : isMerged
@@ -238,11 +259,13 @@ function ProjectCard({ project, isNew, isMerged, onOpen, onMouseEnter }) {
       onMouseEnter={onMouseEnter}
     >
       {/* Thumbnail */}
-      {project.has_thumbnail && (
-        <img
-          src={window.api.getProjectThumbnailUrl(project.id)}
+      {showThumbnail && (
+        <AuthenticatedThumbnail
+          projectId={project.id}
+          revision={project.thumbnail_rev}
           alt={`${project.name} thumbnail`}
           className="w-full h-32 object-cover"
+          onLoadError={() => setShowThumbnail(false)}
         />
       )}
 
@@ -380,10 +403,15 @@ function ProjectDrawer({ project, onClose, onAnalysisDone, onThumbnailChange }) 
 
         {/* Thumbnail banner */}
         {hasThumbnail && (
-          <img
-            src={window.api.getProjectThumbnailUrl(project.id) + (thumbVer ? `?v=${thumbVer}` : '')}
+          <AuthenticatedThumbnail
+            projectId={project.id}
+            revision={thumbVer || project.thumbnail_rev}
             alt={`${project.name} thumbnail`}
             className="w-full h-40 object-cover shrink-0"
+            onLoadError={(loadErr) => {
+              setHasThumbnail(false)
+              setThumbErr(loadErr?.message || 'Failed to load thumbnail.')
+            }}
           />
         )}
 
@@ -602,6 +630,77 @@ function AnalysisDetail({ data }) {
         </Section>
       )}
     </div>
+  )
+}
+
+function AuthenticatedThumbnail({ projectId, revision, alt, className, onLoadError }) {
+  const [src, setSrc] = useState('')
+  const onLoadErrorRef = useRef(onLoadError)
+
+  useEffect(() => {
+    onLoadErrorRef.current = onLoadError
+  }, [onLoadError])
+
+  useEffect(() => {
+    let cancelled = false
+    let objectUrl = null
+
+    async function loadThumbnail() {
+      try {
+        const nextUrl = await window.api.getProjectThumbnailObjectUrl(projectId, revision)
+        if (cancelled) {
+          if (window.api.revokeObjectUrl) {
+            window.api.revokeObjectUrl(nextUrl)
+          } else {
+            URL.revokeObjectURL(nextUrl)
+          }
+          return
+        }
+        objectUrl = nextUrl
+        setSrc(nextUrl)
+      } catch (err) {
+        if (!cancelled) {
+          setSrc('')
+          onLoadErrorRef.current?.(err)
+        }
+      }
+    }
+
+    setSrc('')
+    loadThumbnail()
+
+    return () => {
+      cancelled = true
+      if (objectUrl) {
+        if (window.api.revokeObjectUrl) {
+          window.api.revokeObjectUrl(objectUrl)
+        } else {
+          URL.revokeObjectURL(objectUrl)
+        }
+      }
+    }
+  }, [projectId, revision])
+
+  if (!src) {
+    return null
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      onError={(event) => {
+        const failedUrl = event.currentTarget.currentSrc
+        if (window.api.revokeObjectUrl) {
+          window.api.revokeObjectUrl(failedUrl)
+        } else if (failedUrl) {
+          URL.revokeObjectURL(failedUrl)
+        }
+        setSrc('')
+        onLoadErrorRef.current?.(new Error('Failed to render thumbnail image.'))
+      }}
+    />
   )
 }
 

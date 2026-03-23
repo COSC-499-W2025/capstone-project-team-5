@@ -22,7 +22,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import FileResponse
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -67,7 +67,6 @@ from capstone_project_team_5.services.content_store import (
     materialize_project_tree,
     write_analysis_cache,
 )
-from capstone_project_team_5.services.incremental_upload import find_matching_projects
 from capstone_project_team_5.services.project_thumbnail import (
     clear_project_thumbnail,
     get_project_thumbnail_path,
@@ -271,6 +270,44 @@ def _get_user_or_404(session: Session, username: str) -> User:
     return user
 
 
+def _owned_project_query(session: Session, user_id: int):
+    return (
+        session.query(Project)
+        .join(UploadRecord, UploadRecord.id == Project.upload_id)
+        .filter(UploadRecord.user_id == user_id)
+    )
+
+
+def _get_owned_project_or_404(session: Session, project_id: int, user_id: int) -> Project:
+    project = _owned_project_query(session, user_id).filter(Project.id == project_id).first()
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found.",
+        )
+    return project
+
+
+def _find_matching_owned_projects(
+    session: Session,
+    detected_projects: list[str],
+    user_id: int,
+) -> dict[str, list[int]]:
+    matches: dict[str, list[int]] = {}
+    for project_name in detected_projects:
+        normalized_name = project_name.lower()
+        found_project_ids = (
+            _owned_project_query(session, user_id)
+            .filter(func.lower(Project.name) == normalized_name)
+            .with_entities(Project.id)
+            .all()
+        )
+        found_projects = [project_id for (project_id,) in found_project_ids]
+        if found_projects:
+            matches[project_name] = found_projects
+    return matches
+
+
 def _ensure_user_analysis_link(session: Session, project_id: int, username: str) -> None:
     """Ensure a UserCodeAnalysis link exists for the user and the project's latest analysis."""
     user = session.query(User).filter(User.username == username).first()
@@ -446,6 +483,7 @@ def _build_saved_uploads_response(session: Session, username: str) -> list[Saved
     description="Return all persisted projects ordered by most recently updated.",
 )
 def list_projects(
+    current_username: Annotated[str, Depends(get_current_username)],
     limit: int = Query(
         default=DEFAULT_LIMIT,
         ge=1,
@@ -459,7 +497,8 @@ def list_projects(
     ),
 ) -> PaginatedProjectsResponse:
     with get_session() as session:
-        query = session.query(Project).order_by(desc(Project.updated_at))
+        user = _get_user_or_404(session, current_username)
+        query = _owned_project_query(session, user.id).order_by(desc(Project.updated_at))
         total = query.count()
         projects = query.offset(offset).limit(limit).all()
         return PaginatedProjectsResponse(
@@ -614,14 +653,13 @@ def update_analysis(
     description="Return a single project by ID.",
     responses={404: {"description": "Project not found"}},
 )
-def get_project(project_id: int) -> ProjectSummary:
+def get_project(
+    project_id: int,
+    current_username: Annotated[str, Depends(get_current_username)],
+) -> ProjectSummary:
     with get_session() as session:
-        project = session.query(Project).filter(Project.id == project_id).first()
-        if project is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found.",
-            )
+        user = _get_user_or_404(session, current_username)
+        project = _get_owned_project_or_404(session, project_id, user.id)
         return _project_to_summary(project)
 
 
@@ -632,14 +670,14 @@ def get_project(project_id: int) -> ProjectSummary:
     description="Update editable fields on a project by ID.",
     responses={404: {"description": "Project not found"}},
 )
-def update_project(project_id: int, update: ProjectUpdateRequest) -> ProjectSummary:
+def update_project(
+    project_id: int,
+    update: ProjectUpdateRequest,
+    current_username: Annotated[str, Depends(get_current_username)],
+) -> ProjectSummary:
     with get_session() as session:
-        project = session.query(Project).filter(Project.id == project_id).first()
-        if project is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found.",
-            )
+        user = _get_user_or_404(session, current_username)
+        project = _get_owned_project_or_404(session, project_id, user.id)
 
         updates = update.model_dump(exclude_unset=True)
         for field, value in updates.items():
@@ -663,14 +701,11 @@ def update_project(project_id: int, update: ProjectUpdateRequest) -> ProjectSumm
 async def upload_project_thumbnail(
     project_id: int,
     file: Annotated[UploadFile, File(description="Thumbnail image file")],
+    current_username: Annotated[str, Depends(get_current_username)],
 ) -> Response:
     with get_session() as session:
-        project = session.query(Project).filter(Project.id == project_id).first()
-        if project is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found.",
-            )
+        user = _get_user_or_404(session, current_username)
+        _get_owned_project_or_404(session, project_id, user.id)
 
     data = await file.read()
     saved, error = set_project_thumbnail(
@@ -696,14 +731,13 @@ async def upload_project_thumbnail(
         404: {"description": "Project or thumbnail not found"},
     },
 )
-def get_project_thumbnail(project_id: int) -> Response:
+def get_project_thumbnail(
+    project_id: int,
+    current_username: Annotated[str, Depends(get_current_username)],
+) -> Response:
     with get_session() as session:
-        project = session.query(Project).filter(Project.id == project_id).first()
-        if project is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found.",
-            )
+        user = _get_user_or_404(session, current_username)
+        _get_owned_project_or_404(session, project_id, user.id)
 
     path = get_project_thumbnail_path(project_id)
     if path is None:
@@ -722,14 +756,13 @@ def get_project_thumbnail(project_id: int) -> Response:
     description="Remove the stored thumbnail image for a project.",
     responses={404: {"description": "Project not found"}},
 )
-def delete_project_thumbnail(project_id: int) -> Response:
+def delete_project_thumbnail(
+    project_id: int,
+    current_username: Annotated[str, Depends(get_current_username)],
+) -> Response:
     with get_session() as session:
-        project = session.query(Project).filter(Project.id == project_id).first()
-        if project is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found.",
-            )
+        user = _get_user_or_404(session, current_username)
+        _get_owned_project_or_404(session, project_id, user.id)
 
     clear_project_thumbnail(project_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -742,14 +775,13 @@ def delete_project_thumbnail(project_id: int) -> Response:
     description="Delete a project by ID.",
     responses={404: {"description": "Project not found"}},
 )
-def delete_project(project_id: int) -> Response:
+def delete_project(
+    project_id: int,
+    current_username: Annotated[str, Depends(get_current_username)],
+) -> Response:
     with get_session() as session:
-        project = session.query(Project).filter(Project.id == project_id).first()
-        if project is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found.",
-            )
+        user = _get_user_or_404(session, current_username)
+        project = _get_owned_project_or_404(session, project_id, user.id)
         session.delete(project)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -766,6 +798,7 @@ def delete_project(project_id: int) -> Response:
     },
 )
 async def upload_project_zip(
+    current_username: Annotated[str, Depends(get_current_username)],
     file: Annotated[UploadFile, File(description="ZIP archive containing project files")],
     project_mapping: Annotated[
         str | None,
@@ -817,7 +850,6 @@ async def upload_project_zip(
         )
 
         detected_names = [project.name for project in result.projects]
-        matches = find_matching_projects(detected_names) if detected_names else {}
         unknown_mapped_names = sorted(set(requested_mapping.keys()) - set(detected_names))
         if unknown_mapped_names:
             raise HTTPException(
@@ -829,22 +861,29 @@ async def upload_project_zip(
                     "unknown_project_names": unknown_mapped_names,
                 },
             )
-        ambiguous = {
-            name: ids
-            for name, ids in matches.items()
-            if len(ids) > 1 and name in detected_names and name not in requested_mapping
-        }
-        if ambiguous:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    "message": "Multiple existing projects match uploaded project names.",
-                    "candidates": ambiguous,
-                },
-            )
-
         with get_session() as session:
+            user = _get_user_or_404(session, current_username)
+            matches = (
+                _find_matching_owned_projects(session, detected_names, user.id)
+                if detected_names
+                else {}
+            )
+            ambiguous = {
+                name: ids
+                for name, ids in matches.items()
+                if len(ids) > 1 and name in detected_names and name not in requested_mapping
+            }
+            if ambiguous:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={
+                        "message": "Multiple existing projects match uploaded project names.",
+                        "candidates": ambiguous,
+                    },
+                )
+
             upload_record = UploadRecord(
+                user_id=user.id,
                 filename=result.filename,
                 size_bytes=result.size_bytes,
                 file_count=result.file_count,
@@ -1016,12 +1055,8 @@ def analyze_project(
     # analysis so we don't hold a SQLite shared lock that would prevent
     # save_code_analysis_to_db (which opens its own session) from writing.
     with get_session() as session:
-        project = session.query(Project).filter(Project.id == project_id).first()
-        if project is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found.",
-            )
+        user = _get_user_or_404(session, current_username)
+        project = _get_owned_project_or_404(session, project_id, user.id)
         if not project.rel_path.strip():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -1121,12 +1156,19 @@ def analyze_project(
     summary="Analyze all projects",
     description="Analyze all persisted projects and update their importance scores.",
 )
-def analyze_all_projects(use_ai: bool = False, force: bool = False) -> ProjectsAnalyzeAllResponse:
+def analyze_all_projects(
+    current_username: Annotated[str, Depends(get_current_username)],
+    use_ai: bool = False,
+    force: bool = False,
+) -> ProjectsAnalyzeAllResponse:
     analyzed: list[ProjectAnalysisResult] = []
     skipped: list[ProjectAnalysisSkipped] = []
 
     with get_session() as session:
-        projects = session.query(Project).order_by(Project.upload_id, Project.id).all()
+        user = _get_user_or_404(session, current_username)
+        projects = (
+            _owned_project_query(session, user.id).order_by(Project.upload_id, Project.id).all()
+        )
         if not projects:
             return ProjectsAnalyzeAllResponse(analyzed=[], skipped=[])
 

@@ -4,6 +4,7 @@ import io
 from uuid import uuid4
 from zipfile import ZIP_DEFLATED, ZipFile
 
+from conftest import auth_headers
 from fastapi.testclient import TestClient
 
 from capstone_project_team_5.api.main import app
@@ -33,8 +34,13 @@ def _create_user(username: str) -> None:
             session.commit()
 
 
+def _auth(username: str = "testuser") -> dict[str, str]:
+    _create_user(username)
+    return auth_headers(username)
+
+
 def test_portfolio_edit_endpoint_creates_and_updates_item() -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
 
     # Create a project via upload endpoint.
     project_name = _unique_project_name("proj")
@@ -47,6 +53,7 @@ def test_portfolio_edit_endpoint_creates_and_updates_item() -> None:
     upload_response = client.post(
         "/api/projects/upload",
         files={"file": ("proj.zip", zip_bytes, "application/zip")},
+        headers=_auth(),
     )
     assert upload_response.status_code == 201
     project_id = upload_response.json()["projects"][0]["id"]
@@ -106,7 +113,7 @@ def test_portfolio_edit_endpoint_creates_and_updates_item() -> None:
 
 
 def test_portfolio_edit_endpoint_missing_user_returns_404() -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
 
     project_name = _unique_project_name("proj2")
     zip_bytes = _create_zip_bytes(
@@ -118,6 +125,7 @@ def test_portfolio_edit_endpoint_missing_user_returns_404() -> None:
     upload_response = client.post(
         "/api/projects/upload",
         files={"file": ("proj2.zip", zip_bytes, "application/zip")},
+        headers=_auth(),
     )
     assert upload_response.status_code == 201
     project_id = upload_response.json()["projects"][0]["id"]
@@ -135,7 +143,7 @@ def test_portfolio_edit_endpoint_missing_user_returns_404() -> None:
 
 
 def test_portfolio_edit_endpoint_rejects_portfolio_from_other_user() -> None:
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
 
     project_name = _unique_project_name("proj-ownership")
     zip_bytes = _create_zip_bytes(
@@ -146,6 +154,7 @@ def test_portfolio_edit_endpoint_rejects_portfolio_from_other_user() -> None:
     upload_response = client.post(
         "/api/projects/upload",
         files={"file": ("proj-ownership.zip", zip_bytes, "application/zip")},
+        headers=_auth(),
     )
     assert upload_response.status_code == 201
     project_id = upload_response.json()["projects"][0]["id"]

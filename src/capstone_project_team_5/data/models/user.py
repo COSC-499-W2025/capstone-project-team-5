@@ -19,6 +19,7 @@ from capstone_project_team_5.data.models.resume import Resume
 if TYPE_CHECKING:
     from capstone_project_team_5.data.models.education import Education
     from capstone_project_team_5.data.models.portfolio import Portfolio
+    from capstone_project_team_5.data.models.upload_record import UploadRecord
     from capstone_project_team_5.data.models.user_profile import UserProfile
     from capstone_project_team_5.data.models.work_experience import WorkExperience
 
@@ -58,4 +59,7 @@ class User(Base):
     )
     work_experiences: Mapped[list[WorkExperience]] = relationship(
         "WorkExperience", back_populates="user", cascade="all, delete-orphan"
+    )
+    uploads: Mapped[list[UploadRecord]] = relationship(
+        "UploadRecord", back_populates="user", cascade="all, delete-orphan"
     )
