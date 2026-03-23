@@ -14,6 +14,7 @@ def save_resume(
     description: str,
     bullet_points: list[str],
     analysis_snapshot: list[str],
+    bullet_source: str | None = None,
 ) -> bool:
     """
     Saves a resume item to the database or updates
@@ -62,6 +63,7 @@ def save_resume(
             resume_project.title = title
             resume_project.description = description
             resume_project.analysis_snapshot = snapshot_json
+            resume_project.bullet_source = bullet_source
             resume_project.updated_at = datetime.now(UTC)
 
             # Delete old bullets
@@ -76,6 +78,7 @@ def save_resume(
                 title=title,
                 description=description,
                 analysis_snapshot=snapshot_json,
+                bullet_source=bullet_source,
             )
             session.add(resume_project)
             session.flush()
@@ -156,6 +159,7 @@ def get_resume(username: str, project_id: int) -> dict | None:
             "description": resume_project.description,
             "analysis_snapshot": snapshot,
             "bullet_points": bullets,
+            "bullet_source": resume_project.bullet_source,
             "created_at": resume_project.created_at,
             "updated_at": resume_project.updated_at,
         }
@@ -246,6 +250,7 @@ def get_all_resumes(username: str) -> list[dict]:
                     "description": rp.description,
                     "analysis_snapshot": snapshot,
                     "bullet_points": [bp.content for bp in rp.bullet_points],
+                    "bullet_source": rp.bullet_source,
                     "created_at": rp.created_at,
                     "updated_at": rp.updated_at,
                 }

@@ -1,15 +1,17 @@
-const { contextBridge } = require('electron');
+/**
+ * Browser-compatible API module for Zip2Job.
+ *
+ * In Electron, the preload script sets window.api via contextBridge.
+ * When running as a plain web app (e.g. on Railway), this module provides
+ * the same API surface so React components work identically in both contexts.
+ */
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
-// Signed JWT returned by /api/auth/login or /api/auth/register.
-// Sent as `Authorization: Bearer <token>` on every authenticated request.
 let _token = null;
+let _username = null;
 
-// Display username kept separately so the UI can show it without decoding the JWT.
-let _username = (process.env.ZIP2JOB_USERNAME || '').trim() || null;
-
-async function parseResponseBody(res) {
+function parseResponseBody(res) {
   if (res.status === 204) return null;
 
   const contentType = res.headers.get('content-type') || '';
@@ -17,14 +19,14 @@ async function parseResponseBody(res) {
     return res.json();
   }
 
-  const text = await res.text();
-  if (!text) return null;
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
+  return res.text().then((text) => {
+    if (!text) return null;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
+  });
 }
 
 function getErrorMessage(parsedBody, status) {
@@ -39,7 +41,6 @@ function getErrorMessage(parsedBody, status) {
   return `HTTP ${status}`;
 }
 
-/** Creates an Error that carries the raw HTTP status code as a numeric property. */
 function httpError(parsedBody, status) {
   const err = new Error(getErrorMessage(parsedBody, status));
   err.status = status;
@@ -48,38 +49,25 @@ function httpError(parsedBody, status) {
 
 function buildQueryString(params = {}) {
   const searchParams = new URLSearchParams();
-
   Object.entries(params).forEach(([key, value]) => {
-    if (value === undefined || value === null) {
-      return;
-    }
-
+    if (value === undefined || value === null) return;
     searchParams.set(key, String(value));
   });
-
   const query = searchParams.toString();
   return query ? `?${query}` : '';
 }
 
 function parseFilename(contentDisposition) {
-  if (!contentDisposition) {
-    return 'resume.pdf';
-  }
+  if (!contentDisposition) return 'resume.pdf';
 
   const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
-  if (utf8Match?.[1]) {
-    return decodeURIComponent(utf8Match[1].trim());
-  }
+  if (utf8Match?.[1]) return decodeURIComponent(utf8Match[1].trim());
 
   const quotedMatch = contentDisposition.match(/filename="([^"]+)"/i);
-  if (quotedMatch?.[1]) {
-    return quotedMatch[1].trim();
-  }
+  if (quotedMatch?.[1]) return quotedMatch[1].trim();
 
   const plainMatch = contentDisposition.match(/filename=([^;]+)/i);
-  if (plainMatch?.[1]) {
-    return plainMatch[1].trim().replace(/^"|"$/g, '');
-  }
+  if (plainMatch?.[1]) return plainMatch[1].trim().replace(/^"|"$/g, '');
 
   return 'resume.pdf';
 }
@@ -94,10 +82,7 @@ async function request(method, path, body, signal) {
   const res = await fetch(`${API_BASE}${path}`, opts);
   const parsedBody = await parseResponseBody(res);
 
-  if (!res.ok) {
-    throw httpError(parsedBody, res.status);
-  }
-
+  if (!res.ok) throw httpError(parsedBody, res.status);
   return parsedBody;
 }
 
@@ -113,10 +98,7 @@ async function requestWithForm(method, path, formData, signal) {
   });
   const parsedBody = await parseResponseBody(res);
 
-  if (!res.ok) {
-    throw httpError(parsedBody, res.status);
-  }
-
+  if (!res.ok) throw httpError(parsedBody, res.status);
   return parsedBody;
 }
 
@@ -124,12 +106,7 @@ async function requestBinary(method, path, body, signal) {
   const headers = { 'Content-Type': 'application/json' };
   if (_token) headers['Authorization'] = `Bearer ${_token}`;
 
-  const opts = {
-    method,
-    headers,
-    signal,
-  };
-
+  const opts = { method, headers, signal };
   if (body) opts.body = JSON.stringify(body);
 
   const res = await fetch(`${API_BASE}${path}`, opts);
@@ -146,22 +123,17 @@ async function requestBinary(method, path, body, signal) {
   };
 }
 
-contextBridge.exposeInMainWorld('api', {
-  // Token management — the JWT returned by login/register.
+export const api = {
+  // Token management
   setAuthToken:    (token)    => { _token = token || null; },
   getAuthToken:    ()         => _token,
 
-  // Username management — kept for display purposes and URL building.
+  // Username management
   setAuthUsername: (username) => { _username = (username || '').trim() || null; },
   getAuthUsername: () => _username,
   setUsername:     (username) => { _username = username || null; },
   getUsername:     () => _username,
 
-  /**
-   * Clear all credential state in the preload bridge.
-   * The React layer is responsible for clearing localStorage and
-   * resetting its own state; this keeps the two in sync.
-   */
   clearCredentials: () => { _token = null; _username = null; },
 
   // Health
@@ -183,10 +155,6 @@ contextBridge.exposeInMainWorld('api', {
   // Tutorial
   getTutorialStatus: () => request('GET', '/api/users/me/tutorial-status'),
   updateTutorialStatus: (data) => request('PATCH', '/api/users/me/tutorial-status', data),
-
-  // Setup wizard
-  getSetupStatus: () => request('GET', '/api/users/me/setup-status'),
-  updateSetupStatus: (data) => request('PATCH', '/api/users/me/setup-status', data),
 
   getProfile: (username) =>
     request('GET', `/api/users/${username}/profile`),
@@ -347,36 +315,6 @@ contextBridge.exposeInMainWorld('api', {
   createPortfolioItem: (data) =>
     request('POST', '/api/portfolio/items', data),
 
-  getPortfolioPreviewUrl: (portfolioId) =>
-    `${API_BASE}/api/portfolio/${portfolioId}/preview`,
-
-  sharePortfolio: (portfolioId) =>
-    request('POST', `/api/portfolio/${portfolioId}/share`),
-
-  revokePortfolioShare: (portfolioId) =>
-    request('DELETE', `/api/portfolio/${portfolioId}/share`),
-
-  getSharedPortfolio: (shareToken) =>
-    request('GET', `/api/portfolio/shared/${shareToken}`),
-
-  getPortfolioInfo: (portfolioId) =>
-    request('GET', `/api/portfolio/${portfolioId}/info`),
-
-  removePortfolioItem: (portfolioId, itemId) =>
-    request('DELETE', `/api/portfolio/${portfolioId}/items/${itemId}`),
-
-  addTextBlock: (portfolioId, data) =>
-    request('POST', `/api/portfolio/${portfolioId}/blocks`, data),
-
-  updatePortfolioItem: (portfolioId, itemId, data) =>
-    request('PATCH', `/api/portfolio/${portfolioId}/items/${itemId}`, data),
-
-  reorderPortfolioItems: (portfolioId, itemIds) =>
-    request('POST', `/api/portfolio/${portfolioId}/reorder`, { item_ids: itemIds }),
-
-  updatePortfolio: (portfolioId, data) =>
-    request('PATCH', `/api/portfolio/${portfolioId}`, data),
-
   // Resumes
   getResumes: (username) =>
     request('GET', `/api/users/${username}/resumes`),
@@ -398,4 +336,4 @@ contextBridge.exposeInMainWorld('api', {
 
   deleteResume: (username, projectId) =>
     request('DELETE', `/api/users/${username}/resumes/${projectId}`),
-});
+};

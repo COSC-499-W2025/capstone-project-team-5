@@ -161,6 +161,7 @@ def create_resume_endpoint(
         description=data.description,
         bullet_points=data.bullet_points,
         analysis_snapshot=data.analysis_snapshot,
+        bullet_source=data.bullet_source,
     )
     if not success:
         raise HTTPException(
@@ -204,6 +205,7 @@ def update_resume_endpoint(
     merged_description = update_fields.get("description", existing["description"] or "")
     merged_bullets = update_fields.get("bullet_points", existing["bullet_points"])
     merged_snapshot = update_fields.get("analysis_snapshot", existing["analysis_snapshot"])
+    merged_bullet_source = update_fields.get("bullet_source", existing.get("bullet_source"))
 
     success = save_resume(
         username=username,
@@ -212,6 +214,7 @@ def update_resume_endpoint(
         description=merged_description,
         bullet_points=merged_bullets,
         analysis_snapshot=merged_snapshot,
+        bullet_source=merged_bullet_source,
     )
     if not success:
         raise HTTPException(

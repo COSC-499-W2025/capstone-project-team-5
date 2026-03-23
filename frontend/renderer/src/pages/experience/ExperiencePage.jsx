@@ -72,7 +72,14 @@ export default function ExperiencePage() {
     items, error, loading, showForm, editingId, form,
     formError, saving, confirmId, setConfirmId,
     openCreate, openEdit, cancelForm, setField, handleSave, handleDelete,
-  } = useCrudList({ emptyForm: EMPTY_FORM, api: API, itemToForm, validate, buildPayload })
+  } = useCrudList({
+    emptyForm: EMPTY_FORM,
+    api: API,
+    itemToForm,
+    validate,
+    buildPayload,
+    onSaveSuccess: () => window.dispatchEvent(new CustomEvent('z2j:experience-saved')),
+  })
 
   return (
     <div className="animate-fade-up space-y-6">

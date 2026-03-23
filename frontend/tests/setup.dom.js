@@ -31,6 +31,10 @@ global.window.api = {
     filename: 'resume.pdf',
   }),
 
+  // Tutorial
+  getTutorialStatus:    jest.fn().mockResolvedValue({ completed: true }),
+  updateTutorialStatus: jest.fn().mockResolvedValue({ completed: true }),
+
   // Consent
   getAvailableServices: jest.fn().mockResolvedValue([
     { service_name: 'openai',    display_name: 'OpenAI',    description: 'GPT models' },

@@ -34,6 +34,8 @@ const BASE_API = {
   getProfile: jest.fn().mockRejectedValue(new Error('Profile not found (404)')),
   createProfile: jest.fn().mockResolvedValue(MOCK_PROFILE),
   updateProfile: jest.fn().mockResolvedValue(MOCK_PROFILE),
+  getTutorialStatus: jest.fn().mockResolvedValue({ completed: true }),
+  updateTutorialStatus: jest.fn().mockResolvedValue({ completed: true }),
 }
 
 async function boot(overrides = {}) {

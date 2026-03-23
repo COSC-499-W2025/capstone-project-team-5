@@ -5,9 +5,12 @@ from __future__ import annotations
 from io import BytesIO
 from zipfile import ZipFile
 
+from conftest import auth_headers
 from fastapi.testclient import TestClient
 
 from capstone_project_team_5.api.main import app
+from capstone_project_team_5.data.db import get_session
+from capstone_project_team_5.data.models import User
 
 
 def _create_zip_bytes(entries: list[tuple[str, bytes]]) -> bytes:
@@ -30,9 +33,22 @@ def _upload_single_project(client: TestClient, name: str) -> int:
     return response.json()["projects"][0]["id"]
 
 
+def _create_user(username: str) -> None:
+    with get_session() as session:
+        user = session.query(User).filter(User.username == username).first()
+        if user is None:
+            session.add(User(username=username, password_hash="hash"))
+            session.flush()
+
+
+def _auth(username: str = "role-user") -> dict[str, str]:
+    _create_user(username)
+    return auth_headers(username)
+
+
 def test_get_project_includes_role_fields() -> None:
     """Test GET /api/projects/{id} includes role and contribution fields."""
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     project_id = _upload_single_project(client, "test_no_role")
 
     response = client.get(f"/api/projects/{project_id}")
@@ -47,7 +63,7 @@ def test_get_project_includes_role_fields() -> None:
 
 def test_patch_project_set_role() -> None:
     """Test PATCH /api/projects/{id} can set user role."""
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     project_id = _upload_single_project(client, "test_set_role")
 
     # Set the role via PATCH
@@ -70,7 +86,7 @@ def test_patch_project_set_role() -> None:
 
 def test_patch_project_update_role() -> None:
     """Test PATCH /api/projects/{id} can update existing role."""
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     project_id = _upload_single_project(client, "test_update_role")
 
     # Set initial role
@@ -96,7 +112,7 @@ def test_patch_project_update_role() -> None:
 
 def test_patch_project_clear_role() -> None:
     """Test PATCH /api/projects/{id} can clear role by setting to None."""
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     project_id = _upload_single_project(client, "test_clear_role")
 
     # Set a role
@@ -121,7 +137,7 @@ def test_patch_project_clear_role() -> None:
 
 def test_list_projects_includes_role() -> None:
     """Test GET /api/projects returns role fields in project summaries."""
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     project_id = _upload_single_project(client, "test_summary_role")
 
     # Set a role
@@ -150,7 +166,7 @@ def test_list_projects_includes_role() -> None:
 
 def test_patch_project_negative_contribution_percentage() -> None:
     """Test PATCH rejects negative contribution percentage."""
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     project_id = _upload_single_project(client, "test_negative_pct")
 
     response = client.patch(
@@ -162,7 +178,7 @@ def test_patch_project_negative_contribution_percentage() -> None:
 
 def test_patch_project_contribution_percentage_over_100() -> None:
     """Test PATCH rejects contribution percentage > 100."""
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     project_id = _upload_single_project(client, "test_over_100_pct")
 
     response = client.patch(
@@ -174,7 +190,7 @@ def test_patch_project_contribution_percentage_over_100() -> None:
 
 def test_patch_project_boundary_contribution_0() -> None:
     """Test PATCH accepts 0% contribution percentage."""
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     project_id = _upload_single_project(client, "test_0_pct")
 
     response = client.patch(
@@ -188,7 +204,7 @@ def test_patch_project_boundary_contribution_0() -> None:
 
 def test_patch_project_boundary_contribution_100() -> None:
     """Test PATCH accepts 100% contribution percentage."""
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     project_id = _upload_single_project(client, "test_100_pct")
 
     response = client.patch(
@@ -202,7 +218,7 @@ def test_patch_project_boundary_contribution_100() -> None:
 
 def test_patch_user_role_nonexistent_project() -> None:
     """Test PATCH user role on non-existent project returns 404."""
-    client = TestClient(app)
+    client = TestClient(app, headers=_auth())
     nonexistent_id = 999999
 
     response = client.patch(

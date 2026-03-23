@@ -35,6 +35,8 @@ const BASE_API = {
   updateWorkExperience: jest.fn().mockResolvedValue({ ...MOCK_EXP, title: 'Lead Engineer' }),
   deleteWorkExperience: jest.fn().mockResolvedValue(null),
   getResumes: jest.fn().mockResolvedValue([]),
+  getTutorialStatus: jest.fn().mockResolvedValue({ completed: true }),
+  updateTutorialStatus: jest.fn().mockResolvedValue({ completed: true }),
 }
 
 async function boot(overrides = {}) {

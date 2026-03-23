@@ -54,6 +54,32 @@ class UserProfileCreateRequest(BaseModel):
     website: str | None = Field(None, description="Personal website URL")
 
 
+class TutorialStatusResponse(BaseModel):
+    """Response schema for tutorial completion status."""
+
+    completed: bool
+
+
+class TutorialStatusUpdate(BaseModel):
+    """Request schema for updating tutorial completion status."""
+
+    completed: bool
+
+
+class SetupStatusResponse(BaseModel):
+    """Response schema for setup wizard progress."""
+
+    completed: bool
+    step: int
+
+
+class SetupStatusUpdate(BaseModel):
+    """Request schema for updating setup wizard progress."""
+
+    completed: bool | None = None
+    step: int | None = Field(None, ge=0, le=6, description="Setup step index (0-6)")
+
+
 class UserProfileUpdateRequest(BaseModel):
     """Request schema for updating a user profile."""
 

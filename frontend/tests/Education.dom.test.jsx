@@ -38,6 +38,8 @@ const BASE_API = {
   updateEducation: jest.fn().mockResolvedValue({ ...MOCK_EDU, degree: 'Bachelor of Arts' }),
   deleteEducation: jest.fn().mockResolvedValue(null),
   getResumes: jest.fn().mockResolvedValue([]),
+  getTutorialStatus: jest.fn().mockResolvedValue({ completed: true }),
+  updateTutorialStatus: jest.fn().mockResolvedValue({ completed: true }),
 }
 
 async function boot(overrides = {}) {

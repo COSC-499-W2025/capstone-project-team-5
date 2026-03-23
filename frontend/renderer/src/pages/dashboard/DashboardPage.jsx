@@ -361,6 +361,7 @@ export default function DashboardPage() {
         progress: 100,
         step: 'Done',
       })
+      window.dispatchEvent(new CustomEvent('z2j:upload-complete'))
 
       // Small pause so the user can see 100% before navigating away.
       await new Promise((r) => setTimeout(r, 1200))

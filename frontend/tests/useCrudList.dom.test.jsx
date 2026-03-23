@@ -252,3 +252,34 @@ test('saving is true during save and false after', async () => {
 
   expect(result.current.saving).toBe(false)
 })
+
+test('handleSave calls onSaveSuccess after create', async () => {
+  const api = makeApi()
+  const onSaveSuccess = jest.fn()
+  const { result } = renderCrudHook({ api, onSaveSuccess })
+  await waitFor(() => expect(result.current.loading).toBe(false))
+  act(() => result.current.openCreate())
+  act(() => result.current.setField('name', 'Bob'))
+
+  await act(async () => {
+    await result.current.handleSave({ preventDefault: jest.fn() })
+  })
+
+  expect(onSaveSuccess).toHaveBeenCalledTimes(1)
+  expect(onSaveSuccess).toHaveBeenCalledWith(ITEM)
+})
+
+test('handleSave does NOT call onSaveSuccess after update', async () => {
+  const api = makeApi()
+  const onSaveSuccess = jest.fn()
+  const { result } = renderCrudHook({ api, onSaveSuccess })
+  await waitFor(() => expect(result.current.loading).toBe(false))
+  act(() => result.current.openEdit(ITEM))
+  act(() => result.current.setField('age', '31'))
+
+  await act(async () => {
+    await result.current.handleSave({ preventDefault: jest.fn() })
+  })
+
+  expect(onSaveSuccess).not.toHaveBeenCalled()
+})
