@@ -93,14 +93,26 @@ def _run_migrations() -> None:
     # --- users table ---
     user_cols = [c["name"] for c in inspector.get_columns("users")]
     user_migrations = [
-        ("tutorial_completed", "ALTER TABLE users ADD COLUMN tutorial_completed BOOLEAN NOT NULL DEFAULT 0"),
-        ("setup_completed", "ALTER TABLE users ADD COLUMN setup_completed BOOLEAN NOT NULL DEFAULT 0"),
+        (
+            "tutorial_completed",
+            "ALTER TABLE users ADD COLUMN tutorial_completed BOOLEAN NOT NULL DEFAULT 0",
+        ),
+        (
+            "setup_completed",
+            "ALTER TABLE users ADD COLUMN setup_completed BOOLEAN NOT NULL DEFAULT 0",
+        ),
         ("setup_step", "ALTER TABLE users ADD COLUMN setup_step INTEGER NOT NULL DEFAULT 0"),
     ]
     for col, stmt in user_migrations:
         if col not in user_cols:
             with _engine.begin() as conn:
                 conn.execute(text(stmt))
+
+    # --- upload_records table ---
+    upload_cols = [c["name"] for c in inspector.get_columns("upload_records")]
+    if "user_id" not in upload_cols:
+        with _engine.begin() as conn:
+            conn.execute(text("ALTER TABLE upload_records ADD COLUMN user_id INTEGER"))
 
     # --- portfolios / portfolio_items tables ---
     portfolio_migrations = [
