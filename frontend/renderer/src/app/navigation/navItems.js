@@ -2,6 +2,7 @@ export const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: '◈' },
   { id: 'projects',  label: 'Projects',  icon: '◻' },
   { id: 'analyses',  label: 'Analyses',  icon: '◑' },
+  { id: 'analytics', label: 'Analytics', icon: '◇' },
   { id: 'skills', label: 'Skills', icon: '◆' },
   { id: 'experience', label: 'Experience', icon: '◎' },
   { id: 'education', label: 'Education', icon: '▣' },
