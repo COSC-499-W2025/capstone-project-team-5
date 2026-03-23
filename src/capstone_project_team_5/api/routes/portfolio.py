@@ -383,15 +383,17 @@ def _render_portfolio_for_id(portfolio_id: int, session: Session) -> HTMLRespons
             if item.project_id and has_project_thumbnail(item.project_id)
             else None
         )
-        item_list.append({
-            "title": item.title,
-            "markdown": md,
-            "bullets": analysis_bullets,
-            "thumbnail_url": thumbnail_url,
-            "is_text_block": bool(getattr(item, "is_text_block", False)),
-            "is_user_edited": bool(item.is_user_edited),
-            "updated_at": item.updated_at.strftime("%b %d, %Y"),
-        })
+        item_list.append(
+            {
+                "title": item.title,
+                "markdown": md,
+                "bullets": analysis_bullets,
+                "thumbnail_url": thumbnail_url,
+                "is_text_block": bool(getattr(item, "is_text_block", False)),
+                "is_user_edited": bool(item.is_user_edited),
+                "updated_at": item.updated_at.strftime("%b %d, %Y"),
+            }
+        )
 
     html = _render_portfolio_html(
         name=portfolio.name,
