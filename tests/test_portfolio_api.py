@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from capstone_project_team_5.api.main import app
 from capstone_project_team_5.data.db import get_session
-from capstone_project_team_5.data.models import Portfolio, User
+from capstone_project_team_5.data.models import Portfolio, PortfolioItem, User
 
 
 def _create_zip_bytes(entries: list[tuple[str, bytes]]) -> bytes:
@@ -248,3 +248,258 @@ def test_delete_portfolio() -> None:
     assert list_resp.status_code == 200
     portfolios = list_resp.json()
     assert all(p["id"] != portfolio_id for p in portfolios)
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+
+def _create_portfolio(client: TestClient, username: str, name: str = "Test Portfolio") -> int:
+    """Create a user and portfolio, return portfolio_id."""
+    _create_user(username)
+    resp = client.post("/api/portfolio", json={"username": username, "name": name})
+    assert resp.status_code == 200
+    return resp.json()["id"]
+
+
+def _create_project(client: TestClient) -> int:
+    """Upload a minimal project zip and return project_id."""
+    project_name = _unique_project_name("p")
+    zip_bytes = _create_zip_bytes([(f"{project_name}/main.py", b"print('hi')\n")])
+    resp = client.post(
+        "/api/projects/upload",
+        files={"file": ("p.zip", zip_bytes, "application/zip")},
+    )
+    assert resp.status_code == 201
+    return resp.json()["projects"][0]["id"]
+
+
+# ── Share / revoke ─────────────────────────────────────────────────────────────
+
+
+def test_share_portfolio_generates_token() -> None:
+    client = TestClient(app)
+    portfolio_id = _create_portfolio(client, "share-user-1")
+
+    resp = client.post(f"/api/portfolio/{portfolio_id}/share")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "share_token" in data
+    assert len(data["share_token"]) > 0
+
+    with get_session() as session:
+        p = session.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
+        assert p is not None
+        assert p.share_token == data["share_token"]
+
+
+def test_share_portfolio_is_idempotent() -> None:
+    client = TestClient(app)
+    portfolio_id = _create_portfolio(client, "share-user-2")
+
+    first = client.post(f"/api/portfolio/{portfolio_id}/share").json()["share_token"]
+    second = client.post(f"/api/portfolio/{portfolio_id}/share").json()["share_token"]
+    assert first == second
+
+
+def test_revoke_portfolio_share_clears_token() -> None:
+    client = TestClient(app)
+    portfolio_id = _create_portfolio(client, "revoke-user-1")
+
+    client.post(f"/api/portfolio/{portfolio_id}/share")
+    revoke_resp = client.delete(f"/api/portfolio/{portfolio_id}/share")
+    assert revoke_resp.status_code == 204
+
+    with get_session() as session:
+        p = session.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
+        assert p is not None
+        assert p.share_token is None
+
+
+def test_get_shared_portfolio_returns_html() -> None:
+    client = TestClient(app)
+    portfolio_id = _create_portfolio(client, "html-user-1", "My HTML Portfolio")
+
+    token = client.post(f"/api/portfolio/{portfolio_id}/share").json()["share_token"]
+    resp = client.get(f"/api/portfolio/shared/{token}")
+
+    assert resp.status_code == 200
+    assert "text/html" in resp.headers["content-type"]
+    assert "My HTML Portfolio" in resp.text
+
+
+def test_get_shared_portfolio_invalid_token_returns_404() -> None:
+    client = TestClient(app)
+    resp = client.get("/api/portfolio/shared/nonexistent-token-xyz")
+    assert resp.status_code == 404
+
+
+# ── Update portfolio metadata ──────────────────────────────────────────────────
+
+
+def test_update_portfolio_template() -> None:
+    client = TestClient(app)
+    portfolio_id = _create_portfolio(client, "template-user-1")
+
+    resp = client.patch(f"/api/portfolio/{portfolio_id}", json={"template": "timeline"})
+    assert resp.status_code == 200
+    assert resp.json()["template"] == "timeline"
+
+    with get_session() as session:
+        p = session.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
+        assert p is not None
+        assert p.template == "timeline"
+
+
+def test_update_portfolio_invalid_template_returns_400() -> None:
+    client = TestClient(app)
+    portfolio_id = _create_portfolio(client, "template-user-2")
+
+    resp = client.patch(f"/api/portfolio/{portfolio_id}", json={"template": "invalid"})
+    assert resp.status_code == 400
+
+
+def test_update_portfolio_description_and_color_theme() -> None:
+    client = TestClient(app)
+    portfolio_id = _create_portfolio(client, "meta-user-1")
+
+    resp = client.patch(
+        f"/api/portfolio/{portfolio_id}",
+        json={"description": "My description", "color_theme": "light"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["description"] == "My description"
+    assert data["color_theme"] == "light"
+
+
+def test_get_portfolio_info_returns_metadata() -> None:
+    client = TestClient(app)
+    portfolio_id = _create_portfolio(client, "info-user-1", "Info Portfolio")
+
+    client.patch(
+        f"/api/portfolio/{portfolio_id}",
+        json={"template": "showcase", "description": "desc"},
+    )
+    token = client.post(f"/api/portfolio/{portfolio_id}/share").json()["share_token"]
+
+    resp = client.get(f"/api/portfolio/{portfolio_id}/info")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["name"] == "Info Portfolio"
+    assert data["template"] == "showcase"
+    assert data["description"] == "desc"
+    assert data["share_token"] == token
+
+
+# ── Text blocks ────────────────────────────────────────────────────────────────
+
+
+def test_create_text_block() -> None:
+    client = TestClient(app)
+    portfolio_id = _create_portfolio(client, "textblock-user-1")
+
+    resp = client.post(
+        f"/api/portfolio/{portfolio_id}/blocks",
+        json={"title": "About me", "markdown": "Hello world"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["is_text_block"] is True
+    assert data["title"] == "About me"
+    assert data["markdown"] == "Hello world"
+    assert data["project_id"] is None
+
+    with get_session() as session:
+        item = session.query(PortfolioItem).filter(PortfolioItem.id == data["id"]).first()
+        assert item is not None
+        assert bool(item.is_text_block) is True
+
+
+def test_text_block_appears_in_item_list() -> None:
+    client = TestClient(app)
+    portfolio_id = _create_portfolio(client, "textblock-user-2")
+
+    client.post(f"/api/portfolio/{portfolio_id}/blocks", json={"title": "Intro", "markdown": "Hi"})
+
+    items = client.get(f"/api/portfolio/{portfolio_id}").json()
+    text_blocks = [i for i in items if i.get("is_text_block")]
+    assert len(text_blocks) == 1
+    assert text_blocks[0]["title"] == "Intro"
+
+
+# ── Item update / remove / reorder ────────────────────────────────────────────
+
+
+def test_update_portfolio_item_content() -> None:
+    client = TestClient(app)
+    username = "item-update-user-1"
+    portfolio_id = _create_portfolio(client, username)
+    project_id = _create_project(client)
+
+    add_resp = client.post(
+        f"/api/portfolio/{portfolio_id}/items",
+        json={"username": username, "project_id": project_id},
+    )
+    assert add_resp.status_code == 200
+    item_id = add_resp.json()["id"]
+
+    patch_resp = client.patch(
+        f"/api/portfolio/{portfolio_id}/items/{item_id}",
+        json={"title": "New title", "markdown": "Updated content"},
+    )
+    assert patch_resp.status_code == 200
+    data = patch_resp.json()
+    assert data["title"] == "New title"
+    assert data["markdown"] == "Updated content"
+
+
+def test_remove_portfolio_item() -> None:
+    client = TestClient(app)
+    username = "item-remove-user-1"
+    portfolio_id = _create_portfolio(client, username)
+    project_id = _create_project(client)
+
+    add_resp = client.post(
+        f"/api/portfolio/{portfolio_id}/items",
+        json={"username": username, "project_id": project_id},
+    )
+    item_id = add_resp.json()["id"]
+
+    del_resp = client.delete(f"/api/portfolio/{portfolio_id}/items/{item_id}")
+    assert del_resp.status_code == 204
+
+    items = client.get(f"/api/portfolio/{portfolio_id}").json()
+    assert all(i["id"] != item_id for i in items)
+
+    with get_session() as session:
+        assert session.query(PortfolioItem).filter(PortfolioItem.id == item_id).first() is None
+
+
+def test_reorder_portfolio_items() -> None:
+    client = TestClient(app)
+    username = "reorder-user-1"
+    portfolio_id = _create_portfolio(client, username)
+
+    block_a = client.post(
+        f"/api/portfolio/{portfolio_id}/blocks",
+        json={"title": "A", "markdown": ""},
+    ).json()["id"]
+    block_b = client.post(
+        f"/api/portfolio/{portfolio_id}/blocks",
+        json={"title": "B", "markdown": ""},
+    ).json()["id"]
+    block_c = client.post(
+        f"/api/portfolio/{portfolio_id}/blocks",
+        json={"title": "C", "markdown": ""},
+    ).json()["id"]
+
+    # Reverse the order.
+    reorder_resp = client.post(
+        f"/api/portfolio/{portfolio_id}/reorder",
+        json={"item_ids": [block_c, block_b, block_a]},
+    )
+    assert reorder_resp.status_code == 204
+
+    items = client.get(f"/api/portfolio/{portfolio_id}").json()
+    titles = [i["title"] for i in items]
+    assert titles == ["C", "B", "A"]
