@@ -261,13 +261,15 @@ def _create_portfolio(client: TestClient, username: str, name: str = "Test Portf
     return resp.json()["id"]
 
 
-def _create_project(client: TestClient) -> int:
+def _create_project(client: TestClient, username: str = "project-owner") -> int:
     """Upload a minimal project zip and return project_id."""
+    _create_user(username)
     project_name = _unique_project_name("p")
     zip_bytes = _create_zip_bytes([(f"{project_name}/main.py", b"print('hi')\n")])
     resp = client.post(
         "/api/projects/upload",
         files={"file": ("p.zip", zip_bytes, "application/zip")},
+        headers=auth_headers(username),
     )
     assert resp.status_code == 201
     return resp.json()["projects"][0]["id"]

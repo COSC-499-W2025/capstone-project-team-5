@@ -108,6 +108,12 @@ def _run_migrations() -> None:
             with _engine.begin() as conn:
                 conn.execute(text(stmt))
 
+    # --- upload_records table ---
+    upload_cols = [c["name"] for c in inspector.get_columns("upload_records")]
+    if "user_id" not in upload_cols:
+        with _engine.begin() as conn:
+            conn.execute(text("ALTER TABLE upload_records ADD COLUMN user_id INTEGER"))
+
     # --- portfolios / portfolio_items tables ---
     portfolio_migrations = [
         "ALTER TABLE portfolios ADD COLUMN share_token TEXT UNIQUE",
