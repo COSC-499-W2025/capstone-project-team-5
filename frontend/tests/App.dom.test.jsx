@@ -54,6 +54,8 @@ function setupApi(overrides = {}) {
       contentType: 'application/pdf',
       filename: 'resume.pdf',
     }),
+    getTutorialStatus:    jest.fn().mockResolvedValue({ completed: true }),
+    updateTutorialStatus: jest.fn().mockResolvedValue({ completed: true }),
     ...overrides,
   }
 }

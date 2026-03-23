@@ -8,6 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 from capstone_project_team_5.api.dependencies import get_current_username
 from capstone_project_team_5.api.schemas.users import (
+    SetupStatusResponse,
+    SetupStatusUpdate,
+    TutorialStatusResponse,
+    TutorialStatusUpdate,
     UserInfoResponse,
     UserProfileCreateRequest,
     UserProfileResponse,
@@ -20,6 +24,12 @@ from capstone_project_team_5.services.user_profile import (
     delete_user_profile,
     get_user_profile,
     upsert_user_profile,
+)
+from capstone_project_team_5.services.user_tutorial import (
+    get_setup_status,
+    get_tutorial_status,
+    update_setup_status,
+    update_tutorial_status,
 )
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -68,6 +78,45 @@ def get_current_user_info(
                 detail=f"User '{current_username}' not found",
             )
         return UserInfoResponse.model_validate(user)
+
+
+@router.get("/me/tutorial-status", response_model=TutorialStatusResponse)
+def get_tutorial_status_endpoint(
+    current_username: Annotated[str, Depends(get_current_username)],
+) -> TutorialStatusResponse:
+    """Get the current user's tutorial completion status."""
+    completed = get_tutorial_status(current_username)
+    return TutorialStatusResponse(completed=completed)
+
+
+@router.patch("/me/tutorial-status", response_model=TutorialStatusResponse)
+def update_tutorial_status_endpoint(
+    body: TutorialStatusUpdate,
+    current_username: Annotated[str, Depends(get_current_username)],
+) -> TutorialStatusResponse:
+    """Update the current user's tutorial completion status."""
+    update_tutorial_status(current_username, completed=body.completed)
+    return TutorialStatusResponse(completed=body.completed)
+
+
+@router.get("/me/setup-status", response_model=SetupStatusResponse)
+def get_setup_status_endpoint(
+    current_username: Annotated[str, Depends(get_current_username)],
+) -> SetupStatusResponse:
+    """Get the current user's setup wizard progress."""
+    result = get_setup_status(current_username)
+    return SetupStatusResponse(**result)
+
+
+@router.patch("/me/setup-status", response_model=SetupStatusResponse)
+def update_setup_status_endpoint(
+    body: SetupStatusUpdate,
+    current_username: Annotated[str, Depends(get_current_username)],
+) -> SetupStatusResponse:
+    """Update the current user's setup wizard progress."""
+    update_setup_status(current_username, completed=body.completed, step=body.step)
+    result = get_setup_status(current_username)
+    return SetupStatusResponse(**result)
 
 
 @router.get("/{username}/profile", response_model=UserProfileResponse)

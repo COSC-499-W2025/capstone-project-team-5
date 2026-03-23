@@ -43,6 +43,8 @@ function setupApi(overrides = {}) {
     createPortfolio:       jest.fn().mockResolvedValue(MOCK_PORTFOLIO),
     deletePortfolio:       jest.fn().mockResolvedValue(null),
     addPortfolioItem:      jest.fn().mockResolvedValue(MOCK_ITEM),
+    getTutorialStatus:     jest.fn().mockResolvedValue({ completed: true }),
+    updateTutorialStatus:  jest.fn().mockResolvedValue({ completed: true }),
     ...overrides,
   }
 }

@@ -13,6 +13,7 @@ export default function useSingletonForm({
   validate,
   buildPayload,
   isNotFound,
+  onSaveSuccess,
 }) {
   const { user, apiOk } = useApp()
 
@@ -122,6 +123,7 @@ export default function useSingletonForm({
       setError('')
       setFormError('')
       setShowForm(false)
+      if (onSaveSuccess) onSaveSuccess(result)
     } catch (err) {
       setFormError(err?.message || 'Save failed')
     } finally {

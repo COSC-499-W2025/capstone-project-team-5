@@ -1,6 +1,7 @@
 import { NAV_ITEMS } from '../app/navigation/navItems'
+import ZippyMenu from '../components/onboarding/ZippyMenu'
 
-export default function Sidebar({ current, onNav, apiOk, user, onLogout }) {
+export default function Sidebar({ current, onNav, apiOk, user, onLogout, onStartTour, onStartSetup }) {
   return (
     <aside className="flex min-w-[220px] w-[220px] flex-col border-r border-border bg-surface">
       <div className="border-b border-border px-5 py-6">
@@ -17,6 +18,7 @@ export default function Sidebar({ current, onNav, apiOk, user, onLogout }) {
           <button
             key={item.id}
             type="button"
+            data-tour-id={item.id}
             onClick={() => onNav(item.id)}
             className={`nav-item w-full text-left ${current === item.id ? 'active' : ''}`}
           >
@@ -24,6 +26,12 @@ export default function Sidebar({ current, onNav, apiOk, user, onLogout }) {
             {item.label}
           </button>
         ))}
+
+        {onStartTour && (
+          <div className="mt-auto pt-2">
+            <ZippyMenu currentPage={current} onStartTour={onStartTour} onStartSetup={onStartSetup} />
+          </div>
+        )}
       </nav>
 
       <div className="space-y-1.5 border-t border-border px-5 py-4">

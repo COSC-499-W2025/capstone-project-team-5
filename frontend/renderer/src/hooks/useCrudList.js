@@ -7,6 +7,7 @@ export default function useCrudList({
   itemToForm,
   validate,
   buildPayload,
+  onSaveSuccess,
 }) {
   const { user, apiOk } = useApp()
 
@@ -113,6 +114,7 @@ export default function useCrudList({
       } else {
         const created = await api.create(user.username, payload)
         setItems((current) => [...current, created])
+        if (onSaveSuccess) onSaveSuccess(created)
       }
 
       cancelForm()
