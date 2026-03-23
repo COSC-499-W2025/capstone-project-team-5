@@ -4,6 +4,38 @@
 
 
 <!-- <details> -->
+  <summary><h3>T2 Week 11</h3></summary>
+
+#### What Went Well
+- Prepared for the mileston 3 presentation
+- Merged:
+  - [PR #427 - Zippy Integration](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/427): Introduced **Zippy**, our onboarding mascot and guided spotlight tour for new users. Zippy greets users upon first login and walks them through the app's key features via an interactive step-by-step tour with spotlight highlights on UI elements. Backend changes include a `has_seen_tutorial` flag on the user model with `GET`/`PATCH` API routes under `/api/users/{username}/tutorial-status`. Frontend additions include two new components -`Zippy.jsx` (animated mascot with speech bubbles) and `SpotlightTour.jsx` (multi-step guided tour with spotlight overlays) - integrated into `AppRoot` and `AppShell`/`Sidebar`. Added `framer-motion` for smooth animations. Full-stack feature requiring coordinated backend state tracking, frontend UI components, and test coverage.
+
+- Reviewed and approved:
+  - [PR #414 - feat: Railway deployment support](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/414):
+  My review: Approved the Railway deployment support enabling Zip2Job to run as a web app
+
+  - [PR #424 - PT2 Project Page Changes](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/424):
+  My review: Focuses on the biggest feedback we received on the project page from peer testing. The dynamic feature addition is really cool. Manually tested and confirmed LGTM.
+
+  - [PR #428 - feat: portfolio revamp](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/428):
+  My review: Praised the core portfolio revamp. having an externally viewable shareable link is incredible. Testing is thorough and the fix for the preview issue was prompt. Love the different templates for exporting.
+
+  - Reviewed and approved individual logs
+
+#### What Didn't Go Well
+- All good
+
+#### Planning for Next Week
+- Prepare for Milestone 3 demo
+- Continue reviewing teammates' PRs to support code collaboration
+- Polish Zippy integration based on team feedback
+
+<!-- </details> -->
+
+
+
+<details>
   <summary><h3>T2 Week 10</h3></summary>
 
   <img width="1363" height="793" alt="image" src="https://github.com/user-attachments/assets/60000cb6-6285-4a28-8e2e-8eec4634f644" />
@@ -47,7 +79,7 @@
 - Work towards milestone 3
 - Continue reviewing teammates' PRs to support code collaboration
 
-<!-- </details> -->
+</details>
 
 
 
