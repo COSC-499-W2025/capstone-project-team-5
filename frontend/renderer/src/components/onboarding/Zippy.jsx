@@ -6,11 +6,78 @@
  * expression variants: happy, wave, pointing, excited, thumbsup.
  */
 
+import { useState, useRef, useEffect } from 'react';
+import clippyImg from '../../assets/clippy.png';
+
 const SIZES = { sm: 24, lg: 80 }
 
 export default function Zippy({ size = 'lg', expression = 'happy', className = '' }) {
   const px = SIZES[size] ?? SIZES.lg
   const isLarge = size === 'lg'
+
+  const [clicks, setClicks] = useState(0)
+  const [easterEggState, setEasterEggState] = useState('none') // 'none', 'exploding', 'clippy', 'clippy-leaving'
+  const clickTimer = useRef(null)
+
+  const handleClick = () => {
+    if (easterEggState !== 'none') return;
+
+    setClicks(c => c + 1)
+
+    if (clickTimer.current) clearTimeout(clickTimer.current)
+
+    clickTimer.current = setTimeout(() => {
+      setClicks(0)
+    }, 1000)
+
+    if (clicks + 1 >= 5) {
+      setClicks(0)
+      setEasterEggState('exploding')
+
+      setTimeout(() => {
+        setEasterEggState('clippy')
+
+        setTimeout(() => {
+          setEasterEggState('clippy-leaving')
+
+          setTimeout(() => {
+             setEasterEggState('none')
+          }, 1000)
+        }, 3000)
+      }, 500)
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (clickTimer.current) clearTimeout(clickTimer.current)
+    }
+  }, [])
+
+  if (easterEggState === 'clippy' || easterEggState === 'clippy-leaving') {
+    return (
+      <div
+        className={`inline-block clippy-element ${easterEggState === 'clippy-leaving' ? 'leaving' : 'entering'} ${className}`}
+        style={{ width: px, height: px * (140 / 120), overflow: 'visible' }}
+        aria-label="Clippy"
+        role="img"
+      >
+        <style>{`
+          .clippy-element.entering {
+            animation: fadeUp 0.3s ease-out forwards;
+          }
+          .clippy-element.leaving {
+            animation: clippyExitAnim 1s ease-in forwards;
+          }
+          @keyframes clippyExitAnim {
+            from { opacity: 1; transform: translateX(0) rotate(0deg); }
+            to { opacity: 0; transform: translateX(300px) rotate(45deg); }
+          }
+        `}</style>
+        <img src={clippyImg} alt="Clippy" className="w-full h-full object-contain drop-shadow-lg scale-125 origin-bottom" draggable={false} />
+      </div>
+    )
+  }
 
   // Root animation class depends on expression
   const rootAnim = isLarge
@@ -19,12 +86,16 @@ export default function Zippy({ size = 'lg', expression = 'happy', className = '
       : 'animate-zippy-hop'
     : ''
 
+  // Add click cursor and exploding classes
+  const explosionClass = easterEggState === 'exploding' ? 'scale-[2.5] opacity-0 blur-md transition-all duration-500' : 'cursor-pointer transition-all duration-500'
+
   return (
     <svg
+      onClick={handleClick}
       viewBox="0 0 120 140"
       width={px}
       height={px * (140 / 120)}
-      className={`inline-block ${isLarge ? 'animate-zippy-bounce' : ''} ${rootAnim} ${className}`}
+      className={`inline-block ${isLarge ? 'animate-zippy-bounce' : ''} ${rootAnim} ${explosionClass} ${className}`}
       style={{ overflow: 'visible' }}
       aria-label="Zippy the folder mascot"
       role="img"
