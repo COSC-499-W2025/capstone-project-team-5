@@ -217,6 +217,7 @@ export default function DashboardPage() {
 
     if (actionLabel === 'Generate Portfolio' && apiOk) {
       setPage('portfolio')
+      setTimeout(() => window.dispatchEvent(new CustomEvent('z2j:open-new-portfolio')), 0)
       return
     }
 
