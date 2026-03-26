@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useApp } from '../../app/context/AppContext'
 import EmptyState from '../../components/EmptyState'
 import InlineError from '../../components/InlineError'
@@ -38,6 +38,8 @@ export default function ProjectsPage() {
   const [open,     setOpen]     = useState(null)
   const [query,    setQuery]    = useState('')
   const [sort,     setSort]     = useState('date')
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     if (!apiOk) return
@@ -103,6 +105,31 @@ export default function ProjectsPage() {
   const createdSet = new Set(uploadHighlights.created)
   const mergedSet  = new Set(uploadHighlights.merged)
 
+  const handleUploadFile = useCallback(async (event) => {
+    const [file] = event.target.files || []
+    event.target.value = ''
+    if (!file || !file.name.toLowerCase().endsWith('.zip')) return
+
+    setUploading(true)
+    setError('')
+    try {
+      const bytes = await file.arrayBuffer()
+      const result = await window.api.createProjectUpload({
+        name: file.name,
+        type: file.type || 'application/zip',
+        bytes,
+      })
+      const actions = result?.actions ?? []
+      const created = actions.filter((a) => a.action === 'created').map((a) => a.project_id)
+      const merged  = actions.filter((a) => a.action === 'merged').map((a) => a.project_id)
+      setUploadHighlights({ created, merged })
+    } catch (err) {
+      setError(err?.message || 'Upload failed.')
+    } finally {
+      setUploading(false)
+    }
+  }, [])
+
   function clearHighlight(id) {
     setUploadHighlights((c) => ({
       created: c.created.filter((x) => x !== id),
@@ -161,7 +188,27 @@ export default function ProjectsPage() {
   return (
     <>
     <div className="animate-fade-up space-y-5">
-      <PageHeader title="Projects" description="Uploaded and analyzed projects." />
+      <PageHeader
+        title="Projects"
+        description="Uploaded and analyzed projects."
+        action={
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || !apiOk}
+            className="btn-primary text-xs disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {uploading ? 'Uploading…' : '+ Upload Project'}
+          </button>
+        }
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".zip,application/zip"
+        className="hidden"
+        onChange={handleUploadFile}
+      />
       <InlineError message={error} />
 
       {/* Search + sort toolbar */}
@@ -386,6 +433,7 @@ function ProjectDrawer({ project, onClose, onAnalysisDone, onThumbnailChange }) 
       setData(result)
       setStatus(S.DONE)
       onAnalysisDone?.(project.id, result)
+      window.dispatchEvent(new CustomEvent('z2j:analysis-complete'))
     } catch (e) {
       if (!alive.current) return
       setErr(e?.message || 'Analysis failed.')
