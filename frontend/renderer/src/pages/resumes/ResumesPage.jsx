@@ -20,11 +20,20 @@ import {
   sortResumesByUpdatedAt,
 } from '../../lib/resumes'
 
-function ReadinessItem({ label, ready, detail }) {
-  return (
-    <div className="flex items-start justify-between gap-3 border-b border-border/70 py-2 last:border-b-0 last:pb-0">
+function ReadinessItem({ label, ready, detail, onClick }) {
+  const isClickable = onClick && !ready
+  const content = (
+    <div
+      className={`group flex items-start justify-between gap-3 border-b border-border/70 py-2 last:border-b-0 last:pb-0 ${
+        isClickable ? 'cursor-pointer hover:bg-elevated/50 -mx-2 px-2 rounded transition-colors' : ''
+      }`}
+      onClick={isClickable ? onClick : undefined}
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick() } : undefined}
+    >
       <div className="min-w-0">
-        <div className="text-xs font-semibold text-ink">{label}</div>
+        <div className={`text-xs font-semibold ${isClickable ? 'text-ink group-hover:text-accent transition-colors' : 'text-ink'}`}>{label}</div>
         <div className="mt-0.5 text-2xs text-muted">{detail}</div>
       </div>
       <span
@@ -38,6 +47,8 @@ function ReadinessItem({ label, ready, detail }) {
       </span>
     </div>
   )
+
+  return content
 }
 
 function downloadBlobFile(bytes, contentType, filename) {
@@ -106,7 +117,7 @@ function clearCachedPreview(username) {
 }
 
 export default function ResumesPage() {
-  const { user, apiOk } = useApp()
+  const { user, apiOk, setPage } = useApp()
 
   const [resumes, setResumes] = useState([])
   const [projects, setProjects] = useState([])
@@ -667,10 +678,14 @@ export default function ResumesPage() {
           <button
             type="button"
             onClick={openCreate}
-            disabled={availableProjects.length === 0}
+            disabled={projects.length === 0 || availableProjects.length === 0}
             className="btn-primary text-xs disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {availableProjects.length === 0 ? 'All Projects Added' : '+ Add Resume Entry'}
+            {projects.length === 0
+              ? 'Add Projects to Create Entries'
+              : availableProjects.length === 0
+                ? 'All Projects Added'
+                : '+ Add Resume Entry'}
           </button>
         )}
       />
@@ -916,16 +931,19 @@ export default function ResumesPage() {
               label="Profile"
               ready={hasProfile}
               detail={hasProfile ? 'Profile data is available for the resume header.' : 'Create your profile before generating the PDF.'}
+              onClick={() => setPage('profile')}
             />
             <ReadinessItem
               label="Experience"
               ready={workCount > 0}
               detail={`${workCount} saved experience entr${workCount === 1 ? 'y' : 'ies'}`}
+              onClick={() => setPage('experience')}
             />
             <ReadinessItem
               label="Education"
               ready={educationCount > 0}
               detail={`${educationCount} saved education entr${educationCount === 1 ? 'y' : 'ies'}`}
+              onClick={() => setPage('education')}
             />
             <ReadinessItem
               label="Resume Entries"
@@ -936,6 +954,7 @@ export default function ResumesPage() {
               label="Draft Assist"
               ready={Boolean(llmConfig?.is_allowed)}
               detail={llmConfig?.is_allowed ? 'AI-assisted analysis is available from the form toggle.' : 'Local analysis is available without AI consent.'}
+              onClick={() => setPage('consents')}
             />
           </section>
         </aside>
