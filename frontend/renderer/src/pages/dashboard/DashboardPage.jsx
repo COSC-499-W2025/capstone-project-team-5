@@ -215,6 +215,11 @@ export default function DashboardPage() {
       return
     }
 
+    if (actionLabel === 'Generate Portfolio' && apiOk) {
+      setPage('portfolio')
+      return
+    }
+
     if (actionLabel === 'Generate Resume' && apiOk) {
       setPage('resumes')
     }
@@ -431,9 +436,7 @@ export default function DashboardPage() {
               disabled={
                 action.label === 'Upload Project'
                   ? uploadState.loading || !apiOk
-                  : action.label === 'Generate Resume'
-                    ? !apiOk
-                    : true
+                  : !apiOk
               }
             >
               <div className="mb-3 text-2xl opacity-40 transition-opacity group-hover:opacity-80">
