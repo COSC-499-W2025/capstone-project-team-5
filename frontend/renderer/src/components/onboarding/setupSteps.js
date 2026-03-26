@@ -70,9 +70,9 @@ export const SETUP_STEPS = [
     expression: 'excited',
     message:
       "Here's your project! Click on it and hit 'Analyze' to extract your role, skills, and resume bullets.",
-    event: null,
+    event: 'z2j:analysis-complete',
     skippable: false,
-    hasScrim: true,
+    hasScrim: false,
     checkComplete: null,
   },
   {
