@@ -422,27 +422,30 @@ export default function DashboardPage() {
           onChange={onUploadFileSelected}
         />
         <div className="grid grid-cols-3 gap-3">
-          {QUICK_ACTIONS.map((action) => (
-            <button
-              key={action.label}
-              type="button"
-              className="card group cursor-pointer text-left disabled:opacity-60"
-              onClick={() => handleQuickAction(action.label)}
-              disabled={
-                action.label === 'Upload Project'
-                  ? uploadState.loading || !apiOk
-                  : action.label === 'Generate Resume'
-                    ? !apiOk
-                    : true
-              }
-            >
-              <div className="mb-3 text-2xl opacity-40 transition-opacity group-hover:opacity-80">
-                {action.icon}
-              </div>
-              <div className="mb-1 text-sm font-bold">{action.label}</div>
-              <div className="text-xs text-muted">{action.desc}</div>
-            </button>
-          ))}
+          {QUICK_ACTIONS.map((action) => {
+            const isUpload = action.label === 'Upload Project';
+            return (
+              <button
+                key={action.label}
+                type="button"
+                className={`card group cursor-pointer text-left disabled:opacity-60${isUpload ? ' upload-pulse' : ''}`}
+                onClick={() => handleQuickAction(action.label)}
+                disabled={
+                  isUpload
+                    ? uploadState.loading || !apiOk
+                    : action.label === 'Generate Resume'
+                      ? !apiOk
+                      : true
+                }
+              >
+                <div className="mb-3 text-2xl opacity-40 transition-opacity group-hover:opacity-80">
+                  {action.icon}
+                </div>
+                <div className="mb-1 text-sm font-bold">{action.label}</div>
+                <div className="text-xs text-muted">{action.desc}</div>
+              </button>
+            );
+          })}
         </div>
         {uploadState.loading && (
           <div className="mt-4 space-y-1.5">

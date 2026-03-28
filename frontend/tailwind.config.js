@@ -37,12 +37,30 @@ export default {
         'zippy-bounce': 'zippyBounce 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards',
         'zippy-wobble': 'zippyWobble 2.5s ease-in-out infinite',
         'zippy-wave': 'zippyWave 0.6s ease-in-out infinite',
-
         'zippy-hop': 'zippyHop 2s ease-in-out infinite',
         'zippy-excited': 'zippyExcited 0.4s ease-in-out infinite',
         'zippy-point': 'zippyPoint 0.5s ease-out forwards',
+        'upload-pulse': 'uploadPulse 2.4s cubic-bezier(0.4,0,0.6,1) infinite',
       },
       keyframes: {
+                uploadPulse: {
+                  '0%': {
+                    boxShadow: '0 0 0 0 rgba(255,255,255,0.6)',
+                    opacity: '1',
+                  },
+                  '80%': {
+                    boxShadow: '0 0 0 14px rgba(255,255,255,0)',
+                    opacity: '0.5',
+                  },
+                  '92%': {
+                    boxShadow: '0 0 0 0 rgba(255,255,255,0)',
+                    opacity: '0.5',
+                  },
+                  '100%': {
+                    boxShadow: '0 0 0 0 rgba(255,255,255,0)',
+                    opacity: '1',
+                  },
+                },
         fadeUp: {
           from: { opacity: 0, transform: 'translateY(8px)' },
           to:   { opacity: 1, transform: 'translateY(0)' },
