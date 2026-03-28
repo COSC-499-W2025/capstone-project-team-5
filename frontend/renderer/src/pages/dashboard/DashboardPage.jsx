@@ -424,11 +424,13 @@ export default function DashboardPage() {
         <div className="grid grid-cols-3 gap-3">
           {QUICK_ACTIONS.map((action) => {
             const isUpload = action.label === 'Upload Project';
+            // Show pulse only if no projects have been uploaded
+            const showPulse = isUpload && (stats.projects === '—' || stats.projects === 0 || stats.projects === '0');
             return (
               <button
                 key={action.label}
                 type="button"
-                className={`card group cursor-pointer text-left disabled:opacity-60${isUpload ? ' upload-pulse' : ''}`}
+                className={`card group cursor-pointer text-left disabled:opacity-60${showPulse ? ' upload-pulse' : ''}`}
                 onClick={() => handleQuickAction(action.label)}
                 disabled={
                   isUpload
