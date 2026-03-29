@@ -405,8 +405,9 @@ This past week I focused on frontend follow-up work and UI feature implementatio
 
 <details>
   <summary><h3></h3></summary>
+<alt="Screenshot 2026-03-29 163741" src="https://github.com/user-attachments/assets/8018854b-e379-4649-bd63-72b7d16472aa" />
 
-Over the past two weeks, I implemented a critical security fix enforcing per-user project access across all API routes. Key accomplishments include: scoping project operations (list, detail, update, delete, thumbnails, analysis) to authenticated owners, adding user_id ownership metadata to UploadRecord, improving the frontend thumbnail component with graceful error handling, and adding comprehensive regression tests for access control. I also began preparation for the Milestone #3 presentation with the team.
+Over the past two weeks, I implemented a critical security fix enforcing per-user project access across all API routes. Key accomplishments include: scoping project operations (list, detail, update, delete, thumbnails, analysis) to authenticated owners, adding user_id ownership metadata to UploadRecord, improving the frontend thumbnail component with graceful error handling, and adding comprehensive regression tests for access control. In Week 12, I focused on frontend user experience improvements based on peer-testing feedback. I enhanced the upload button discoverability by adding an animated pulse effect to make it more visible for new users.
 
 ### Previous Weeks:
 | Task | Status | Notes |
@@ -416,12 +417,13 @@ Over the past two weeks, I implemented a critical security fix enforcing per-use
 | Security: Project Access Controls | Completed | Enforced per-user project access across all API routes. |
 | Database: User-Project Ownership | Completed | Added user_id FK to UploadRecord and User→UploadRecord relationship. |
 | Frontend: Thumbnail Error Handling | Completed | Graceful handling for image load failures with blob URL cleanup. |
-| Testing: Regression Tests | Completed | Added tests for cross-user access prevention and thumbnail errors. |
+| Frontend: Upload Button Enhancement| Completed | Added animated pulse effect for new users. |
+| Testing: Regression & UI Tests | Completed | Added tests for cross-user access prevention, thumbnail errors, and React test for upload button pulse visibility. |
 | Milestone #3 Preparation | Completed | Prepared presentation with the team. |
 
 
 ### Next Week:
 | Task | Status | Notes |
 | :---- | :----- | :------- |
-| TBD | Not Yet Started | TBD |
+| Project Voting | Not Yet Started | Evaluate other team projects and vote. |
 </details>
