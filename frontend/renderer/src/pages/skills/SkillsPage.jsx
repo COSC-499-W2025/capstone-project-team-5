@@ -23,10 +23,10 @@ const TYPE_FILTERS = [
 ]
 
 const LEVELS = [
-  { key: 'beginner', label: 'Beginner', color: '#f87171' },
-  { key: 'intermediate', label: 'Intermediate', color: '#f5a623' },
-  { key: 'proficient', label: 'Proficient', color: '#3dd68c' },
-  { key: 'expert', label: 'Expert', color: '#60a5fa' },
+  { key: 'beginner', label: 'Beginner', short: 'B', color: '#f87171' },
+  { key: 'intermediate', label: 'Intermediate', short: 'I', color: '#f5a623' },
+  { key: 'proficient', label: 'Proficient', short: 'P', color: '#3dd68c' },
+  { key: 'expert', label: 'Expert', short: 'E', color: '#60a5fa' },
 ]
 
 const PROFICIENCY_FILTERS = [
@@ -38,37 +38,29 @@ const PROFICIENCY_FILTERS = [
   { label: 'Unrated', value: 'unrated' },
 ]
 
-/* ─── Range slider level picker ─── */
+/* ─── Segmented level picker (abbreviates on small cards) ─── */
 function LevelPicker({ current, onChange }) {
-  // 0 = unrated, 1-4 = levels
-  const idx = current ? LEVELS.findIndex((l) => l.key === current) + 1 : 0
-  const levelMeta = idx > 0 ? LEVELS[idx - 1] : null
-
-  function handleChange(e) {
-    const val = Number(e.target.value)
-    onChange(val === 0 ? null : LEVELS[val - 1].key)
-  }
-
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-3">
-        <input
-          type="range"
-          min={0}
-          max={4}
-          step={1}
-          value={idx}
-          onChange={handleChange}
-          className="proficiency-slider flex-1"
-          style={{ '--slider-color': levelMeta?.color || '#2c3140' }}
-        />
-        <span
-          className="shrink-0 font-mono text-2xs uppercase tracking-wider min-w-[5.5rem] text-right"
-          style={{ color: levelMeta?.color || '#4e5668' }}
-        >
-          {levelMeta?.label || 'Unrated'}
-        </span>
-      </div>
+    <div className="flex gap-px rounded border border-border bg-elevated p-0.5">
+      {LEVELS.map((l) => {
+        const isActive = l.key === current
+        return (
+          <button
+            key={l.key}
+            onClick={() => onChange(isActive ? null : l.key)}
+            title={l.label}
+            className="flex-1 rounded py-1 font-mono text-2xs uppercase tracking-wider transition-all duration-150 cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap px-1"
+            style={{
+              color: isActive ? '#0a0b0d' : '#4e5668',
+              backgroundColor: isActive ? l.color : 'transparent',
+              fontWeight: isActive ? 600 : 400,
+            }}
+          >
+            <span className="hidden sm:inline">{l.label}</span>
+            <span className="sm:hidden">{l.short}</span>
+          </button>
+        )
+      })}
     </div>
   )
 }
