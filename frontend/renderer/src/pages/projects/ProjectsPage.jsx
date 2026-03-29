@@ -176,16 +176,44 @@ export default function ProjectsPage() {
   function handleDelete(projectId) {
     if (analysisCache?.current) delete analysisCache.current[projectId]
     evictCache(projectId)
+
     setProjects((prev) => {
       const remaining = prev.filter((p) => p.id !== projectId)
+
       // Re-sequence ranks to close any gap left by the deleted project
       const ranked = remaining
         .filter((p) => p.importance_rank != null)
         .sort((a, b) => a.importance_rank - b.importance_rank)
+
       const rankFix = new Map(ranked.map((p, i) => [p.id, i + 1]))
-      return remaining.map((p) => rankFix.has(p.id) ? { ...p, importance_rank: rankFix.get(p.id) } : p)
+      
+      const updated = remaining.map((p) =>
+        rankFix.has(p.id)
+          ? { ...p, importance_rank: rankFix.get(p.id) }
+          : p
+      )
+
+      persistRankFix(rankFix)
+      return updated
     })
     setOpen(null)
+  }
+
+  async function persistRankFix(rankMap) {
+    if (!rankMap || rankMap.size === 0) return
+
+    try {
+      const rankings = Array.from(rankMap.entries()).map(
+        ([project_id, importance_rank]) => ({
+          project_id,
+          importance_rank,
+        })
+      )
+
+      await window.api.rerankProjects({ rankings })
+    } catch (err) {
+      console.error("Failed to persist rank fix:", err)
+    }
   }
 
   function handleRankChange(rankMap) {
