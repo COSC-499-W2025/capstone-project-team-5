@@ -648,12 +648,12 @@ function ProjectDrawer({ project, projects, onClose, onAnalysisDone, onThumbnail
         )}
 
         {/* Header */}
-        <div className="flex flex-col gap-2 border-b border-border px-5 py-4 min-h-[4.5rem] shrink-0">
-          <div className="min-w-0">
+        <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4 min-h-[4.5rem] shrink-0 flex-wrap">
+          <div className="min-w-0 shrink">
             <h2 className="text-base font-semibold text-ink truncate">{project.name}</h2>
             <p className="mt-0.5 font-mono text-sm text-muted truncate">{project.rel_path}</p>
           </div>
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {hasThumbnail ? (
               <button
                 onClick={handleClearThumbnail}
