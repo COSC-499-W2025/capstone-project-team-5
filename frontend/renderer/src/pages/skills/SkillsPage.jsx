@@ -23,10 +23,10 @@ const TYPE_FILTERS = [
 ]
 
 const LEVELS = [
-  { key: 'beginner', label: 'Beginner', short: 'B', color: '#4e5668', bar: 1 },
-  { key: 'intermediate', label: 'Intermediate', short: 'I', color: '#f5a623', bar: 2 },
-  { key: 'proficient', label: 'Proficient', short: 'P', color: '#3dd68c', bar: 3 },
-  { key: 'expert', label: 'Expert', short: 'E', color: '#60a5fa', bar: 4 },
+  { key: 'beginner', label: 'Beginner', color: '#4e5668' },
+  { key: 'intermediate', label: 'Intermediate', color: '#f5a623' },
+  { key: 'proficient', label: 'Proficient', color: '#3dd68c' },
+  { key: 'expert', label: 'Expert', color: '#60a5fa' },
 ]
 
 const PROFICIENCY_FILTERS = [
@@ -38,44 +38,57 @@ const PROFICIENCY_FILTERS = [
   { label: 'Unrated', value: 'unrated' },
 ]
 
-/* ─── Level bar: 4 small segments that fill up to the current level ─── */
-function LevelBar({ level }) {
-  const activeIndex = LEVELS.findIndex((l) => l.key === level)
-  return (
-    <div className="flex gap-1">
-      {LEVELS.map((l, i) => (
-        <div
-          key={l.key}
-          className="h-1 rounded-full transition-all duration-300"
-          style={{
-            width: '16px',
-            backgroundColor: i <= activeIndex ? l.color : '#1e2229',
-          }}
-        />
-      ))}
-    </div>
-  )
-}
+/* ─── Slider-style level picker: 4 stops on a track ─── */
+function LevelSlider({ current, onChange }) {
+  const activeIdx = LEVELS.findIndex((l) => l.key === current)
+  const activeColor = activeIdx >= 0 ? LEVELS[activeIdx].color : null
 
-/* ─── Segmented proficiency picker ─── */
-function LevelPicker({ current, onChange }) {
   return (
-    <div className="flex gap-px rounded bg-elevated p-px">
-      {LEVELS.map((l) => {
-        const active = current === l.key
+    <div className="flex items-center gap-0 w-full">
+      {LEVELS.map((l, i) => {
+        const isActive = l.key === current
+        const isFilled = i <= activeIdx
         return (
           <button
             key={l.key}
-            onClick={() => onChange(active ? null : l.key)}
-            title={active ? `Clear ${l.label}` : l.label}
-            className="relative flex-1 py-1.5 font-mono text-2xs uppercase tracking-wider rounded transition-all duration-150 cursor-pointer"
-            style={{
-              color: active ? '#0a0b0d' : '#4e5668',
-              backgroundColor: active ? l.color : 'transparent',
-              fontWeight: active ? 600 : 400,
-            }}
+            onClick={() => onChange(isActive ? null : l.key)}
+            title={isActive ? `Clear ${l.label}` : l.label}
+            className="group flex-1 flex flex-col items-center gap-1.5 cursor-pointer py-1"
           >
-            {l.short}
+            {/* Track segment + dot */}
+            <div className="relative w-full flex items-center justify-center h-3">
+              {/* Track line (left half) */}
+              {i > 0 && (
+                <div
+                  className="absolute left-0 right-1/2 h-0.5 rounded-full transition-colors duration-200"
+                  style={{ backgroundColor: isFilled && activeColor ? activeColor : '#1e2229' }}
+                />
+              )}
+              {/* Track line (right half) */}
+              {i < LEVELS.length - 1 && (
+                <div
+                  className="absolute left-1/2 right-0 h-0.5 rounded-full transition-colors duration-200"
+                  style={{ backgroundColor: i < activeIdx && activeColor ? activeColor : '#1e2229' }}
+                />
+              )}
+              {/* Dot */}
+              <div
+                className="relative z-10 rounded-full transition-all duration-200"
+                style={{
+                  width: isActive ? 12 : 8,
+                  height: isActive ? 12 : 8,
+                  backgroundColor: isFilled && activeColor ? activeColor : '#2c3140',
+                  boxShadow: isActive ? `0 0 8px ${activeColor}40` : 'none',
+                }}
+              />
+            </div>
+            {/* Label */}
+            <span
+              className="font-mono text-2xs transition-colors duration-150"
+              style={{ color: isActive ? activeColor : '#4e5668' }}
+            >
+              {l.label}
+            </span>
           </button>
         )
       })}
@@ -87,11 +100,10 @@ function LevelPicker({ current, onChange }) {
 function SkillCard({ skill, onLevelChange, style }) {
   const typeLabel = normalizeSkillType(skill.skill_type)
   const currentLevel = skill.proficiency_level || ''
-  const levelMeta = LEVELS.find((l) => l.key === currentLevel)
 
   return (
     <div className="card flex flex-col gap-3" style={style}>
-      {/* Top row: name + type badge */}
+      {/* Header: name + type */}
       <div className="flex items-start justify-between gap-2">
         <span className="text-sm font-bold truncate leading-tight" title={skill.name}>
           {skill.name}
@@ -108,23 +120,8 @@ function SkillCard({ skill, onLevelChange, style }) {
         </span>
       </div>
 
-      {/* Level indicator bar + label */}
-      <div className="flex items-center justify-between gap-2">
-        <LevelBar level={currentLevel} />
-        {levelMeta ? (
-          <span
-            className="font-mono text-2xs tracking-wide"
-            style={{ color: levelMeta.color }}
-          >
-            {levelMeta.label}
-          </span>
-        ) : (
-          <span className="font-mono text-2xs text-muted italic">unrated</span>
-        )}
-      </div>
-
-      {/* Segmented picker */}
-      <LevelPicker
+      {/* Level slider */}
+      <LevelSlider
         current={currentLevel}
         onChange={(level) => onLevelChange(skill.id, level)}
       />
@@ -172,9 +169,7 @@ export default function SkillsPage() {
   async function handleLevelChange(skillId, level) {
     setSkills((prev) =>
       prev.map((s) =>
-        s.id === skillId
-          ? { ...s, proficiency_level: level, is_manual_override: level !== null }
-          : s
+        s.id === skillId ? { ...s, proficiency_level: level } : s
       )
     )
     try {
@@ -211,8 +206,6 @@ export default function SkillsPage() {
     practice: skills.filter((s) => String(s.skill_type || '').toLowerCase() === 'practice').length,
   }), [skills])
 
-  const ratedCount = skills.filter((s) => s.proficiency_level).length
-
   const hasQuery = query.trim() !== ''
   const noResults = !loading && !error && skills.length > 0 && filteredSkills.length === 0
 
@@ -232,23 +225,7 @@ export default function SkillsPage() {
 
       {!loading && !error && skills.length > 0 && (
         <>
-          {/* Stats row */}
-          <div className="flex items-center gap-4">
-            <div className="stat-card flex items-center gap-3 px-4 py-2.5">
-              <span className="font-mono text-2xs text-muted uppercase tracking-widest">Total</span>
-              <span className="font-mono text-sm font-bold text-ink">{skills.length}</span>
-            </div>
-            <div className="stat-card flex items-center gap-3 px-4 py-2.5">
-              <span className="font-mono text-2xs text-muted uppercase tracking-widest">Rated</span>
-              <span className="font-mono text-sm font-bold" style={{ color: '#3dd68c' }}>{ratedCount}</span>
-            </div>
-            <div className="stat-card flex items-center gap-3 px-4 py-2.5">
-              <span className="font-mono text-2xs text-muted uppercase tracking-widest">Unrated</span>
-              <span className="font-mono text-sm font-bold text-muted">{skills.length - ratedCount}</span>
-            </div>
-          </div>
-
-          {/* Filters row */}
+          {/* Filters */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             {/* Search */}
             <div className="relative max-w-xs w-full">
@@ -278,40 +255,42 @@ export default function SkillsPage() {
               )}
             </div>
 
-            {/* Type filter */}
-            <div className="flex items-center gap-px rounded border border-border bg-elevated p-0.5">
-              {TYPE_FILTERS.map(({ label, value }) => (
-                <button
-                  key={value}
-                  onClick={() => setTypeFilter(value)}
-                  className={`rounded px-3 py-1 font-mono text-2xs uppercase tracking-wider transition-colors cursor-pointer ${
-                    typeFilter === value
-                      ? 'bg-surface text-ink shadow-sm'
-                      : 'text-muted hover:text-ink'
-                  }`}
-                >
-                  {label}
-                  <span className="ml-1.5 opacity-50">{counts[value] ?? 0}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+            <div className="flex items-center gap-2">
+              {/* Type filter */}
+              <div className="flex items-center gap-px rounded border border-border bg-elevated p-0.5">
+                {TYPE_FILTERS.map(({ label, value }) => (
+                  <button
+                    key={value}
+                    onClick={() => setTypeFilter(value)}
+                    className={`rounded px-3 py-1 font-mono text-2xs uppercase tracking-wider transition-colors cursor-pointer ${
+                      typeFilter === value
+                        ? 'bg-surface text-ink shadow-sm'
+                        : 'text-muted hover:text-ink'
+                    }`}
+                  >
+                    {label}
+                    <span className="ml-1.5 opacity-50">{counts[value] ?? 0}</span>
+                  </button>
+                ))}
+              </div>
 
-          {/* Proficiency filter */}
-          <div className="flex items-center gap-px rounded border border-border bg-elevated p-0.5 w-fit">
-            {PROFICIENCY_FILTERS.map(({ label, value }) => (
-              <button
-                key={value}
-                onClick={() => setProficiencyFilter(value)}
-                className={`rounded px-3 py-1 font-mono text-2xs uppercase tracking-wider transition-colors cursor-pointer ${
-                  proficiencyFilter === value
-                    ? 'bg-surface text-ink shadow-sm'
-                    : 'text-muted hover:text-ink'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+              {/* Proficiency filter */}
+              <div className="flex items-center gap-px rounded border border-border bg-elevated p-0.5">
+                {PROFICIENCY_FILTERS.map(({ label, value }) => (
+                  <button
+                    key={value}
+                    onClick={() => setProficiencyFilter(value)}
+                    className={`rounded px-2.5 py-1 font-mono text-2xs uppercase tracking-wider transition-colors cursor-pointer ${
+                      proficiencyFilter === value
+                        ? 'bg-surface text-ink shadow-sm'
+                        : 'text-muted hover:text-ink'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </>
       )}
