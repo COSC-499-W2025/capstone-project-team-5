@@ -176,7 +176,15 @@ export default function ProjectsPage() {
   function handleDelete(projectId) {
     if (analysisCache?.current) delete analysisCache.current[projectId]
     evictCache(projectId)
-    setProjects((prev) => prev.filter((p) => p.id !== projectId))
+    setProjects((prev) => {
+      const remaining = prev.filter((p) => p.id !== projectId)
+      // Re-sequence ranks to close any gap left by the deleted project
+      const ranked = remaining
+        .filter((p) => p.importance_rank != null)
+        .sort((a, b) => a.importance_rank - b.importance_rank)
+      const rankFix = new Map(ranked.map((p, i) => [p.id, i + 1]))
+      return remaining.map((p) => rankFix.has(p.id) ? { ...p, importance_rank: rankFix.get(p.id) } : p)
+    })
     setOpen(null)
   }
 
@@ -472,6 +480,11 @@ function ProjectDrawer({ project, projects, onClose, onAnalysisDone, onThumbnail
 
     // Compute all rank changes client-side so every displaced project is covered
     const rankMap = computeNewRankings(projects, project.id, parsed)
+
+    if (rankMap.size === 0) {
+      setRankOpen(false)
+      return
+    }
 
     setRankSaving(true)
     setRankErr('')
