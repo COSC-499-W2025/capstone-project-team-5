@@ -30,6 +30,35 @@ function isAnalyzed(p) {
   return !!(p?.importance_score || p?.user_role)
 }
 
+function computeNewRankings(projects, movingId, targetRank) {
+  const ranked = projects
+    .filter((p) => p.importance_rank != null)
+    .sort((a, b) => a.importance_rank - b.importance_rank)
+
+  const wasUnranked = projects.find((p) => p.id === movingId)?.importance_rank == null
+
+  // Remove the moving project from the ranked list if it was there
+  const withoutMoving = ranked.filter((p) => p.id !== movingId)
+
+  // Clamp target to valid range (1 … length after re-insertion)
+  const maxRank = withoutMoving.length + 1
+  const clamped = Math.min(Math.max(1, targetRank), maxRank)
+
+  // Insert at target position (convert 1-based to 0-based index)
+  withoutMoving.splice(clamped - 1, 0, { id: movingId })
+
+  // Build result map for every entry whose rank changed
+  const result = new Map()
+  withoutMoving.forEach((p, idx) => {
+    const newRank = idx + 1
+    const original = projects.find((x) => x.id === p.id)
+    if (wasUnranked || original?.importance_rank !== newRank) {
+      result.set(p.id, newRank)
+    }
+  })
+  return result
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const SORT_OPTIONS = [
@@ -151,21 +180,12 @@ export default function ProjectsPage() {
     setOpen(null)
   }
 
-  function handleRankChange(updatedProjects) {
-    const map = new Map(updatedProjects.map(p => [p.id, p.importance_rank]))
-
+  function handleRankChange(rankMap) {
     setProjects((prev) =>
-      prev.map((p) =>
-        map.has(p.id)
-          ? { ...p, importance_rank: map.get(p.id) }
-          : p
-      )
+      prev.map((p) => rankMap.has(p.id) ? { ...p, importance_rank: rankMap.get(p.id) } : p)
     )
-
     setOpen((prev) =>
-      prev && map.has(prev.id)
-        ? { ...prev, importance_rank: map.get(prev.id) }
-        : prev
+      prev && rankMap.has(prev.id) ? { ...prev, importance_rank: rankMap.get(prev.id) } : prev
     )
   }
 
@@ -174,7 +194,6 @@ export default function ProjectsPage() {
     .filter((p) => !query || p.name.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => {
       if (sort === 'rank') {
-        // Ranked projects first (ascending), unranked at end
         if (a.importance_rank == null && b.importance_rank == null) return 0
         if (a.importance_rank == null) return 1
         if (b.importance_rank == null) return -1
@@ -371,22 +390,29 @@ function useOutsideClick(ref, handler) {
 
 function ProjectDrawer({ project, projects, onClose, onAnalysisDone, onThumbnailChange, onDelete, onRankChange }) {
   const alreadyDone = isAnalyzed(project)
-  const [status,        setStatus]       = useState(alreadyDone ? S.DONE : S.IDLE)
-  const [data,          setData]         = useState(alreadyDone ? project : null)
-  const [err,           setErr]          = useState('')
-  const [deleting,      setDeleting]     = useState(false)
-  const [deleteErr,     setDeleteErr]    = useState('')
+  const [status,     setStatus]   = useState(alreadyDone ? S.DONE : S.IDLE)
+  const [data,       setData]     = useState(alreadyDone ? project : null)
+  const [err,        setErr]      = useState('')
+  const [deleting,   setDeleting] = useState(false)
+  const [deleteErr,  setDeleteErr] = useState('')
   // Rank editing
-  const [rankInput,     setRankInput]    = useState(project.importance_rank != null ? String(project.importance_rank) : '')
-  const [rankSaving,    setRankSaving]   = useState(false)
-  const [rankErr,       setRankErr]      = useState('')
-  const alive = useRef(true)
+  const [rankInput,  setRankInput]  = useState(project.importance_rank != null ? String(project.importance_rank) : '')
+  const [rankSaving, setRankSaving] = useState(false)
+  const [rankErr,    setRankErr]    = useState('')
+  const [rankOpen,   setRankOpen]   = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const alive     = useRef(true)
+  const rankRef   = useRef(null)
+  const deleteRef = useRef(null)
+  const thumbInputRef = useRef(null)
 
   // Thumbnail state
   const [hasThumbnail, setHasThumbnail] = useState(project.has_thumbnail ?? false)
   const [thumbErr,     setThumbErr]     = useState('')
   const [thumbVer,     setThumbVer]     = useState(0)
-  const thumbInputRef = useRef(null)
+
+  useOutsideClick(rankRef,   () => { setRankOpen(false);   setRankErr('') })
+  useOutsideClick(deleteRef, () => { setDeleteOpen(false) })
 
   async function handleThumbnailFileSelected(e) {
     const file = e.target.files?.[0]
@@ -429,8 +455,12 @@ function ProjectDrawer({ project, projects, onClose, onAnalysisDone, onThumbnail
   }
 
   async function handleRank() {
-    const parsed = parseInt(rankInput, 10)
-    const maxRank = projects.length
+    const parsed   = parseInt(rankInput, 10)
+    // Max valid rank = current ranked count + 1 if this project is unranked
+    const rankedCount = projects.filter((p) => p.importance_rank != null).length
+    const isUnranked  = project.importance_rank == null
+    const maxRank     = isUnranked ? rankedCount + 1 : rankedCount
+
     if (!rankInput || isNaN(parsed)) {
       setRankErr('Enter a valid number.')
       return
@@ -439,24 +469,21 @@ function ProjectDrawer({ project, projects, onClose, onAnalysisDone, onThumbnail
       setRankErr(`Rank must be between 1 and ${maxRank}.`)
       return
     }
+
+    // Compute all rank changes client-side so every displaced project is covered
+    const rankMap = computeNewRankings(projects, project.id, parsed)
+
     setRankSaving(true)
     setRankErr('')
     try {
-      const result = await window.api.rerankProjects({
-        rankings: [{ project_id: project.id, importance_rank: parsed }],
-      })
-
-      const updatedProjects = result?.projects || []
-
-      onRankChange?.(updatedProjects)
-
-      const self = updatedProjects.find((p) => p.id === project.id)
-      if (self) {
-        setRankInput(String(self.importance_rank))
-      }
-
+      const rankings = Array.from(rankMap.entries()).map(([project_id, importance_rank]) => ({
+        project_id,
+        importance_rank,
+      }))
+      await window.api.rerankProjects({ rankings })
+      onRankChange?.(rankMap)
+      setRankInput(String(rankMap.get(project.id) ?? parsed))
       setRankOpen(false)
-      setRankErr('')
     } catch (err) {
       setRankErr(err?.message || 'Failed to update rank.')
     } finally {
@@ -477,21 +504,14 @@ function ProjectDrawer({ project, projects, onClose, onAnalysisDone, onThumbnail
   useEffect(() => {
     const fn = (e) => {
       if (e.key === 'Escape') {
-        if (rankOpen) {
-          setRankOpen(false)
-          setRankErr('')
-          return
-        }
-        if (deleteOpen) {
-          setDeleteOpen(false)
-          return
-        }
+        if (rankOpen)   { setRankOpen(false);   setRankErr(''); return }
+        if (deleteOpen) { setDeleteOpen(false);                 return }
         onClose()
       }
     }
     document.addEventListener('keydown', fn)
     return () => document.removeEventListener('keydown', fn)
-  }, [onClose])
+  }, [onClose, rankOpen, deleteOpen])
 
   async function analyze() {
     setStatus(S.RUNNING)
@@ -549,19 +569,6 @@ function ProjectDrawer({ project, projects, onClose, onAnalysisDone, onThumbnail
     setDrawerWidth(defaultWidth)
     localStorage.setItem('zip2job_drawer_width', String(defaultWidth))
   }
-
-  const rankRef = useRef(null)
-  const [rankOpen, setRankOpen] = useState(false)
-
-  useOutsideClick(rankRef, () => {
-    setRankOpen(false)
-    setRankErr('')
-  })
-
-  const deleteRef = useRef(null)
-  const [deleteOpen, setDeleteOpen] = useState(false)
-
-  useOutsideClick(deleteRef, () => setDeleteOpen(false))
 
   return (
     <>
@@ -627,15 +634,14 @@ function ProjectDrawer({ project, projects, onClose, onAnalysisDone, onThumbnail
                 {status === S.DONE ? 'Re-analyze' : 'Analyze'}
               </button>
             )}
-            {/* Rank Popover */}
+
+            {/* Rank popover */}
             <div className="relative" ref={rankRef}>
               <button
                 onClick={() => setRankOpen((v) => !v)}
                 className="rounded border border-border-hi px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-ink transition-colors hover:bg-elevated whitespace-nowrap"
               >
-                {project.importance_rank != null
-                  ? `Rank ${project.importance_rank}`
-                  : 'Set Rank'}
+                {project.importance_rank != null ? `Rank ${project.importance_rank}` : 'Set Rank'}
               </button>
 
               {rankOpen && (
@@ -643,19 +649,13 @@ function ProjectDrawer({ project, projects, onClose, onAnalysisDone, onThumbnail
                   <input
                     type="number"
                     min="1"
-                    max={projects.length}
+                    max={projects.filter((p) => p.importance_rank != null).length + (project.importance_rank == null ? 1 : 0)}
                     value={rankInput}
-                    onChange={(e) => {
-                      setRankInput(e.target.value)
-                      setRankErr('')
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleRank()
-                    }}
+                    onChange={(e) => { setRankInput(e.target.value); setRankErr('') }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleRank() }}
                     className="input w-full py-1 text-sm text-center tabular-nums"
                     autoFocus
                   />
-
                   <div className="flex gap-1 mt-2">
                     <button
                       onClick={handleRank}
@@ -665,23 +665,20 @@ function ProjectDrawer({ project, projects, onClose, onAnalysisDone, onThumbnail
                       {rankSaving ? <Spinner /> : 'Save'}
                     </button>
                     <button
-                      onClick={() => {
-                        setRankOpen(false)
-                        setRankErr('')
-                      }}
+                      onClick={() => { setRankOpen(false); setRankErr('') }}
                       className="flex-1 rounded border border-border px-2 py-1 text-xs text-muted hover:text-ink"
                     >
                       Cancel
                     </button>
                   </div>
-
                   {rankErr && (
                     <p className="mt-1 text-xs text-danger text-center">{rankErr}</p>
                   )}
                 </div>
               )}
             </div>
-            {/* Delete Popover */}
+
+            {/* Delete popover */}
             <div className="relative" ref={deleteRef}>
               <button
                 onClick={() => setDeleteOpen((v) => !v)}
@@ -699,7 +696,6 @@ function ProjectDrawer({ project, projects, onClose, onAnalysisDone, onThumbnail
               {deleteOpen && (
                 <div className="absolute right-0 mt-2 w-48 rounded border border-danger/30 bg-surface shadow-lg p-3 z-50">
                   <p className="text-sm text-danger mb-2">Delete this project?</p>
-
                   <div className="flex gap-1">
                     <button
                       onClick={handleDelete}
@@ -716,13 +712,13 @@ function ProjectDrawer({ project, projects, onClose, onAnalysisDone, onThumbnail
                       Cancel
                     </button>
                   </div>
-
                   {deleteErr && (
                     <p className="mt-1 text-xs text-danger text-center">{deleteErr}</p>
                   )}
                 </div>
               )}
             </div>
+
             <button
               onClick={onClose}
               className="rounded p-1.5 text-muted transition-colors hover:bg-border hover:text-ink"
@@ -735,9 +731,9 @@ function ProjectDrawer({ project, projects, onClose, onAnalysisDone, onThumbnail
           </div>
         </div>
 
-        {(thumbErr || deleteErr) && (
+        {thumbErr && (
           <div className="px-5 pt-2">
-            <p className="text-sm text-danger">{thumbErr || deleteErr}</p>
+            <p className="text-sm text-danger">{thumbErr}</p>
           </div>
         )}
 
@@ -797,8 +793,8 @@ function MetaTable({ project }) {
     { label: 'Language',      value: project.language   },
     { label: 'Framework',     value: project.framework  },
     { label: 'Uploaded',      value: project.created_at ? new Date(project.created_at).toLocaleDateString() : null },
-    { label: 'Duration',      value: project.duration,            wide: true },
-    { label: 'Collaborators', value: collaborators,               wide: true },
+    { label: 'Duration',      value: project.duration,   wide: true },
+    { label: 'Collaborators', value: collaborators,      wide: true },
   ].filter((c) => c.value != null)
 
   return (
