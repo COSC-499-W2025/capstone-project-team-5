@@ -9,7 +9,7 @@ from capstone_project_team_5.api.schemas.common import (
     MAX_LIMIT,
     PaginationMeta,
 )
-from capstone_project_team_5.constants.skill_detection_constants import SkillType
+from capstone_project_team_5.constants.skill_detection_constants import ProficiencyLevel, SkillType
 
 # Re-export for backwards compatibility
 __all__ = ["DEFAULT_LIMIT", "MAX_LIMIT", "PaginationMeta"]
@@ -23,6 +23,14 @@ class SkillResponse(BaseModel):
     id: int
     name: str
     skill_type: SkillType
+    proficiency_level: ProficiencyLevel | None = None
+    is_manual_override: bool = False
+
+
+class UpdateProficiencyRequest(BaseModel):
+    """Request body for updating skill proficiency."""
+
+    proficiency_level: ProficiencyLevel | None = None
 
 
 class PaginatedSkillsResponse(BaseModel):
