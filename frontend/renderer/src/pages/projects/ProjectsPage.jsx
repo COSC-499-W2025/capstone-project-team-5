@@ -18,6 +18,13 @@ function writeCache(projectId, result) {
     localStorage.setItem(CACHE_KEY, JSON.stringify(c))
   } catch { /* quota exceeded */ }
 }
+function evictCache(projectId) {
+  try {
+    const c = readCache()
+    delete c[String(projectId)]
+    localStorage.setItem(CACHE_KEY, JSON.stringify(c))
+  } catch { /* ignore */ }
+}
 
 function isAnalyzed(p) {
   return !!(p?.importance_score || p?.user_role)
@@ -27,6 +34,7 @@ function isAnalyzed(p) {
 
 const SORT_OPTIONS = [
   { value: 'date',  label: 'Date' },
+  { value: 'rank',  label: 'Rank' },
   { value: 'score', label: 'Score' },
   { value: 'name',  label: 'Name' },
 ]
@@ -51,13 +59,12 @@ export default function ProjectsPage() {
         ])
         if (cancelled) return
 
-        // Build projectId → saved analysis map from the saved uploads response
         const savedMap = {}
         for (const upload of (savedUploads || [])) {
           for (const sp of (upload.projects || [])) {
-            // Newest analysis is last in the array (oldest-first from DB)
             const latest = sp.analyses?.length > 0 ? sp.analyses[sp.analyses.length - 1] : null
             savedMap[sp.id] = {
+              importance_rank:              sp.importance_rank,
               importance_score:             sp.importance_score,
               user_role:                    latest?.user_role           ?? sp.user_role,
               user_contribution_percentage: latest?.user_contribution_percentage ?? sp.user_contribution_percentage,
@@ -77,7 +84,6 @@ export default function ProjectsPage() {
           }
         }
 
-        // Seed in-memory + localStorage cache with saved analysis data
         for (const [id, data] of Object.entries(savedMap)) {
           if (!analysisCache?.current[id]) {
             if (analysisCache?.current) analysisCache.current[id] = data
@@ -128,22 +134,37 @@ export default function ProjectsPage() {
     const thumbnailRev = hasThumbnail ? Date.now() : null
     const update = (p) =>
       p.id === projectId
-        ? {
-            ...p,
-            has_thumbnail: hasThumbnail,
-            thumbnail_url: thumbnailUrl,
-            thumbnail_rev: thumbnailRev,
-          }
+        ? { ...p, has_thumbnail: hasThumbnail, thumbnail_url: thumbnailUrl, thumbnail_rev: thumbnailRev }
         : p
     setProjects((prev) => prev.map(update))
     setOpen((prev) =>
       prev?.id === projectId
-        ? {
-            ...prev,
-            has_thumbnail: hasThumbnail,
-            thumbnail_url: thumbnailUrl,
-            thumbnail_rev: thumbnailRev,
-          }
+        ? { ...prev, has_thumbnail: hasThumbnail, thumbnail_url: thumbnailUrl, thumbnail_rev: thumbnailRev }
+        : prev
+    )
+  }
+
+  function handleDelete(projectId) {
+    if (analysisCache?.current) delete analysisCache.current[projectId]
+    evictCache(projectId)
+    setProjects((prev) => prev.filter((p) => p.id !== projectId))
+    setOpen(null)
+  }
+
+  function handleRankChange(updatedProjects) {
+    const map = new Map(updatedProjects.map(p => [p.id, p.importance_rank]))
+
+    setProjects((prev) =>
+      prev.map((p) =>
+        map.has(p.id)
+          ? { ...p, importance_rank: map.get(p.id) }
+          : p
+      )
+    )
+
+    setOpen((prev) =>
+      prev && map.has(prev.id)
+        ? { ...prev, importance_rank: map.get(prev.id) }
         : prev
     )
   }
@@ -152,9 +173,15 @@ export default function ProjectsPage() {
   const visible = projects
     .filter((p) => !query || p.name.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => {
+      if (sort === 'rank') {
+        // Ranked projects first (ascending), unranked at end
+        if (a.importance_rank == null && b.importance_rank == null) return 0
+        if (a.importance_rank == null) return 1
+        if (b.importance_rank == null) return -1
+        return a.importance_rank - b.importance_rank
+      }
       if (sort === 'score') return (b.importance_score ?? -1) - (a.importance_score ?? -1)
       if (sort === 'name')  return a.name.localeCompare(b.name)
-      // date: newest first (higher id = newer upload)
       return b.id - a.id
     })
 
@@ -222,15 +249,17 @@ export default function ProjectsPage() {
           />
         ))}
       </div>
-
     </div>
 
     {open && (
       <ProjectDrawer
         project={open}
+        projects={projects}
         onClose={() => setOpen(null)}
         onAnalysisDone={handleAnalysisDone}
         onThumbnailChange={handleThumbnailChange}
+        onDelete={handleDelete}
+        onRankChange={handleRankChange}
       />
     )}
     </>
@@ -275,15 +304,13 @@ function ProjectCard({ project, isNew, isMerged, onOpen, onMouseEnter }) {
         <div className="flex items-start justify-between gap-2">
           <span className="text-base font-semibold text-ink leading-snug">{project.name}</span>
           <div className="flex shrink-0 gap-1 pt-px">
-            {isNew             && <Chip variant="success">NEW</Chip>}
+            {isNew              && <Chip variant="success">NEW</Chip>}
             {isMerged && !isNew && <Chip variant="accent">MERGED</Chip>}
           </div>
         </div>
 
-        {/* Path */}
         <p className="mt-1.5 font-mono text-sm text-muted truncate">{project.rel_path}</p>
 
-        {/* Footer */}
         <div className="mt-4 flex items-end justify-between gap-2">
           <div className="min-w-0">
             <p className="text-sm text-muted">
@@ -294,11 +321,21 @@ function ProjectCard({ project, isNew, isMerged, onOpen, onMouseEnter }) {
               <p className="mt-0.5 text-sm text-ink/70 truncate">{project.user_role}</p>
             )}
           </div>
-          {project.importance_score != null && (
-            <span className="shrink-0 font-mono text-xl font-bold tabular-nums text-ink leading-none">
-              {Math.round(project.importance_score)}
-            </span>
-          )}
+          <div className="shrink-0 flex items-end gap-5">
+            {project.importance_rank != null && (
+              <div className="text-right">
+                <p className="font-mono text-2xs text-ink/40 mb-0.5">RANK</p>
+                <span className="font-mono text-base font-bold tabular-nums text-ink/60 leading-none">
+                  #{project.importance_rank}
+                </span>
+              </div>
+            )}
+            {project.importance_score != null && (
+              <span className="font-mono text-xl font-bold tabular-nums text-ink leading-none">
+                {Math.round(project.importance_score)}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </button>
@@ -321,11 +358,28 @@ function Chip({ variant, children }) {
 
 const S = { IDLE: 'idle', RUNNING: 'running', DONE: 'done', ERROR: 'error' }
 
-function ProjectDrawer({ project, onClose, onAnalysisDone, onThumbnailChange }) {
+function useOutsideClick(ref, handler) {
+  useEffect(() => {
+    function handle(e) {
+      if (!ref.current || ref.current.contains(e.target)) return
+      handler()
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [ref, handler])
+}
+
+function ProjectDrawer({ project, projects, onClose, onAnalysisDone, onThumbnailChange, onDelete, onRankChange }) {
   const alreadyDone = isAnalyzed(project)
-  const [status, setStatus] = useState(alreadyDone ? S.DONE  : S.IDLE)
-  const [data,   setData]   = useState(alreadyDone ? project : null)
-  const [err,    setErr]    = useState('')
+  const [status,        setStatus]       = useState(alreadyDone ? S.DONE : S.IDLE)
+  const [data,          setData]         = useState(alreadyDone ? project : null)
+  const [err,           setErr]          = useState('')
+  const [deleting,      setDeleting]     = useState(false)
+  const [deleteErr,     setDeleteErr]    = useState('')
+  // Rank editing
+  const [rankInput,     setRankInput]    = useState(project.importance_rank != null ? String(project.importance_rank) : '')
+  const [rankSaving,    setRankSaving]   = useState(false)
+  const [rankErr,       setRankErr]      = useState('')
   const alive = useRef(true)
 
   // Thumbnail state
@@ -361,6 +415,55 @@ function ProjectDrawer({ project, onClose, onAnalysisDone, onThumbnailChange }) 
     }
   }
 
+  async function handleDelete() {
+    setDeleting(true)
+    setDeleteErr('')
+    try {
+      await window.api.deleteProject(project.id)
+      onDelete?.(project.id)
+    } catch (err) {
+      setDeleteErr(err?.message || 'Failed to delete project.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  async function handleRank() {
+    const parsed = parseInt(rankInput, 10)
+    const maxRank = projects.length
+    if (!rankInput || isNaN(parsed)) {
+      setRankErr('Enter a valid number.')
+      return
+    }
+    if (parsed < 1 || parsed > maxRank) {
+      setRankErr(`Rank must be between 1 and ${maxRank}.`)
+      return
+    }
+    setRankSaving(true)
+    setRankErr('')
+    try {
+      const result = await window.api.rerankProjects({
+        rankings: [{ project_id: project.id, importance_rank: parsed }],
+      })
+
+      const updatedProjects = result?.projects || []
+
+      onRankChange?.(updatedProjects)
+
+      const self = updatedProjects.find((p) => p.id === project.id)
+      if (self) {
+        setRankInput(String(self.importance_rank))
+      }
+
+      setRankOpen(false)
+      setRankErr('')
+    } catch (err) {
+      setRankErr(err?.message || 'Failed to update rank.')
+    } finally {
+      setRankSaving(false)
+    }
+  }
+
   useEffect(() => {
     alive.current = true
     return () => { alive.current = false }
@@ -372,7 +475,20 @@ function ProjectDrawer({ project, onClose, onAnalysisDone, onThumbnailChange }) 
   }, [])
 
   useEffect(() => {
-    const fn = (e) => { if (e.key === 'Escape') onClose() }
+    const fn = (e) => {
+      if (e.key === 'Escape') {
+        if (rankOpen) {
+          setRankOpen(false)
+          setRankErr('')
+          return
+        }
+        if (deleteOpen) {
+          setDeleteOpen(false)
+          return
+        }
+        onClose()
+      }
+    }
     document.addEventListener('keydown', fn)
     return () => document.removeEventListener('keydown', fn)
   }, [onClose])
@@ -434,28 +550,38 @@ function ProjectDrawer({ project, onClose, onAnalysisDone, onThumbnailChange }) 
     localStorage.setItem('zip2job_drawer_width', String(defaultWidth))
   }
 
+  const rankRef = useRef(null)
+  const [rankOpen, setRankOpen] = useState(false)
+
+  useOutsideClick(rankRef, () => {
+    setRankOpen(false)
+    setRankErr('')
+  })
+
+  const deleteRef = useRef(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+
+  useOutsideClick(deleteRef, () => setDeleteOpen(false))
+
   return (
     <>
-      {/* Backdrop — dark enough to hide cards behind */}
       <div className="fixed inset-0 z-40 bg-black/80" onClick={onClose} />
 
-      {/* Panel */}
       <div
         className="fixed right-0 top-0 z-50 flex h-full flex-col border-l border-border bg-surface shadow-2xl text-ink"
         style={{ width: `${drawerWidth}px` }}
       >
-      <div
-        className="absolute left-0 top-0 h-full w-1 cursor-col-resize hover:bg-border-hi transition-colors group"
-        onMouseDown={handleDragStart}
-        onDoubleClick={handleDragReset}
-      >
-        {/* Grip dots */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {[0,1,2].map(i => (
-            <div key={i} className="w-2 h-2 rounded-full bg-muted" />
-          ))}
+        <div
+          className="absolute left-0 top-0 h-full w-1 cursor-col-resize hover:bg-border-hi transition-colors group"
+          onMouseDown={handleDragStart}
+          onDoubleClick={handleDragReset}
+        >
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {[0,1,2].map(i => (
+              <div key={i} className="w-2 h-2 rounded-full bg-muted" />
+            ))}
+          </div>
         </div>
-      </div>
 
         {/* Thumbnail banner */}
         {hasThumbnail && (
@@ -472,23 +598,23 @@ function ProjectDrawer({ project, onClose, onAnalysisDone, onThumbnailChange }) 
         )}
 
         {/* Header */}
-        <div className="flex shrink-0 items-start gap-3 border-b border-border px-5 py-4">
-          <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold text-ink">{project.name}</h2>
-            <p className="mt-0.5 font-mono text-sm text-muted">{project.rel_path}</p>
+        <div className="items-start gap-3 border-b border-border px-5 py-4">
+          <div className="min-w-0 flex-1 pr-2">
+            <h2 className="text-base font-semibold text-ink truncate">{project.name}</h2>
+            <p className="mt-0.5 font-mono text-sm text-muted truncate">{project.rel_path}</p>
           </div>
-          <div className="flex shrink-0 items-center gap-2 pt-0.5">
+          <div className="flex items-center justify-end gap-2">
             {hasThumbnail ? (
               <button
                 onClick={handleClearThumbnail}
-                className="rounded border border-border-hi px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-elevated"
+                className="rounded border border-border-hi px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-ink transition-colors hover:bg-elevated whitespace-nowrap"
               >
                 Clear Thumbnail
               </button>
             ) : (
               <button
                 onClick={() => thumbInputRef.current?.click()}
-                className="rounded border border-border-hi px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-elevated"
+                className="rounded border border-border-hi px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-ink transition-colors hover:bg-elevated whitespace-nowrap"
               >
                 Set Thumbnail
               </button>
@@ -496,11 +622,107 @@ function ProjectDrawer({ project, onClose, onAnalysisDone, onThumbnailChange }) 
             {status !== S.RUNNING && (
               <button
                 onClick={analyze}
-                className="rounded border border-border-hi px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-elevated"
+                className="rounded border border-border-hi px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-ink transition-colors hover:bg-elevated whitespace-nowrap"
               >
                 {status === S.DONE ? 'Re-analyze' : 'Analyze'}
               </button>
             )}
+            {/* Rank Popover */}
+            <div className="relative" ref={rankRef}>
+              <button
+                onClick={() => setRankOpen((v) => !v)}
+                className="rounded border border-border-hi px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-ink transition-colors hover:bg-elevated whitespace-nowrap"
+              >
+                {project.importance_rank != null
+                  ? `Rank ${project.importance_rank}`
+                  : 'Set Rank'}
+              </button>
+
+              {rankOpen && (
+                <div className="absolute right-0 mt-2 w-44 rounded border border-border bg-surface shadow-lg p-2 z-50">
+                  <input
+                    type="number"
+                    min="1"
+                    max={projects.length}
+                    value={rankInput}
+                    onChange={(e) => {
+                      setRankInput(e.target.value)
+                      setRankErr('')
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleRank()
+                    }}
+                    className="input w-full py-1 text-sm text-center tabular-nums"
+                    autoFocus
+                  />
+
+                  <div className="flex gap-1 mt-2">
+                    <button
+                      onClick={handleRank}
+                      disabled={rankSaving}
+                      className="flex-1 rounded border border-border-hi px-2 py-1 text-xs font-medium hover:bg-elevated disabled:opacity-50"
+                    >
+                      {rankSaving ? <Spinner /> : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setRankOpen(false)
+                        setRankErr('')
+                      }}
+                      className="flex-1 rounded border border-border px-2 py-1 text-xs text-muted hover:text-ink"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  {rankErr && (
+                    <p className="mt-1 text-xs text-danger text-center">{rankErr}</p>
+                  )}
+                </div>
+              )}
+            </div>
+            {/* Delete Popover */}
+            <div className="relative" ref={deleteRef}>
+              <button
+                onClick={() => setDeleteOpen((v) => !v)}
+                className="rounded border border-border-hi px-2 py-1 text-sm font-medium text-muted transition-colors hover:border-danger/50 hover:text-danger hover:bg-danger/10"
+                title="Delete project"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                  <path d="M10 11v6M14 11v6"/>
+                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                </svg>
+              </button>
+
+              {deleteOpen && (
+                <div className="absolute right-0 mt-2 w-48 rounded border border-danger/30 bg-surface shadow-lg p-3 z-50">
+                  <p className="text-sm text-danger mb-2">Delete this project?</p>
+
+                  <div className="flex gap-1">
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="flex-1 rounded border border-danger/50 bg-danger/10 px-2 py-1 text-xs font-medium text-danger hover:bg-danger/20 disabled:opacity-50"
+                    >
+                      {deleting ? 'Deleting…' : 'Delete'}
+                    </button>
+                    <button
+                      onClick={() => setDeleteOpen(false)}
+                      disabled={deleting}
+                      className="flex-1 rounded border border-border px-2 py-1 text-xs text-muted hover:text-ink"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  {deleteErr && (
+                    <p className="mt-1 text-xs text-danger text-center">{deleteErr}</p>
+                  )}
+                </div>
+              )}
+            </div>
             <button
               onClick={onClose}
               className="rounded p-1.5 text-muted transition-colors hover:bg-border hover:text-ink"
@@ -512,9 +734,10 @@ function ProjectDrawer({ project, onClose, onAnalysisDone, onThumbnailChange }) 
             </button>
           </div>
         </div>
-        {thumbErr && (
+
+        {(thumbErr || deleteErr) && (
           <div className="px-5 pt-2">
-            <p className="text-sm text-danger">{thumbErr}</p>
+            <p className="text-sm text-danger">{thumbErr || deleteErr}</p>
           </div>
         )}
 
@@ -523,7 +746,6 @@ function ProjectDrawer({ project, onClose, onAnalysisDone, onThumbnailChange }) 
           <div className="px-5 py-4 space-y-4">
             <MetaTable project={project} />
 
-            {/* Status states */}
             {status === S.RUNNING && (
               <div className="flex items-center gap-3 rounded border border-border px-4 py-3 text-base text-muted">
                 <Spinner /> Analyzing…
@@ -564,7 +786,6 @@ function ProjectDrawer({ project, onClose, onAnalysisDone, onThumbnailChange }) 
 
 function parseCollaborators(display) {
   if (!display) return null
-  // Strip everything up to and including "N collaborator(s) detected: " (may have emoji prefix)
   return display.replace(/^.*?\d+\s+collaborators?\s+detected:\s*/i, '').trim() || null
 }
 
@@ -572,12 +793,12 @@ function MetaTable({ project }) {
   const collaborators = parseCollaborators(project.collaborators_display)
 
   const items = [
-    { label: 'Files',        value: project.file_count },
-    { label: 'Language',     value: project.language   },
-    { label: 'Framework',    value: project.framework  },
-    { label: 'Uploaded',     value: project.created_at ? new Date(project.created_at).toLocaleDateString() : null },
-    { label: 'Duration',      value: project.duration, wide: true },
-    { label: 'Collaborators', value: collaborators,    wide: true },
+    { label: 'Files',         value: project.file_count },
+    { label: 'Language',      value: project.language   },
+    { label: 'Framework',     value: project.framework  },
+    { label: 'Uploaded',      value: project.created_at ? new Date(project.created_at).toLocaleDateString() : null },
+    { label: 'Duration',      value: project.duration,            wide: true },
+    { label: 'Collaborators', value: collaborators,               wide: true },
   ].filter((c) => c.value != null)
 
   return (
@@ -600,8 +821,6 @@ function AnalysisDetail({ data }) {
 
   return (
     <div className="space-y-3">
-
-      {/* Role + scores */}
       {(primaryRole || data.importance_score != null) && (
         <div className="rounded border border-border p-4">
           <div className="flex items-start justify-between gap-4">
@@ -737,9 +956,7 @@ function AuthenticatedThumbnail({ projectId, revision, alt, className, onLoadErr
     }
   }, [projectId, revision])
 
-  if (!src) {
-    return null
-  }
+  if (!src) return null
 
   return (
     <img
@@ -788,9 +1005,9 @@ function GitSection({ git }) {
         {mine && (
           <div className="grid grid-cols-3 gap-3 text-sm">
             {[
-              { label: 'Commits',    value: mine.commits },
-              { label: 'Added',      value: mine.added?.toLocaleString()   },
-              { label: 'Removed',    value: mine.deleted?.toLocaleString() },
+              { label: 'Commits', value: mine.commits },
+              { label: 'Added',   value: mine.added?.toLocaleString()   },
+              { label: 'Removed', value: mine.deleted?.toLocaleString() },
             ].map(({ label, value }) => (
               <div key={label}>
                 <p className="text-sm text-ink/50 mb-0.5">{label}</p>
