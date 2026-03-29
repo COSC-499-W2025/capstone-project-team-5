@@ -274,22 +274,16 @@ export default function SkillsPage() {
                 ))}
               </div>
 
-              {/* Proficiency filter */}
-              <div className="flex items-center gap-px rounded border border-border bg-elevated p-0.5">
+              {/* Proficiency filter dropdown */}
+              <select
+                value={proficiencyFilter}
+                onChange={(e) => setProficiencyFilter(e.target.value)}
+                className="input w-auto py-1.5 px-3 text-2xs uppercase tracking-wider"
+              >
                 {PROFICIENCY_FILTERS.map(({ label, value }) => (
-                  <button
-                    key={value}
-                    onClick={() => setProficiencyFilter(value)}
-                    className={`rounded px-2.5 py-1 font-mono text-2xs uppercase tracking-wider transition-colors cursor-pointer ${
-                      proficiencyFilter === value
-                        ? 'bg-surface text-ink shadow-sm'
-                        : 'text-muted hover:text-ink'
-                    }`}
-                  >
-                    {label}
-                  </button>
+                  <option key={value} value={value}>{label}</option>
                 ))}
-              </div>
+              </select>
             </div>
           </div>
         </>
