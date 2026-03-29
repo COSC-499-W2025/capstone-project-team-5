@@ -197,16 +197,18 @@ def _build_project_list(
 
 
 def _build_skills(skill_list: list[dict]) -> ResumeSkills:
-    """Split chronological skills into tools and practices."""
+    """Split chronological skills into tools and practices with proficiency annotations."""
     tools: list[str] = []
     practices: list[str] = []
     for skill in skill_list:
         stype = skill.get("skill_type")
         sname = skill.get("skill_name", "")
+        level = skill.get("proficiency_level")
+        label = f"{sname} ({level.capitalize()})" if level else sname
         if stype == SkillType.TOOL:
-            tools.append(sname)
+            tools.append(label)
         elif stype == SkillType.PRACTICE:
-            practices.append(sname)
+            practices.append(label)
     return {"tools": tools, "practices": practices}
 
 
