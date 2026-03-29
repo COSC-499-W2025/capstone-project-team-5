@@ -173,30 +173,32 @@ export default function ProjectsPage() {
     )
   }
 
-  function handleDelete(projectId) {
+  async function handleDelete(projectId) {
     if (analysisCache?.current) delete analysisCache.current[projectId]
     evictCache(projectId)
 
-    setProjects((prev) => {
-      const remaining = prev.filter((p) => p.id !== projectId)
+    const remaining = projects.filter((p) => p.id !== projectId)
+    const ranked = remaining
+      .filter((p) => p.importance_rank != null)
+      .sort((a, b) => a.importance_rank - b.importance_rank)
+    const rankFix = new Map(ranked.map((p, i) => [p.id, i + 1]))
 
-      // Re-sequence ranks to close any gap left by the deleted project
-      const ranked = remaining
+    setProjects((prev) => {
+      const remainingInner = prev.filter((p) => p.id !== projectId)
+      const rankedInner = remainingInner
         .filter((p) => p.importance_rank != null)
         .sort((a, b) => a.importance_rank - b.importance_rank)
+      const rankFixInner = new Map(rankedInner.map((p, i) => [p.id, i + 1]))
 
-      const rankFix = new Map(ranked.map((p, i) => [p.id, i + 1]))
-      
-      const updated = remaining.map((p) =>
-        rankFix.has(p.id)
-          ? { ...p, importance_rank: rankFix.get(p.id) }
+      return remainingInner.map((p) =>
+        rankFixInner.has(p.id)
+          ? { ...p, importance_rank: rankFixInner.get(p.id) }
           : p
       )
-
-      persistRankFix(rankFix)
-      return updated
     })
     setOpen(null)
+
+    await persistRankFix(rankFix)
   }
 
   async function persistRankFix(rankMap) {
