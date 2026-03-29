@@ -75,6 +75,7 @@ def _ensure_tables_created() -> None:
         upload_record,
         user,
         user_code_analysis,
+        user_skill,
     )
 
     Base.metadata.create_all(bind=_engine)
