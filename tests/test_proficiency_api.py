@@ -5,13 +5,13 @@ from __future__ import annotations
 import uuid
 
 import pytest
+from conftest import auth_headers
 from fastapi.testclient import TestClient
 
 from capstone_project_team_5.api.main import app
 from capstone_project_team_5.constants.skill_detection_constants import SkillType
 from capstone_project_team_5.data.db import get_session
 from capstone_project_team_5.data.models import Skill, User
-from tests.conftest import auth_headers
 
 
 @pytest.fixture

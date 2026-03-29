@@ -207,11 +207,14 @@ export default function SkillsPage() {
   }), [skills])
 
   const hasQuery = query.trim() !== ''
+  const hasTypeFilter = typeFilter !== 'all'
+  const hasProficiencyFilter = proficiencyFilter !== 'all'
   const noResults = !loading && !error && skills.length > 0 && filteredSkills.length === 0
 
   function emptyFilterMessage() {
+    if (hasQuery && (hasTypeFilter || hasProficiencyFilter)) return 'No skills match your search and filter.'
     if (hasQuery) return 'No skills match your search.'
-    return 'No skills match your current filters.'
+    return 'No skills match your current filter.'
   }
 
   return (
