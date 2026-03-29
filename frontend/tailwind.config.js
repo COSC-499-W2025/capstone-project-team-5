@@ -40,6 +40,7 @@ export default {
         'zippy-hop': 'zippyHop 2s ease-in-out infinite',
         'zippy-excited': 'zippyExcited 0.4s ease-in-out infinite',
         'zippy-point': 'zippyPoint 0.5s ease-out forwards',
+        'clippy-exit': 'clippyExit 1s ease-in forwards',
         'upload-pulse': 'uploadPulse 2.4s cubic-bezier(0.4,0,0.6,1) infinite',
       },
       keyframes: {
@@ -94,6 +95,10 @@ export default {
         zippyPoint: {
           from: { transform: 'rotate(0deg)' },
           to:   { transform: 'rotate(-30deg)' },
+        },
+        clippyExit: {
+          from: { opacity: 1, transform: 'translateX(0) rotate(0deg)' },
+          to:   { opacity: 0, transform: 'translateX(300px) rotate(45deg)' },
         },
       },
     },
