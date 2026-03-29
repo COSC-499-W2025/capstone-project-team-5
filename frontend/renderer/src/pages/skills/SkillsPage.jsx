@@ -23,10 +23,10 @@ const TYPE_FILTERS = [
 ]
 
 const LEVELS = [
-  { key: 'beginner', label: 'Beg', color: '#f87171' },
-  { key: 'intermediate', label: 'Int', color: '#f5a623' },
-  { key: 'proficient', label: 'Pro', color: '#3dd68c' },
-  { key: 'expert', label: 'Exp', color: '#60a5fa' },
+  { key: 'beginner', label: 'Beginner', color: '#f87171' },
+  { key: 'intermediate', label: 'Intermediate', color: '#f5a623' },
+  { key: 'proficient', label: 'Proficient', color: '#3dd68c' },
+  { key: 'expert', label: 'Expert', color: '#60a5fa' },
 ]
 
 const PROFICIENCY_FILTERS = [
@@ -38,57 +38,25 @@ const PROFICIENCY_FILTERS = [
   { label: 'Unrated', value: 'unrated' },
 ]
 
-/* ─── Slider-style level picker: 4 stops on a track ─── */
-function LevelSlider({ current, onChange }) {
-  const activeIdx = LEVELS.findIndex((l) => l.key === current)
-  const activeColor = activeIdx >= 0 ? LEVELS[activeIdx].color : null
-
+/* ─── Segmented level picker ─── */
+function LevelPicker({ current, onChange }) {
   return (
-    <div className="flex items-center gap-0 w-full">
-      {LEVELS.map((l, i) => {
+    <div className="flex gap-px rounded border border-border bg-elevated p-0.5">
+      {LEVELS.map((l) => {
         const isActive = l.key === current
-        const isFilled = i <= activeIdx
         return (
           <button
             key={l.key}
             onClick={() => onChange(isActive ? null : l.key)}
             title={isActive ? `Clear ${l.label}` : l.label}
-            className="group flex-1 flex flex-col items-center gap-1.5 cursor-pointer py-1"
+            className="flex-1 rounded py-1 font-mono text-2xs uppercase tracking-wider transition-all duration-150 cursor-pointer"
+            style={{
+              color: isActive ? '#0a0b0d' : '#4e5668',
+              backgroundColor: isActive ? l.color : 'transparent',
+              fontWeight: isActive ? 600 : 400,
+            }}
           >
-            {/* Track segment + dot */}
-            <div className="relative w-full flex items-center justify-center h-3">
-              {/* Track line (left half) */}
-              {i > 0 && (
-                <div
-                  className="absolute left-0 right-1/2 h-0.5 rounded-full transition-colors duration-200"
-                  style={{ backgroundColor: isFilled && activeColor ? activeColor : '#1e2229' }}
-                />
-              )}
-              {/* Track line (right half) */}
-              {i < LEVELS.length - 1 && (
-                <div
-                  className="absolute left-1/2 right-0 h-0.5 rounded-full transition-colors duration-200"
-                  style={{ backgroundColor: i < activeIdx && activeColor ? activeColor : '#1e2229' }}
-                />
-              )}
-              {/* Dot */}
-              <div
-                className="relative z-10 rounded-full transition-all duration-200"
-                style={{
-                  width: isActive ? 12 : 8,
-                  height: isActive ? 12 : 8,
-                  backgroundColor: isFilled && activeColor ? activeColor : '#2c3140',
-                  boxShadow: isActive ? `0 0 8px ${activeColor}40` : 'none',
-                }}
-              />
-            </div>
-            {/* Label */}
-            <span
-              className="font-mono text-2xs transition-colors duration-150"
-              style={{ color: isActive ? activeColor : '#4e5668' }}
-            >
-              {l.label}
-            </span>
+            {l.label}
           </button>
         )
       })}
@@ -120,8 +88,8 @@ function SkillCard({ skill, onLevelChange, style }) {
         </span>
       </div>
 
-      {/* Level slider */}
-      <LevelSlider
+      {/* Level picker */}
+      <LevelPicker
         current={currentLevel}
         onChange={(level) => onLevelChange(skill.id, level)}
       />
