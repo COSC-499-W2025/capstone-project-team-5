@@ -605,8 +605,8 @@ function ProjectDrawer({ project, projects, onClose, onAnalysisDone, onThumbnail
         )}
 
         {/* Header */}
-        <div className="items-start gap-3 border-b border-border px-5 py-4">
-          <div className="min-w-0 flex-1 pr-2">
+        <div className="flex flex-col gap-2 border-b border-border px-5 py-4 min-h-[4.5rem] shrink-0">
+          <div className="min-w-0">
             <h2 className="text-base font-semibold text-ink truncate">{project.name}</h2>
             <p className="mt-0.5 font-mono text-sm text-muted truncate">{project.rel_path}</p>
           </div>
