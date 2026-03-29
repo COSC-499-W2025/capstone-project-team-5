@@ -191,3 +191,26 @@ def test_manual_override_not_overwritten(api_db: None) -> None:
         us = session.query(UserSkill).filter_by(user_id=user.id, skill_id=skill.id).one()
         assert us.proficiency_level == ProficiencyLevel.EXPERT
         assert us.is_manual_override is True
+
+
+def test_save_skills_triggers_proficiency_computation(api_db: None) -> None:
+    """After saving skills with user_id, proficiency should be auto-computed."""
+    uid = uuid.uuid4().hex[:8]
+    with get_session() as session:
+        user = User(username=f"u_{uid}", password_hash="x")
+        session.add(user)
+        session.flush()
+
+        upload = UploadRecord(filename=f"f_{uid}.zip", size_bytes=1, file_count=1)
+        session.add(upload)
+        session.flush()
+
+        proj = _make_project_with_analysis(session, upload.id, user.id, uid, 0)
+
+        from capstone_project_team_5.services.skill_persistence import save_skills_to_db
+
+        save_skills_to_db(session, proj.id, {f"Python_{uid}"}, set(), user_id=user.id)
+
+        us = session.query(UserSkill).filter_by(user_id=user.id).first()
+        assert us is not None
+        assert us.proficiency_level == ProficiencyLevel.BEGINNER

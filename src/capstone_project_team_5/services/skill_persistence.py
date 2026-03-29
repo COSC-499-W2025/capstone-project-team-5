@@ -17,6 +17,7 @@ def save_skills_to_db(
     project_id: int,
     tools: set[str],
     practices: set[str],
+    user_id: int | None = None,
 ) -> None:
     """Save detected skills to the Skill and ProjectSkill tables.
 
@@ -87,3 +88,11 @@ def save_skills_to_db(
     ]
     if new_links:
         session.add_all(new_links)
+
+    if user_id is not None:
+        session.flush()  # Ensure new ProjectSkill rows are visible for count query
+        from capstone_project_team_5.services.proficiency_service import (
+            compute_and_save_proficiency,
+        )
+
+        compute_and_save_proficiency(session, user_id)
