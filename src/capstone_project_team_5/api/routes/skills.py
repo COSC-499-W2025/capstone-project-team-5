@@ -19,7 +19,6 @@ from capstone_project_team_5.api.schemas.skills import (
 from capstone_project_team_5.constants.skill_detection_constants import ProficiencyLevel, SkillType
 from capstone_project_team_5.data.db import get_session
 from capstone_project_team_5.data.models import Project, ProjectSkill, Skill, User, UserSkill
-from capstone_project_team_5.services.proficiency_service import compute_and_save_proficiency
 
 router = APIRouter(prefix="/projects/{project_id}/skills", tags=["skills"])
 global_router = APIRouter(prefix="/skills", tags=["skills"])
@@ -28,14 +27,12 @@ global_router = APIRouter(prefix="/skills", tags=["skills"])
 def _skill_to_response(
     skill: Skill,
     proficiency_level: ProficiencyLevel | None = None,
-    is_manual_override: bool = False,
 ) -> SkillResponse:
     return SkillResponse(
         id=skill.id,
         name=skill.name,
         skill_type=skill.skill_type,
         proficiency_level=proficiency_level,
-        is_manual_override=is_manual_override,
     )
 
 
@@ -226,7 +223,6 @@ def get_all_skills(
             _skill_to_response(
                 s,
                 proficiency_level=prof_map[s.id].proficiency_level if s.id in prof_map else None,
-                is_manual_override=prof_map[s.id].is_manual_override if s.id in prof_map else False,
             )
             for s in skills
         ]
@@ -266,26 +262,20 @@ def update_skill_proficiency(
         us = session.query(UserSkill).filter_by(user_id=user.id, skill_id=skill.id).first()
 
         if body.proficiency_level is not None:
-            # Manual override
             if us is None:
                 us = UserSkill(
                     user_id=user.id,
                     skill_id=skill.id,
                     proficiency_level=body.proficiency_level,
-                    is_manual_override=True,
                 )
                 session.add(us)
             else:
                 us.proficiency_level = body.proficiency_level
-                us.is_manual_override = True
             session.flush()
-            return _skill_to_response(skill, us.proficiency_level, us.is_manual_override)
+            return _skill_to_response(skill, us.proficiency_level)
 
-        # Revert to auto-detect
+        # Clear proficiency
         if us is not None:
-            us.is_manual_override = False
+            session.delete(us)
             session.flush()
-            compute_and_save_proficiency(session, user.id)
-            session.refresh(us)
-            return _skill_to_response(skill, us.proficiency_level, us.is_manual_override)
         return _skill_to_response(skill)

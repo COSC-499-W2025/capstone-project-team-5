@@ -37,7 +37,6 @@ def test_create_user_skill(api_db: None) -> None:
 
         assert us.id is not None
         assert us.proficiency_level == ProficiencyLevel.EXPERT
-        assert us.is_manual_override is False
 
 
 def test_user_skill_unique_constraint(api_db: None) -> None:

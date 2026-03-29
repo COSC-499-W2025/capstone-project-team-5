@@ -24,7 +24,6 @@ class SkillResponse(BaseModel):
     name: str
     skill_type: SkillType
     proficiency_level: ProficiencyLevel | None = None
-    is_manual_override: bool = False
 
 
 class UpdateProficiencyRequest(BaseModel):

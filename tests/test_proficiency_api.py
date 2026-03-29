@@ -46,23 +46,22 @@ def test_patch_proficiency_sets_level(client: TestClient, user_and_skill: tuple[
     assert resp.status_code == 200
     data = resp.json()
     assert data["proficiency_level"] == "expert"
-    assert data["is_manual_override"] is True
 
 
-def test_patch_proficiency_null_reverts_override(
+def test_patch_proficiency_null_clears_level(
     client: TestClient, user_and_skill: tuple[str, int]
 ) -> None:
-    """PATCH with null proficiency_level clears manual override."""
+    """PATCH with null proficiency_level deletes the UserSkill row."""
     username, skill_id = user_and_skill
 
-    # First set manually
+    # First set
     client.patch(
         f"/api/skills/{skill_id}/proficiency",
         json={"proficiency_level": "expert"},
         headers=auth_headers(username),
     )
 
-    # Then revert
+    # Then clear
     resp = client.patch(
         f"/api/skills/{skill_id}/proficiency",
         json={"proficiency_level": None},
@@ -70,7 +69,7 @@ def test_patch_proficiency_null_reverts_override(
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert data["is_manual_override"] is False
+    assert data["proficiency_level"] is None
 
 
 def test_patch_proficiency_requires_auth(
@@ -107,7 +106,6 @@ def test_get_all_skills_includes_proficiency(
     """GET /api/skills/ includes proficiency when authenticated."""
     username, skill_id = user_and_skill
 
-    # Set proficiency
     client.patch(
         f"/api/skills/{skill_id}/proficiency",
         json={"proficiency_level": "proficient"},

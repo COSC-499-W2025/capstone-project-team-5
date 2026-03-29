@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from capstone_project_team_5.constants.skill_detection_constants import ProficiencyLevel
@@ -17,7 +17,6 @@ class UserSkill(Base):
         user_id: Foreign key to the user.
         skill_id: Foreign key to the skill.
         proficiency_level: One of expert/proficient/intermediate/beginner.
-        is_manual_override: True if user manually set the level.
     """
 
     __tablename__ = "UserSkill"
@@ -41,7 +40,6 @@ class UserSkill(Base):
         nullable=False,
     )
     proficiency_level: Mapped[ProficiencyLevel] = mapped_column(String, nullable=False)
-    is_manual_override: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     user = relationship("User")
     skill = relationship("Skill")
