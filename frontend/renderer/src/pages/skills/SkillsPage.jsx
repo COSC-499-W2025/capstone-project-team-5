@@ -23,10 +23,10 @@ const TYPE_FILTERS = [
 ]
 
 const LEVELS = [
-  { key: 'beginner', label: 'Beginner', color: '#4e5668' },
-  { key: 'intermediate', label: 'Intermediate', color: '#f5a623' },
-  { key: 'proficient', label: 'Proficient', color: '#3dd68c' },
-  { key: 'expert', label: 'Expert', color: '#60a5fa' },
+  { key: 'beginner', label: 'Beg', color: '#f87171' },
+  { key: 'intermediate', label: 'Int', color: '#f5a623' },
+  { key: 'proficient', label: 'Pro', color: '#3dd68c' },
+  { key: 'expert', label: 'Exp', color: '#60a5fa' },
 ]
 
 const PROFICIENCY_FILTERS = [
