@@ -386,6 +386,7 @@ function ProjectDrawer({ project, onClose, onAnalysisDone, onThumbnailChange }) 
       setData(result)
       setStatus(S.DONE)
       onAnalysisDone?.(project.id, result)
+      window.dispatchEvent(new CustomEvent('z2j:analysis-complete'))
     } catch (e) {
       if (!alive.current) return
       setErr(e?.message || 'Analysis failed.')
