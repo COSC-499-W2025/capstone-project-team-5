@@ -50,6 +50,38 @@ const ANALYSIS_RESULT = {
   rel_path: 'repos/demo-project',
 }
 
+const RANKED_PROJECT_A = {
+  ...RAW_PROJECT,
+  id: 1,
+  name: 'project-a',
+  importance_rank: 1,
+  importance_score: 90,
+}
+
+const RANKED_PROJECT_B = {
+  ...RAW_PROJECT,
+  id: 2,
+  name: 'project-b',
+  importance_rank: 2,
+  importance_score: 70,
+}
+
+const RANKED_PROJECT_C = {
+  ...RAW_PROJECT,
+  id: 3,
+  name: 'project-c',
+  importance_rank: 3,
+  importance_score: 50,
+}
+
+const UNRANKED_PROJECT = {
+  ...RAW_PROJECT,
+  id: 4,
+  name: 'project-unranked',
+  importance_rank: null,
+  importance_score: null,
+}
+
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
 function renderProjectsPage({
@@ -96,6 +128,12 @@ beforeEach(() => {
   localStorage.clear()
   jest.clearAllMocks()
 })
+
+async function openDrawer(name) {
+  await waitFor(() => expect(screen.getByText(name)).toBeInTheDocument())
+  fireEvent.click(screen.getByText(name).closest('.card'))
+  await waitFor(() => expect(screen.getByRole('button', { name: /close/i })).toBeInTheDocument())
+}
 
 test('clears project highlight when highlighted card is hovered', async () => {
   const { setUploadHighlights } = renderProjectsPage({
@@ -217,6 +255,20 @@ test('renders analysis results after successful analysis', async () => {
     expect(screen.getByText('Built REST API with Node.js')).toBeInTheDocument()
   )
   expect(screen.getByText('Led full-stack development')).toBeInTheDocument()
+})
+
+test('dispatches z2j:analysis-complete event after successful analysis', async () => {
+  const handler = jest.fn()
+  window.addEventListener('z2j:analysis-complete', handler)
+
+  renderProjectsPage({ projectPayload: [RAW_PROJECT] })
+  await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
+  await waitFor(() => expect(screen.getByText('Analyze')).toBeInTheDocument())
+  fireEvent.click(screen.getByText('Analyze'))
+
+  await waitFor(() => expect(handler).toHaveBeenCalledTimes(1))
+  window.removeEventListener('z2j:analysis-complete', handler)
 })
 
 test('shows error message when analysis fails', async () => {
@@ -442,4 +494,44 @@ test('shows error message when thumbnail upload fails', async () => {
   const file = new File(['pixels'], 'big.png', { type: 'image/png' })
   fireEvent.change(fileInput, { target: { files: [file] } })
   await waitFor(() => expect(screen.getByText('File exceeds 2 MiB.')).toBeInTheDocument())
+})
+
+test('rank sort orders projects ascending by importance_rank', async () => {
+  renderProjectsPage({ projectPayload: [RANKED_PROJECT_B, RANKED_PROJECT_A, RANKED_PROJECT_C] })
+  await waitFor(() => expect(screen.getByText('project-a')).toBeInTheDocument())
+
+  fireEvent.click(screen.getByRole('button', { name: 'Rank' }))
+
+  const cards = screen.getAllByText(/project-[abc]/).map((el) => el.textContent)
+  expect(cards).toEqual(['project-a', 'project-b', 'project-c'])
+})
+
+test('rank sort places unranked projects after ranked ones', async () => {
+  renderProjectsPage({ projectPayload: [UNRANKED_PROJECT, RANKED_PROJECT_A] })
+  await waitFor(() => expect(screen.getByText('project-a')).toBeInTheDocument())
+
+  fireEvent.click(screen.getByRole('button', { name: 'Rank' }))
+
+  const names = screen.getAllByText(/project-(a|unranked)/).map((el) => el.textContent)
+  expect(names[0]).toBe('project-a')
+  expect(names[1]).toBe('project-unranked')
+})
+
+test('set rank button shows current rank when project is ranked', async () => {
+  renderProjectsPage({ projectPayload: [RANKED_PROJECT_A] })
+  await openDrawer('project-a')
+  expect(screen.getByRole('button', { name: /rank 1/i })).toBeInTheDocument()
+})
+
+test('set rank button shows Set Rank when project is unranked', async () => {
+  renderProjectsPage({ projectPayload: [UNRANKED_PROJECT] })
+  await openDrawer('project-unranked')
+  expect(screen.getByRole('button', { name: /set rank/i })).toBeInTheDocument()
+})
+
+test('opening rank popover focuses the input', async () => {
+  renderProjectsPage({ projectPayload: [RANKED_PROJECT_A] })
+  await openDrawer('project-a')
+  fireEvent.click(screen.getByRole('button', { name: /rank 1/i }))
+  await waitFor(() => expect(screen.getByRole('spinbutton')).toBeInTheDocument())
 })

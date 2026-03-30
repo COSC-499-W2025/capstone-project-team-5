@@ -32,6 +32,8 @@ from capstone_project_team_5.data.models import (
     Portfolio,
     PortfolioItem,
     Project,
+    ProjectSkill,
+    Skill,
     User,
 )
 from capstone_project_team_5.services.project_thumbnail import has_project_thumbnail
@@ -543,6 +545,26 @@ def _render_portfolio_for_id(portfolio_id: int, session: Session) -> HTMLRespons
             if item.project_id and has_project_thumbnail(item.project_id)
             else None
         )
+        # Fetch skills and project metadata for skill timeline + showcase ranking
+        item_skills: list[dict] = []
+        importance_rank: int | None = None
+        is_showcase_proj: bool = False
+        start_date_str: str | None = None
+        if item.project_id and not getattr(item, "is_text_block", False):
+            proj = session.query(Project).filter(Project.id == item.project_id).first()
+            if proj:
+                importance_rank = proj.importance_rank
+                is_showcase_proj = bool(proj.is_showcase)
+                if proj.start_date:
+                    start_date_str = proj.start_date.strftime("%b %Y")
+            skill_rows = (
+                session.query(Skill)
+                .join(ProjectSkill, ProjectSkill.skill_id == Skill.id)
+                .filter(ProjectSkill.project_id == item.project_id)
+                .order_by(Skill.name)
+                .all()
+            )
+            item_skills = [{"name": s.name, "type": str(s.skill_type)} for s in skill_rows]
         item_list.append(
             {
                 "title": item.title,
@@ -552,6 +574,10 @@ def _render_portfolio_for_id(portfolio_id: int, session: Session) -> HTMLRespons
                 "is_text_block": bool(getattr(item, "is_text_block", False)),
                 "is_user_edited": bool(item.is_user_edited),
                 "updated_at": item.updated_at.strftime("%b %d, %Y"),
+                "skills": item_skills,
+                "importance_rank": importance_rank,
+                "is_showcase": is_showcase_proj,
+                "start_date": start_date_str,
             }
         )
 
@@ -740,6 +766,27 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1
 /* ── Text block ── */
 .text-section{margin:28px 0;padding:0 2px}
 .text-section-title{font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:10px;color:var(--ink)}
+/* ── Search ── */
+.search-wrap{margin-top:20px}
+.search-input{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--ink);font-family:var(--font);outline:none}
+.search-input:focus{border-color:var(--accent)}
+.search-input::placeholder{color:var(--muted)}
+/* ── Featured badge ── */
+.featured-badge{display:inline-block;margin-left:6px;padding:1px 5px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(99,102,241,.15);color:var(--accent);border:1px solid rgba(99,102,241,.3);border-radius:3px;vertical-align:middle}
+/* ── Skills timeline ── */
+.skills-section{margin-top:48px;padding-top:32px;border-top:1px solid var(--border)}
+.section-title{font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:24px;color:var(--ink)}
+.sk-timeline{position:relative;padding-left:28px}
+.sk-timeline::before{content:'';position:absolute;left:6px;top:4px;bottom:4px;width:1px;background:var(--border)}
+.sk-item{position:relative;display:flex;gap:14px;margin-bottom:20px}
+.sk-dot{position:absolute;left:-28px;top:4px;width:13px;height:13px;border-radius:50%;border:1px solid var(--accent);background:var(--bg);flex-shrink:0}
+.sk-body{flex:1}
+.sk-project{font-size:13px;font-weight:600;color:var(--ink);display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.sk-date{font-size:11px;font-family:var(--mono);color:var(--muted);font-weight:400}
+.sk-tags{display:flex;flex-wrap:wrap;gap:4px}
+.skill-tag{font-size:11px;font-family:var(--mono);border-radius:4px;padding:2px 7px}
+.skill-tool{background:rgba(99,102,241,.1);color:var(--accent);border:1px solid rgba(99,102,241,.2)}
+.skill-practice{background:rgba(16,185,129,.08);color:#10b981;border:1px solid rgba(16,185,129,.2)}
 /* Footer */
 footer{text-align:center;padding:24px;font-size:11px;font-family:var(--mono);color:var(--muted);border-top:1px solid var(--border);margin-top:40px}
 </style>"""
@@ -862,6 +909,16 @@ def _render_grid(items: list[dict]) -> str:
 def _render_showcase(items: list[dict]) -> str:
     if not items:
         return '<p class="empty">No projects in this portfolio yet.</p>'
+    # Determine top-3 by importance_rank (lower = more important); is_showcase as tiebreaker
+    ranked = sorted(
+        range(len(items)),
+        key=lambda i: (
+            items[i].get("importance_rank") is None,
+            items[i].get("importance_rank") or 999,
+            not items[i].get("is_showcase", False),
+        ),
+    )
+    top3 = set(ranked[:3])
     cards = ""
     for i, item in enumerate(items):
         title, md = item["title"], item["markdown"]
@@ -875,6 +932,7 @@ def _render_showcase(items: list[dict]) -> str:
             if thumb
             else ""
         )
+        featured_badge = '<span class="featured-badge">Featured</span>' if i in top3 else ""
         # Showcase main: bullets take priority; fall back to full markdown render
         if bullets_html:
             main_html = (
@@ -886,7 +944,7 @@ def _render_showcase(items: list[dict]) -> str:
         cards += (
             '<div class="showcase-card">' + thumb_html + '<div class="showcase-inner">'
             '<div class="showcase-sidebar">'
-            f'<div class="item-idx">{idx}</div>'
+            f'<div class="item-idx">{idx}{featured_badge}</div>'
             f'<div class="item-title">{_hl.escape(title)}</div>'
             f'<div class="item-date">{_hl.escape(item["updated_at"])}</div>'
             + _tags_el(md)
@@ -924,6 +982,50 @@ def _render_timeline(items: list[dict]) -> str:
             "</details></div></div>"
         )
     return f'<div class="timeline">{rows}</div>'
+
+
+def _render_skills_timeline(items: list[dict]) -> str:
+    """Render a skills-progression timeline section across portfolio projects."""
+    project_items = [it for it in items if not it.get("is_text_block") and it.get("skills")]
+    if not project_items:
+        return ""
+    seen: set[str] = set()
+    rows = ""
+    for item in project_items:
+        new_skills = [s for s in item["skills"] if s["name"] not in seen]
+        for s in new_skills:
+            seen.add(s["name"])
+        if not new_skills:
+            continue
+        date_str = item.get("start_date") or item.get("updated_at", "")
+        tools_html = "".join(
+            f'<span class="skill-tag skill-tool">{_hl.escape(s["name"])}</span>'
+            for s in new_skills
+            if s["type"] == "tool"
+        )
+        practices_html = "".join(
+            f'<span class="skill-tag skill-practice">{_hl.escape(s["name"])}</span>'
+            for s in new_skills
+            if s["type"] == "practice"
+        )
+        rows += (
+            '<div class="sk-item">'
+            '<div class="sk-dot"></div>'
+            '<div class="sk-body">'
+            f'<div class="sk-project">{_hl.escape(item["title"])}'
+            + (f'<span class="sk-date">{_hl.escape(date_str)}</span>' if date_str else "")
+            + "</div>"
+            f'<div class="sk-tags">{tools_html}{practices_html}</div>'
+            "</div></div>"
+        )
+    if not rows:
+        return ""
+    return (
+        '<section class="skills-section">'
+        '<h2 class="section-title">Skills Progression</h2>'
+        f'<div class="sk-timeline">{rows}</div>'
+        "</section>"
+    )
 
 
 def _render_portfolio_html(
@@ -986,6 +1088,7 @@ def _render_portfolio_html(
         segments.append('<p class="empty">No projects in this portfolio yet.</p>')
 
     items_html = "\n".join(segments)
+    skills_html = _render_skills_timeline(items)
 
     enhance_js = (
         "<script>\n"
@@ -1015,6 +1118,14 @@ def _render_portfolio_html(
         "  if (o) { o.style.display = 'none'; document.body.style.overflow = ''; }\n"
         "}\n"
         "document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });\n"
+        # Search/filter
+        "function filterItems(q) {\n"
+        "  var term = q.toLowerCase().trim();\n"
+        "  var sel = '.grid-card,.showcase-card,.timeline-item,.text-section';\n"
+        "  document.querySelectorAll(sel).forEach(function(el) {\n"
+        "    el.style.display = (!term || el.textContent.toLowerCase().includes(term)) ? '' : 'none';\n"
+        "  });\n"
+        "}\n"
         "</script>"
     )
 
@@ -1045,6 +1156,12 @@ def _render_portfolio_html(
             + "</div>"
         )
 
+    search_bar = (
+        '<div class="search-wrap">'
+        '<input id="portfolio-search" type="search" placeholder="Filter projects…"'
+        ' oninput="filterItems(this.value)" class="search-input" autocomplete="off"/>'
+        "</div>"
+    )
     body = (
         f"</head>\n<body>\n"
         f'<div class="hero">\n  <div class="hero-inner">\n'
@@ -1056,6 +1173,10 @@ def _render_portfolio_html(
         f"</div>\n  </div>\n</div>\n"
         f"{heatmap_html}\n"
         f'<div class="content">\n{items_html}\n</div>\n'
+        f"</div>\n"
+        f"    {search_bar}\n"
+        f"  </div>\n</div>\n"
+        f'<div class="content">\n{items_html}\n{skills_html}\n</div>\n'
         f"{modal_overlay}\n"
         f"<footer>Shared via Zip2Job</footer>\n"
         f"{enhance_js}\n"
