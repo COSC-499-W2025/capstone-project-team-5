@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../../app/context/AppContext'
-import ActivityHeatmap from '../../components/ActivityHeatmap'
 import PageHeader from '../../components/PageHeader'
 import { getProjectItems } from '../../lib/projects'
 
@@ -367,7 +366,6 @@ export default function DashboardPage() {
         progress: 100,
         step: 'Done',
       })
-      window.dispatchEvent(new CustomEvent('z2j:upload-complete'))
 
       // Small pause so the user can see 100% before navigating away.
       await new Promise((r) => setTimeout(r, 1200))
@@ -414,8 +412,6 @@ export default function DashboardPage() {
           )
         })}
       </div>
-
-      <ActivityHeatmap />
 
       <div>
         <div className="divider-label">Quick Actions</div>

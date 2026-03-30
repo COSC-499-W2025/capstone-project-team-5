@@ -167,7 +167,7 @@ def _prepare_cpp_data(summary: any) -> tuple[dict[str, any], str]:
     Returns:
         Tuple of (metrics_dict, summary_text)
     """
-    from capstone_project_team_5.c_analyzer import generate_summary_text
+    from capstone_project_team_5.c_analyzer import CFileAnalyzer
 
     metrics = {
         "total_files": summary.total_files,
@@ -191,7 +191,7 @@ def _prepare_cpp_data(summary: any) -> tuple[dict[str, any], str]:
         "algorithms": list(summary.algorithms_used),
     }
 
-    summary_text = generate_summary_text(summary)
+    summary_text = CFileAnalyzer.generate_summary_text(summary)
 
     return metrics, summary_text
 
