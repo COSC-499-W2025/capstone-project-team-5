@@ -218,3 +218,24 @@ test('restores step from backend on mount', async () => {
   })
   expect(setPage).toHaveBeenCalledWith('dashboard')
 })
+
+test('projects step does not show Continue until analysis-complete event fires', async () => {
+  window.api.getSetupStatus.mockResolvedValue({ completed: false, step: 4 })
+
+  renderSetup()
+  await waitFor(() => {
+    expect(screen.getByText(/Click on it and hit 'Analyze'/)).toBeInTheDocument()
+  })
+
+  // Continue should NOT be visible before analysis
+  expect(screen.queryByText('Continue →')).not.toBeInTheDocument()
+
+  // Dispatch analysis-complete event
+  act(() => {
+    window.dispatchEvent(new CustomEvent('z2j:analysis-complete'))
+  })
+
+  await waitFor(() => {
+    expect(screen.getByText('Continue →')).toBeInTheDocument()
+  })
+})

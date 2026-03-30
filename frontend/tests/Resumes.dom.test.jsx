@@ -86,19 +86,23 @@ function createApi(overrides = {}) {
   }
 }
 
-function renderResumesPage(apiOverrides = {}) {
+function renderResumesPage(apiOverrides = {}, { setPage } = {}) {
   window.api = createApi(apiOverrides)
+  const mockSetPage = setPage ?? jest.fn()
 
   render(
     <AppContext.Provider
       value={{
         apiOk: true,
         user: { username: 'alice' },
+        setPage: mockSetPage,
       }}
     >
       <ResumesPage />
     </AppContext.Provider>
   )
+
+  return { setPage: mockSetPage }
 }
 
 function getProjectSelect() {
@@ -135,10 +139,10 @@ test('creates a resume entry from project analysis with ai assist enabled', asyn
   })
 
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: /\+ add resume entry/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /\+ add resume project entry/i })).toBeInTheDocument()
   )
 
-  fireEvent.click(screen.getByRole('button', { name: /\+ add resume entry/i }))
+  fireEvent.click(screen.getByRole('button', { name: /\+ add resume project entry/i }))
 
   fireEvent.change(getProjectSelect(), { target: { value: '2' } })
 
@@ -177,10 +181,10 @@ test('falls back to local analysis when ai assist fails', async () => {
   })
 
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: /\+ add resume entry/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /\+ add resume project entry/i })).toBeInTheDocument()
   )
 
-  fireEvent.click(screen.getByRole('button', { name: /\+ add resume entry/i }))
+  fireEvent.click(screen.getByRole('button', { name: /\+ add resume project entry/i }))
   fireEvent.change(getProjectSelect(), { target: { value: '2' } })
 
   await waitFor(() =>
@@ -250,10 +254,10 @@ test('hides already-used projects from the create form', async () => {
   })
 
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: /\+ add resume entry/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /\+ add resume project entry/i })).toBeInTheDocument()
   )
 
-  fireEvent.click(screen.getByRole('button', { name: /\+ add resume entry/i }))
+  fireEvent.click(screen.getByRole('button', { name: /\+ add resume project entry/i }))
 
   expect(screen.queryByRole('option', { name: 'Portfolio Engine' })).not.toBeInTheDocument()
   expect(screen.getByRole('option', { name: 'Signal Board' })).toBeInTheDocument()
@@ -444,10 +448,10 @@ test('save payload includes bullet_source from analysis', async () => {
   })
 
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: /\+ add resume entry/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /\+ add resume project entry/i })).toBeInTheDocument()
   )
 
-  fireEvent.click(screen.getByRole('button', { name: /\+ add resume entry/i }))
+  fireEvent.click(screen.getByRole('button', { name: /\+ add resume project entry/i }))
   fireEvent.change(getProjectSelect(), { target: { value: '2' } })
 
   await waitFor(() =>
@@ -489,10 +493,10 @@ test('full flow: analysis bullet_source flows to saved card display', async () =
   renderResumesPage(apiOverrides)
 
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: /\+ add resume entry/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /\+ add resume project entry/i })).toBeInTheDocument()
   )
 
-  fireEvent.click(screen.getByRole('button', { name: /\+ add resume entry/i }))
+  fireEvent.click(screen.getByRole('button', { name: /\+ add resume project entry/i }))
   fireEvent.change(getProjectSelect(), { target: { value: '2' } })
 
   await waitFor(() =>
@@ -530,4 +534,66 @@ test('deleting all resume entries clears the cached preview', async () => {
 
   // Cache should be cleared since all entries are gone
   expect(localStorage.getItem('resume_preview_alice')).toBeNull()
+})
+
+test('readiness checklist items navigate to the correct page when clicked', async () => {
+  const { setPage } = renderResumesPage({
+    getProfile: jest.fn().mockResolvedValue(null),
+    getWorkExperiences: jest.fn().mockResolvedValue([]),
+    getEducations: jest.fn().mockResolvedValue([]),
+  })
+
+  await waitFor(() =>
+    expect(screen.getByText(/create your profile before generating the pdf/i)).toBeInTheDocument()
+  )
+
+  fireEvent.click(screen.getByText('Profile').closest('[role="button"]'))
+  expect(setPage).toHaveBeenCalledWith('profile')
+
+  fireEvent.click(screen.getByText('Experience').closest('[role="button"]'))
+  expect(setPage).toHaveBeenCalledWith('experience')
+
+  fireEvent.click(screen.getByText('Education').closest('[role="button"]'))
+  expect(setPage).toHaveBeenCalledWith('education')
+})
+
+test('readiness checklist items are clickable even when ready', async () => {
+  const { setPage } = renderResumesPage()
+
+  await waitFor(() =>
+    expect(screen.getByText(/profile data is available/i)).toBeInTheDocument()
+  )
+
+  fireEvent.click(screen.getByText('Profile').closest('[role="button"]'))
+  expect(setPage).toHaveBeenCalledWith('profile')
+})
+
+test('entries tab shows "Project Entries for Resume" heading', async () => {
+  renderResumesPage({
+    getResumes: jest.fn().mockResolvedValue([EXISTING_RESUME]),
+  })
+
+  await waitFor(() =>
+    expect(screen.getByText('Project Entries for Resume')).toBeInTheDocument()
+  )
+})
+
+test('add resume entry button is visible in entries tab but not in preview tab', async () => {
+  renderResumesPage({
+    getResumes: jest.fn().mockResolvedValue([EXISTING_RESUME]),
+  })
+
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: /\+ add resume project entry/i })).toBeInTheDocument()
+  )
+
+  // Switch to preview tab
+  fireEvent.click(screen.getByRole('button', { name: /^preview$/i }))
+
+  // Button should not be visible
+  expect(screen.queryByRole('button', { name: /\+ add resume project entry/i })).not.toBeInTheDocument()
+
+  // Switch back to entries tab — button reappears
+  fireEvent.click(screen.getByRole('button', { name: /^entries$/i }))
+  expect(screen.getByRole('button', { name: /\+ add resume project entry/i })).toBeInTheDocument()
 })

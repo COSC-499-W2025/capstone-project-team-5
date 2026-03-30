@@ -3,7 +3,7 @@
  */
 
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { AppContext } from '../renderer/src/app/context/AppContext.jsx'
 import DashboardPage from '../renderer/src/pages/dashboard/DashboardPage.jsx'
 
@@ -189,4 +189,40 @@ test('renders projects count under React StrictMode', async () => {
   )
 
   await waitFor(() => expect(screen.getByText('3')).toBeInTheDocument())
+})
+
+test('Generate Portfolio button navigates to portfolio and dispatches open event', async () => {
+  const setPage = jest.fn()
+  const handler = jest.fn()
+  window.addEventListener('z2j:open-new-portfolio', handler)
+
+  window.api = {
+    getProjects: jest.fn().mockResolvedValue([]),
+    getSkills: jest.fn().mockResolvedValue([]),
+    getWorkExperiences: jest.fn().mockResolvedValue([]),
+    getResumes: jest.fn().mockResolvedValue([]),
+    getUsername: jest.fn().mockReturnValue('alice'),
+  }
+
+  render(
+    <AppContext.Provider
+      value={{
+        user: { username: 'alice' },
+        apiOk: true,
+        setPage,
+        setUploadHighlights: jest.fn(),
+      }}
+    >
+      <DashboardPage />
+    </AppContext.Provider>
+  )
+
+  await waitFor(() => expect(screen.getByText('Generate Portfolio')).toBeInTheDocument())
+
+  fireEvent.click(screen.getByText('Generate Portfolio').closest('button'))
+  expect(setPage).toHaveBeenCalledWith('portfolio')
+
+  // Event is dispatched asynchronously via setTimeout
+  await waitFor(() => expect(handler).toHaveBeenCalledTimes(1))
+  window.removeEventListener('z2j:open-new-portfolio', handler)
 })
