@@ -70,9 +70,9 @@ export const SETUP_STEPS = [
     expression: 'excited',
     message:
       "Here's your project! Click on it and hit 'Analyze' to extract your role, skills, and resume bullets.",
-    event: null,
+    event: 'z2j:analysis-complete',
     skippable: false,
-    hasScrim: true,
+    hasScrim: false,
     checkComplete: null,
   },
   {
@@ -80,7 +80,7 @@ export const SETUP_STEPS = [
     page: 'resumes',
     expression: 'pointing',
     message:
-      "Last step! Click '+ Add Resume Entry' to build a resume entry from your project.",
+      "Last step! Click '+ Add Resume Project Entry' to build a resume entry from your project.",
     event: 'z2j:resume-saved',
     skippable: false,
     hasScrim: false,
