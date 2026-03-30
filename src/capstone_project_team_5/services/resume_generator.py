@@ -10,7 +10,6 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from capstone_project_team_5.constants.skill_detection_constants import SkillType
 from capstone_project_team_5.data.db import get_session
 from capstone_project_team_5.data.models import Project, User
 from capstone_project_team_5.services.education import get_educations
@@ -197,19 +196,20 @@ def _build_project_list(
 
 
 def _build_skills(skill_list: list[dict]) -> ResumeSkills:
-    """Split chronological skills into tools and practices with proficiency annotations."""
-    tools: list[str] = []
-    practices: list[str] = []
+    """Group skills by proficiency level."""
+    groups: dict[str, list[str]] = {
+        "expert": [],
+        "proficient": [],
+        "intermediate": [],
+        "beginner": [],
+        "other": [],
+    }
     for skill in skill_list:
-        stype = skill.get("skill_type")
         sname = skill.get("skill_name", "")
         level = skill.get("proficiency_level")
-        label = f"{sname} ({level.capitalize()})" if level else sname
-        if stype == SkillType.TOOL:
-            tools.append(label)
-        elif stype == SkillType.PRACTICE:
-            practices.append(label)
-    return {"tools": tools, "practices": practices}
+        bucket = level if level and level in groups else "other"
+        groups[bucket].append(sname)
+    return {k: v for k, v in groups.items() if v}
 
 
 def _fetch_project_dates(
@@ -271,7 +271,7 @@ def aggregate_resume_data(
         project_entries = _build_project_list(resumes, project_dates)
 
         # Skills require a raw session + user_id
-        skills: ResumeSkills = {"tools": [], "practices": []}
+        skills: ResumeSkills = {}
         with get_session() as session:
             user = session.query(User).filter(User.username == username).first()
             if user:

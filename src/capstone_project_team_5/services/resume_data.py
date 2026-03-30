@@ -70,10 +70,13 @@ class ResumeProjectEntry(TypedDict, total=False):
 
 
 class ResumeSkills(TypedDict, total=False):
-    """Skill lists split by category."""
+    """Skill lists grouped by proficiency level."""
 
-    tools: list[str]
-    practices: list[str]
+    expert: list[str]
+    proficient: list[str]
+    intermediate: list[str]
+    beginner: list[str]
+    other: list[str]
 
 
 class ResumeData(TypedDict, total=False):

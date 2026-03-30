@@ -115,7 +115,7 @@ class ModernResumeTemplate(ResumeTemplate):
             self._add_projects(doc, projects)
 
         skills = data.get("skills", {})
-        if skills.get("tools") or skills.get("practices"):
+        if any(skills.values()):
             self._add_skills(doc, skills)
 
         return doc
@@ -300,16 +300,18 @@ class ModernResumeTemplate(ResumeTemplate):
             r"\small{\item{",
         ]
 
-        tools = skills.get("tools", [])
-        practices = skills.get("practices", [])
-        if tools:
-            joined = esc(", ".join(tools))
-            suffix = r" \\" if practices else ""
-            lines.append(rf"\textbf{{Tools}}{{: {joined}}}{suffix}")
-
-        if practices:
-            joined = esc(", ".join(practices))
-            lines.append(rf"\textbf{{Practices}}{{: {joined}}}")
+        level_labels = [
+            ("expert", "Expert"),
+            ("proficient", "Proficient"),
+            ("intermediate", "Intermediate"),
+            ("beginner", "Beginner"),
+            ("other", "Other"),
+        ]
+        entries = [(label, skills.get(key, [])) for key, label in level_labels if skills.get(key)]
+        for i, (label, items) in enumerate(entries):
+            joined = esc(", ".join(items))
+            suffix = r" \\" if i < len(entries) - 1 else ""
+            lines.append(rf"\textbf{{{label}}}{{: {joined}}}{suffix}")
 
         lines.append(r"}}")
         lines.append(r"\end{itemize}")

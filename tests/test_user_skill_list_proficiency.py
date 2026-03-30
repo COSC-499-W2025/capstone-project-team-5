@@ -104,15 +104,19 @@ def test_chronological_skills_null_proficiency_when_no_user_skill(
         assert go_skill["proficiency_level"] is None
 
 
-def test_build_skills_formats_with_proficiency() -> None:
-    """_build_skills should format 'Name (Level)' when proficiency is set."""
+def test_build_skills_groups_by_proficiency_level() -> None:
+    """_build_skills should group skills by proficiency level."""
     from capstone_project_team_5.services.resume_generator import _build_skills
 
     skill_list = [
         {"skill_name": "Python", "skill_type": SkillType.TOOL, "proficiency_level": "expert"},
         {"skill_name": "React", "skill_type": SkillType.TOOL, "proficiency_level": None},
         {"skill_name": "TDD", "skill_type": SkillType.PRACTICE, "proficiency_level": "proficient"},
+        {"skill_name": "Docker", "skill_type": SkillType.TOOL, "proficiency_level": "expert"},
     ]
     result = _build_skills(skill_list)
-    assert result["tools"] == ["Python (Expert)", "React"]
-    assert result["practices"] == ["TDD (Proficient)"]
+    assert result["expert"] == ["Python", "Docker"]
+    assert result["proficient"] == ["TDD"]
+    assert result["other"] == ["React"]
+    assert "intermediate" not in result
+    assert "beginner" not in result
