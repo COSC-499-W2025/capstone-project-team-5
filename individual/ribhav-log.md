@@ -3,6 +3,41 @@
 **GitHub:** [@ribhavsharma](https://github.com/ribhavsharma)
 ---
 
+## **Term 2 – Week 11 & 12 | March 15 – March 29, 2026**
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1617" height="953" alt="image" src="https://github.com/user-attachments/assets/ae9deb5a-cd8f-41ef-a737-5069928597b8" />
+
+
+</details>
+
+## **Task Progress**
+
+### **Coding Tasks**
+- Opened **PR [#428 – ribhav/portfolio-revamp](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/428)**, building the full portfolio experience on top of existing API endpoints: drag-and-drop item reordering, markdown text blocks, layout/theme pickers, shareable public HTML page with revoke support, and a published/unpublished indicator.
+- Opened **PR [#443](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/443)**, implementing remaining web portfolio requirements: skills progression timeline on the public page, top-3 featured badge in showcase layout (ranked by importance score), client-side search/filter on the public shared page, and wiring the dashboard "Generate Portfolio" button to navigate to the portfolio page.
+
+### **Testing / Debugging**
+- Verified all existing portfolio API tests pass against the new endpoints (`tests/test_portfolio_api.py`).
+- Manually tested share/revoke flow, drag-and-drop reorder, text blocks, and public page rendering across all three layout templates.
+
+### **Reviewing / Collaboration**
+- Reviewed **PR [#439](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/439)**: cascading rank updates and UI polish are well done with meaningful test coverage. Flagged duplicated ranking logic between `computeNewRankings` and the delete flow (suggested extracting a helper), noted that optimistic deletes don't handle failure from `rerankProjects` so UI could diverge from backend, and raised whether rank consistency should live server-side if concurrent updates become a concern.
+- Reviewed **PR [#425](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/425)**: search, type filters, and `SkillCard` extraction are solid with thorough test coverage. Suggested simplifying the counts memo from three separate `.filter()` passes into a single `.reduce()`.
+- Reviewed **PR [#431](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/431)** and commented requesting additional test coverage.
+- Reviewed **PR [#444](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/444)**.
+
+### **Issues / Blockers**
+- None.
+
+### **Next Steps**
+- Record and submit the milestone video.
+- Audit the full platform for gaps in implementation before final submission.
+
+
+
 ## **Term 2 – Week 10 | March 8 – March 15, 2026**
 
 <details>
