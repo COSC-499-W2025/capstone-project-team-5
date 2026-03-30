@@ -2,9 +2,48 @@
 
 **GitHub:** [@Ron-it](https://github.com/Ron-it)
 
-_Last Updated:_ March 15, 2026
+_Last Updated:_ March 29, 2026
 
 ---
+
+## Week 12 | March 16-29, 2026
+
+*Note: Weeks 11 and 12 are combined into a single entry.*
+
+<details>
+  <summary><h3>Evaluation</h3></summary>
+  <img width="1080" height="633" alt="image" src="https://github.com/user-attachments/assets/710cdc79-b01c-4dde-a4e1-a8708176e2ff" />
+</details>
+
+### Current Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| **Coding Tasks** | | |
+| Added Railway deployment support | ✅ Done | Configured backend and frontend for Railway hosting ([PR #414](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/414)) |
+| Fixed resume edit form rendering | ✅ Done | Moved edit form inline instead of rendering at top of page ([PR #417](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/417)) |
+| Added resume bullet source display | ✅ Done | Shows which project a resume entry originated from ([PR #419](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/419)) |
+| Implemented skill proficiency levels with rating UI | ✅ Done | Added manual proficiency rating for skills on the skills page ([PR #437](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/437)) |
+| **Reviewing/Collaboration Tasks** | | |
+| Reviewed [PR #422](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/422) (per-user project access controls) | ✅ Done | Flagged excessive re-fetching from onLoadError in dependency array and inconsistent model relationships |
+| Reviewed [PR #425](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/425) (skill page additions) | ✅ Done | Noted flaky assertion |
+| Reviewed [PR #433](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/433) (Zippy clippy comments) | ✅ Done | |
+| Reviewed [PR #436](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/436) (upload button enhance) | ✅ Done | Caught CSS import ordering issue causing errors |
+| Reviewed [PR #444](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/444) (M3 UI feedback fixes) | ✅ Done | Noted missing `preventDefault` on Space key for button elements |
+| Reviewed [PR #446](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/446) (heatmap migration to portfolio) | ✅ Done | |
+| **Other Tasks** | | |
+| Prepared and gave milestone 3 presentation | ✅ Done | |
+| Recorded milestone 3 video demo | ✅ Done | |
+
+### To-Dos for Next Cycle
+| Task | Status | Notes |
+| --- | --- | --- |
+| N/A | | |
+
+### Last Cycle's To-Dos
+| Task | Status | Notes |
+| --- | --- | --- |
+| Make changes based on peer testing feedback | ✅ Done | Fixed resume edit form, added bullet source display, deployment support |
+| Continue code reviews | ✅ Done | Ongoing task |
 
 ## Week 10 | March 9-15, 2026
 
