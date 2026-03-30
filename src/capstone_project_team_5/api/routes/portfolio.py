@@ -835,11 +835,13 @@ def _render_skills_timeline(items: list[dict]) -> str:
         date_str = item.get("start_date") or item.get("updated_at", "")
         tools_html = "".join(
             f'<span class="skill-tag skill-tool">{_hl.escape(s["name"])}</span>'
-            for s in new_skills if s["type"] == "tool"
+            for s in new_skills
+            if s["type"] == "tool"
         )
         practices_html = "".join(
             f'<span class="skill-tag skill-practice">{_hl.escape(s["name"])}</span>'
-            for s in new_skills if s["type"] == "practice"
+            for s in new_skills
+            if s["type"] == "practice"
         )
         rows += (
             '<div class="sk-item">'
