@@ -61,7 +61,7 @@ def _extract_markdown(content: str) -> str:
 def _aggregate_commit_frequency(project_ids: list[int], session: Session) -> dict[str, int]:
     """Aggregate commit_frequency across project IDs from their latest analyses.
 
-    Returns a ``{YYYY-MM-DD: count}`` mapping covering the last 365 days.
+    Returns a ``{YYYY-MM-DD: count}`` mapping with all available dates.
     """
     if not project_ids:
         return {}
@@ -72,9 +72,6 @@ def _aggregate_commit_frequency(project_ids: list[int], session: Session) -> dic
         .order_by(CodeAnalysis.project_id, CodeAnalysis.id.desc())
         .all()
     )
-
-    today = datetime.date.today()
-    start = today - datetime.timedelta(days=364)
 
     seen: set[int] = set()
     freq: dict[str, int] = {}
@@ -91,19 +88,22 @@ def _aggregate_commit_frequency(project_ids: list[int], session: Session) -> dic
             continue
         for date_str, count in cf.items():
             if isinstance(count, int) and count > 0 and len(date_str) == 10:
-                try:
-                    d = datetime.date.fromisoformat(date_str)
-                except ValueError:
-                    continue
-                if start <= d <= today:
-                    freq[date_str] = freq.get(date_str, 0) + count
+                freq[date_str] = freq.get(date_str, 0) + count
     return freq
 
 
 def _render_heatmap_html(freq: dict[str, int]) -> str:
     """Return self-contained HTML/CSS for a GitHub-style contribution heatmap."""
     today = datetime.date.today()
-    start = today - datetime.timedelta(days=364)
+
+    # Determine the start date: earliest commit or 364 days ago, whichever is older
+    if freq:
+        earliest = min(freq.keys())
+        earliest_date = datetime.date.fromisoformat(earliest)
+        default_start = today - datetime.timedelta(days=364)
+        start = min(earliest_date, default_start)
+    else:
+        start = today - datetime.timedelta(days=364)
     # Roll back to the previous Sunday
     start -= datetime.timedelta(days=start.weekday() + 1 if start.weekday() != 6 else 0)
 
@@ -202,7 +202,7 @@ def _render_heatmap_html(freq: dict[str, int]) -> str:
         f'<div style="margin-bottom:24px">'
         f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
         f'<span style="font-size:11px;font-family:var(--mono);text-transform:uppercase;'
-        f'letter-spacing:.08em;color:var(--muted)">{total} commit{plural} in the last year</span>'
+        f'letter-spacing:.08em;color:var(--muted)">{total} commit{plural}</span>'
         f'<div style="display:flex;align-items:center;gap:4px">'
         f'<span style="font-size:10px;color:var(--muted);font-family:var(--mono)">Less</span>'
         f"{legend}"
