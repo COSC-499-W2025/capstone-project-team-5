@@ -4,6 +4,57 @@
 
 
 <!-- <details> -->
+  <summary><h3>T2 Week 11 + 12</h3></summary>
+
+<img width="1382" height="805" alt="image" src="https://github.com/user-attachments/assets/c629ae56-c233-4186-b08e-03c37ec9ff63" />
+
+
+#### What Went Well
+- Prepared for and presented our Milestone 3 presentation
+- Worked on the video demo this week
+- Merged:
+  - [PR #427 - Zippy Integration](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/427): Introduced **Zippy**, our onboarding mascot and guided spotlight tour for new users. Zippy greets users upon first login and walks them through the app's key features via an interactive step-by-step tour with spotlight highlights on UI elements. Backend changes include a `has_seen_tutorial` flag on the user model with `GET`/`PATCH` API routes under `/api/users/{username}/tutorial-status`. Frontend additions include two new components -`Zippy.jsx` (animated mascot with speech bubbles) and `SpotlightTour.jsx` (multi-step guided tour with spotlight overlays) - integrated into `AppRoot` and `AppShell`/`Sidebar`. Added `framer-motion` for smooth animations. Full-stack feature requiring coordinated backend state tracking, frontend UI components, and test coverage.
+
+  - [PR #433 - Zippy Addresses Clippy Comments](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/433): After Milestone 3 presentation feedback pointing out Zippy's similarities with Clippy, made appropriate visual and behavioural changes to differentiate our onboarding mascot. Updated the `Zippy.jsx` component with a new asset, added animation tweaks via `tailwind.config.js`, and added a mock file for Jest image handling.
+
+  - [PR #444 - Add UI Feedback Fixes for M3](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/444): Fixed three UI issues based on feedback: (1) Zippy setup tour step 5 Continue button now only appears after the user actually clicks Analyze/Re-analyze, preventing users from skipping without analyzing. (2) Resume readiness checklist items are now clickable and navigate to their relevant page (Profile, Experience, Education, Consents). (3) Moved the "+ Add Resume Project Entry" button inline with a new "Project Entries for Resume" section header. All 244 frontend tests pass.
+
+- Reviewed and approved:
+  - [PR #414 - feat: Railway deployment support](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/414):
+  My review: Approved the Railway deployment support enabling Zip2Job to run as a web app
+
+  - [PR #424 - PT2 Project Page Changes](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/424):
+  My review: Focuses on the biggest feedback we received on the project page from peer testing. The dynamic feature addition is really cool. Manually tested and confirmed LGTM.
+
+  - [PR #428 - feat: portfolio revamp](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/428):
+  My review: Praised the core portfolio revamp. having an externally viewable shareable link is incredible. Testing is thorough and the fix for the preview issue was prompt. Love the different templates for exporting.
+
+  - [PR #431 - Implementation of heatmap](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/431):
+  My review: Adding the contribution heatmap is a big win for the product. Looking forward to the analysis and associated features. Requested linking the issue before approving.
+
+  - [PR #432 - fix linting](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/432):
+  My review: Approved the linting fix.
+
+  - [PR #443 - feat: featured projects + implement search on portfolio](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/443):
+  My review: Manually tested changes. The featured projects functionality is clean and concise, and follows expected conventions. Search feature is a big addition. LGTM.
+
+  - [PR #446 - Migration of Heatmap to Portfolio](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/446) (open):
+  My review: Requested changes before merge.
+
+  - Reviewed and approved individual logs
+
+#### What Didn't Go Well
+- All good
+
+#### Planning for Next Week
+- Submit demo video and iron out remaining gaps
+- Continue reviewing teammates' PRs to support code collaboration
+
+<!-- </details> -->
+
+
+
+<details>
   <summary><h3>T2 Week 10</h3></summary>
 
   <img width="1363" height="793" alt="image" src="https://github.com/user-attachments/assets/60000cb6-6285-4a28-8e2e-8eec4634f644" />
@@ -47,7 +98,7 @@
 - Work towards milestone 3
 - Continue reviewing teammates' PRs to support code collaboration
 
-<!-- </details> -->
+</details>
 
 
 
