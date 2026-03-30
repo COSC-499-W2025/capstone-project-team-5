@@ -215,6 +215,12 @@ export default function DashboardPage() {
       return
     }
 
+    if (actionLabel === 'Generate Portfolio' && apiOk) {
+      setPage('portfolio')
+      setTimeout(() => window.dispatchEvent(new CustomEvent('z2j:open-new-portfolio')), 0)
+      return
+    }
+
     if (actionLabel === 'Generate Resume' && apiOk) {
       setPage('resumes')
     }
@@ -435,9 +441,7 @@ export default function DashboardPage() {
                 disabled={
                   isUpload
                     ? uploadState.loading || !apiOk
-                    : action.label === 'Generate Resume'
-                      ? !apiOk
-                      : true
+                    : !apiOk
                 }
               >
                 <div className="mb-3 text-2xl opacity-40 transition-opacity group-hover:opacity-80">
