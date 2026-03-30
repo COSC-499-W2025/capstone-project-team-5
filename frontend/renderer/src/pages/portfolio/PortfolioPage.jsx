@@ -286,15 +286,6 @@ export default function PortfolioPage() {
   }, [apiOk, user])
 
   useEffect(() => {
-    function openNewPortfolio() {
-      setShowForm(true)
-      setFormError('')
-    }
-    window.addEventListener('z2j:open-new-portfolio', openNewPortfolio)
-    return () => window.removeEventListener('z2j:open-new-portfolio', openNewPortfolio)
-  }, [])
-
-  useEffect(() => {
     if (view !== 'detail' || !selectedPortfolio) return
 
     let cancelled = false
