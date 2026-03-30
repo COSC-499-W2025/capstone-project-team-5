@@ -7,6 +7,42 @@
 
 # TERM2 Logs - Sparsh Khanna
 ---
+## Week 11-12 | March 15 - March 29, 2026
+<details>
+  <summary><h3>Evaluation</h3></summary>
+
+<img width="1033" height="609" alt="image" src="https://github.com/user-attachments/assets/1833830e-bf19-450e-a2df-f7cc39295409" />
+
+</details>
+### Tasks worked on
+
+- Activity Heatmap Component & Dashboard Integration [PR#431](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/431)
+- Portfolio Heatmap & Dashboard Cleanup [PR (open on portfolio-heatmap branch)](https://github.com/COSC-499-W2025/capstone-project-team-5/compare/portfolio-heatmap)
+- Bug fix in code analysis persistence layer.
+- Reviewed and merged teammates' PRs.
+
+### Personal Contributions
+
+- **Activity Heatmap Component & Dashboard Integration**
+Implemented a GitHub-style `ActivityHeatmap` component (284 lines) that renders a 52-week contribution grid based on the user's Git commit history. The component builds a week-by-week grid, colour-codes each day cell by commit count, and displays month labels and a tooltip on hover. I wired it into the `DashboardPage`, added a new `commit_activity` field to the project schema, extended `git.py` with a utility to extract per-day commit counts, and updated `analysis_pipeline.py` to populate the activity data during project analysis.
+
+- **Portfolio Heatmap & Dashboard Cleanup**
+Integrated the `ActivityHeatmap` component into the `PortfolioPage` so that each portfolio now displays a project-scoped activity heatmap showing the user's commit history for the projects in that portfolio. I also refactored `DashboardPage.jsx` to clean up redundant code and reduce the component size, and extended `ActivityHeatmap.jsx` to accept an optional `projectIds` prop for scoped filtering. Additionally, I fixed a bug in `code_analysis_persistence.py` where incorrect field references were causing analysis data to not persist correctly.
+
+### Tests Added
+- N/A (frontend component changes — verified manually via Electron app)
+
+### PRs Reviewed
+- [PR#414](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/414) *(Railway deploy)*
+- [PR#429](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/429) *(Ethan weekly logs)*
+- [PR#433](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/433) *(Zippy or Clippy)*
+- [PR#436](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/436) *(Upload button enhance)*
+
+### Additional Details
+
+These two weeks were feature-heavy — the main deliverables were the new Analytics page, the Activity Heatmap component, and extending the heatmap into the Portfolio page. All three are frontend-focused but required corresponding backend and pipeline changes to supply the commit activity data. The dashboard heatmap PR (#431) was merged, and the portfolio-heatmap PR is currently open for review.
+
+---
 ## Week 10 | March 8 - March 15, 2026
 <details>
   <summary><h3>Evaluation</h3></summary>
