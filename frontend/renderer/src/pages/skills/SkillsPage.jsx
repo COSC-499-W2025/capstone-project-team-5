@@ -38,29 +38,25 @@ const PROFICIENCY_FILTERS = [
   { label: 'Unrated', value: 'unrated' },
 ]
 
-/* ─── Segmented level picker ─── */
+/* ─── Dropdown level picker ─── */
 function LevelPicker({ current, onChange }) {
+  const levelMeta = LEVELS.find((l) => l.key === current)
+
   return (
-    <div className="flex gap-px rounded border border-border bg-elevated p-0.5">
-      {LEVELS.map((l) => {
-        const isActive = l.key === current
-        return (
-          <button
-            key={l.key}
-            onClick={() => onChange(isActive ? null : l.key)}
-            title={l.label}
-            className="flex-1 rounded py-1 font-mono text-2xs uppercase tracking-wider transition-all duration-150 cursor-pointer"
-            style={{
-              color: isActive ? '#0a0b0d' : '#4e5668',
-              backgroundColor: isActive ? l.color : 'transparent',
-              fontWeight: isActive ? 600 : 400,
-            }}
-          >
-            {l.short}
-          </button>
-        )
-      })}
-    </div>
+    <select
+      value={current || ''}
+      onChange={(e) => onChange(e.target.value || null)}
+      className="input py-1.5 text-sm cursor-pointer"
+      style={{
+        color: levelMeta?.color || '#4e5668',
+        borderColor: levelMeta ? `${levelMeta.color}30` : undefined,
+      }}
+    >
+      <option value="">Unrated</option>
+      {LEVELS.map((l) => (
+        <option key={l.key} value={l.key}>{l.label}</option>
+      ))}
+    </select>
   )
 }
 
@@ -88,19 +84,11 @@ function SkillCard({ skill, onLevelChange, style }) {
         </span>
       </div>
 
-      {/* Level picker + label */}
-      <div className="flex items-center gap-2">
-        <LevelPicker
-          current={currentLevel}
-          onChange={(level) => onLevelChange(skill.id, level)}
-        />
-        <span
-          className="shrink-0 font-mono text-2xs uppercase tracking-wider min-w-[4.5rem] text-right"
-          style={{ color: LEVELS.find((l) => l.key === currentLevel)?.color || '#4e5668' }}
-        >
-          {LEVELS.find((l) => l.key === currentLevel)?.label || 'Unrated'}
-        </span>
-      </div>
+      {/* Level picker */}
+      <LevelPicker
+        current={currentLevel}
+        onChange={(level) => onLevelChange(skill.id, level)}
+      />
     </div>
   )
 }

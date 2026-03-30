@@ -35,7 +35,7 @@ class TestRoverTemplate:
             "education": [],
             "work_experience": [],
             "projects": [],
-            "skills": {"tools": [], "practices": []},
+            "skills": {},
         }
         data.update(overrides)
         return data
@@ -104,7 +104,7 @@ class TestRoverTemplate:
     def test_skills_section(self):
         from capstone_project_team_5.templates.rover import RoverResumeTemplate
 
-        data = self._minimal_data(skills={"tools": ["Python", "Go"], "practices": ["CI/CD"]})
+        data = self._minimal_data(skills={"expert": ["Python", "Go"], "beginner": ["CI/CD"]})
         tex = RoverResumeTemplate().build(data).dumps()
         assert "Python" in tex
 
@@ -156,7 +156,7 @@ class TestModernTemplate:
             "education": [],
             "work_experience": [],
             "projects": [],
-            "skills": {"tools": [], "practices": []},
+            "skills": {},
         }
         data.update(overrides)
         return data
@@ -239,7 +239,7 @@ class TestModernTemplate:
     def test_skills_section(self):
         from capstone_project_team_5.templates.modern import ModernResumeTemplate
 
-        data = self._minimal_data(skills={"tools": ["Python", "Go"], "practices": ["CI/CD"]})
+        data = self._minimal_data(skills={"expert": ["Python", "Go"], "beginner": ["CI/CD"]})
         tex = ModernResumeTemplate().build(data).dumps()
         assert "Python" in tex
 
