@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, status
+from typing import Annotated
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from capstone_project_team_5.api.dependencies import get_current_username, get_optional_username
 from capstone_project_team_5.api.schemas.skills import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
@@ -11,20 +14,25 @@ from capstone_project_team_5.api.schemas.skills import (
     PaginationMeta,
     ProjectSkillsResponse,
     SkillResponse,
+    UpdateProficiencyRequest,
 )
-from capstone_project_team_5.constants.skill_detection_constants import SkillType
+from capstone_project_team_5.constants.skill_detection_constants import ProficiencyLevel, SkillType
 from capstone_project_team_5.data.db import get_session
-from capstone_project_team_5.data.models import Project, ProjectSkill, Skill
+from capstone_project_team_5.data.models import Project, ProjectSkill, Skill, User, UserSkill
 
 router = APIRouter(prefix="/projects/{project_id}/skills", tags=["skills"])
 global_router = APIRouter(prefix="/skills", tags=["skills"])
 
 
-def _skill_to_response(skill: Skill) -> SkillResponse:
+def _skill_to_response(
+    skill: Skill,
+    proficiency_level: ProficiencyLevel | None = None,
+) -> SkillResponse:
     return SkillResponse(
         id=skill.id,
         name=skill.name,
         skill_type=skill.skill_type,
+        proficiency_level=proficiency_level,
     )
 
 
@@ -187,6 +195,7 @@ def get_all_skills(
         ge=0,
         description="Number of items to skip",
     ),
+    current_username: str | None = Depends(get_optional_username),  # noqa: B008
 ) -> PaginatedSkillsResponse:
     with get_session() as session:
         query = session.query(Skill)
@@ -195,8 +204,31 @@ def get_all_skills(
         query = query.order_by(Skill.name)
         total = query.count()
         skills = query.offset(offset).limit(limit).all()
+
+        # Build proficiency lookup for authenticated users
+        prof_map: dict[int, UserSkill] = {}
+        if current_username:
+            user = session.query(User).filter(User.username == current_username).first()
+            if user:
+                skill_ids = [s.id for s in skills]
+                if skill_ids:
+                    user_skills = (
+                        session.query(UserSkill)
+                        .filter(UserSkill.user_id == user.id, UserSkill.skill_id.in_(skill_ids))
+                        .all()
+                    )
+                    prof_map = {us.skill_id: us for us in user_skills}
+
+        items = [
+            _skill_to_response(
+                s,
+                proficiency_level=prof_map[s.id].proficiency_level if s.id in prof_map else None,
+            )
+            for s in skills
+        ]
+
         return PaginatedSkillsResponse(
-            items=[_skill_to_response(s) for s in skills],
+            items=items,
             pagination=PaginationMeta(
                 total=total,
                 limit=limit,
@@ -204,3 +236,46 @@ def get_all_skills(
                 has_more=(offset + len(skills)) < total,
             ),
         )
+
+
+@global_router.patch(
+    "/{skill_id}/proficiency",
+    response_model=SkillResponse,
+    summary="Update skill proficiency",
+    description="Set or clear the proficiency level for a skill.",
+    responses={401: {"description": "Not authenticated"}, 404: {"description": "Skill not found"}},
+)
+def update_skill_proficiency(
+    skill_id: int,
+    body: UpdateProficiencyRequest,
+    current_username: Annotated[str, Depends(get_current_username)],
+) -> SkillResponse:
+    with get_session() as session:
+        skill = session.query(Skill).filter(Skill.id == skill_id).first()
+        if skill is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Skill not found.")
+
+        user = session.query(User).filter(User.username == current_username).first()
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+
+        us = session.query(UserSkill).filter_by(user_id=user.id, skill_id=skill.id).first()
+
+        if body.proficiency_level is not None:
+            if us is None:
+                us = UserSkill(
+                    user_id=user.id,
+                    skill_id=skill.id,
+                    proficiency_level=body.proficiency_level,
+                )
+                session.add(us)
+            else:
+                us.proficiency_level = body.proficiency_level
+            session.flush()
+            return _skill_to_response(skill, us.proficiency_level)
+
+        # Clear proficiency
+        if us is not None:
+            session.delete(us)
+            session.flush()
+        return _skill_to_response(skill)

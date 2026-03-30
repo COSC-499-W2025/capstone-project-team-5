@@ -223,7 +223,7 @@ class TestJakeTemplate:
             "education": [],
             "work_experience": [],
             "projects": [],
-            "skills": {"tools": [], "practices": []},
+            "skills": {},
         }
         data.update(overrides)
         return data
@@ -299,7 +299,7 @@ class TestJakeTemplate:
     def test_skills_section(self):
         from capstone_project_team_5.templates.jake import JakeResumeTemplate
 
-        data = self._minimal_data(skills={"tools": ["Python", "Go"], "practices": ["CI/CD"]})
+        data = self._minimal_data(skills={"expert": ["Python", "Go"], "beginner": ["CI/CD"]})
         doc = JakeResumeTemplate().build(data)
         tex = doc.dumps()
         assert r"\section{Technical Skills}" in tex
@@ -389,13 +389,18 @@ class TestDataBuilders:
         from capstone_project_team_5.services.resume_generator import _build_skills
 
         raw = [
-            {"skill_name": "Python", "skill_type": SkillType.TOOL},
-            {"skill_name": "TDD", "skill_type": SkillType.PRACTICE},
-            {"skill_name": "Go", "skill_type": SkillType.TOOL},
+            {"skill_name": "Python", "skill_type": SkillType.TOOL, "proficiency_level": "expert"},
+            {
+                "skill_name": "TDD",
+                "skill_type": SkillType.PRACTICE,
+                "proficiency_level": "proficient",
+            },
+            {"skill_name": "Go", "skill_type": SkillType.TOOL, "proficiency_level": None},
         ]
         result = _build_skills(raw)
-        assert result["tools"] == ["Python", "Go"]
-        assert result["practices"] == ["TDD"]
+        assert result["expert"] == ["Python"]
+        assert result["proficient"] == ["TDD"]
+        assert result["other"] == ["Go"]
 
 
 # ======================================================================
@@ -459,8 +464,9 @@ class TestAggregateResumeData:
         assert len(data["education"]) == 1
         assert len(data["work_experience"]) == 1
         assert len(data["projects"]) == 1
-        assert "Python" in data["skills"]["tools"]
-        assert "TDD" in data["skills"]["practices"]
+        assert "Python" in data["skills"].get("other", []) or any(
+            "Python" in v for v in data["skills"].values()
+        )
 
 
 # ======================================================================

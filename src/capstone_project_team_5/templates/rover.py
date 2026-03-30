@@ -79,7 +79,7 @@ class RoverResumeTemplate(ResumeTemplate):
             self._add_projects(doc, projects)
 
         skills = data.get("skills", {})
-        if skills.get("tools") or skills.get("practices"):
+        if any(skills.values()):
             self._add_skills(doc, skills)
 
         return doc
@@ -255,14 +255,18 @@ class RoverResumeTemplate(ResumeTemplate):
         esc = self.escape_latex
         lines = [r"\section{Skills}", r"\begin{description}"]
 
-        tools = skills.get("tools", [])
-        practices = skills.get("practices", [])
-        if tools:
-            joined = esc(", ".join(tools))
-            lines.append(rf"\item[Languages/Tools] {joined}")
-        if practices:
-            joined = esc(", ".join(practices))
-            lines.append(rf"\item[Practices] {joined}")
+        level_labels = [
+            ("expert", "Expert"),
+            ("proficient", "Proficient"),
+            ("intermediate", "Intermediate"),
+            ("beginner", "Beginner"),
+            ("other", "Other"),
+        ]
+        for key, label in level_labels:
+            items = skills.get(key, [])
+            if items:
+                joined = esc(", ".join(items))
+                lines.append(rf"\item[{label}] {joined}")
 
         lines.append(r"\end{description}")
         doc.append(NoEscape("\n".join(lines)))

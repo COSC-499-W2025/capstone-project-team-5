@@ -296,6 +296,9 @@ export const api = {
   getSkills: () =>
     request('GET', '/api/skills/'),
 
+  updateSkillProficiency: (skillId, proficiencyLevel) =>
+    request('PATCH', `/api/skills/${skillId}/proficiency`, { proficiency_level: proficiencyLevel }),
+
   // Portfolio
   createPortfolio: (data) =>
     request('POST', '/api/portfolio', data),

@@ -6,6 +6,7 @@ from capstone_project_team_5.constants.skill_detection_constants import SkillTyp
 from capstone_project_team_5.data.models.code_analysis import CodeAnalysis
 from capstone_project_team_5.data.models.user import User
 from capstone_project_team_5.data.models.user_code_analysis import UserCodeAnalysis
+from capstone_project_team_5.data.models.user_skill import UserSkill
 
 """Service for aggregating user skills across all projects."""
 
@@ -28,6 +29,11 @@ def get_chronological_skills(session: Session, user_id: int) -> list[dict]:
         return []
 
     skill_entries = {}
+
+    # Pre-load proficiency levels for this user
+    proficiency_map: dict[int, str | None] = {}
+    for us in session.query(UserSkill).filter(UserSkill.user_id == user_id).all():
+        proficiency_map[us.skill_id] = us.proficiency_level
 
     # Use the link between users and their code analyses to get projects
     user_analyses = (
@@ -52,6 +58,7 @@ def get_chronological_skills(session: Session, user_id: int) -> list[dict]:
                         "skill_name": project_skill.skill.name,
                         "skill_type": project_skill.skill.skill_type,
                         "first_used": project.created_at,
+                        "proficiency_level": proficiency_map.get(project_skill.skill.id),
                     }
 
     skills = sorted(skill_entries.values(), key=lambda x: x["first_used"])

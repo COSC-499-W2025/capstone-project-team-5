@@ -30,6 +30,7 @@ from capstone_project_team_5.data.models.upload_record import UploadRecord
 from capstone_project_team_5.data.models.user import User
 from capstone_project_team_5.data.models.user_code_analysis import UserCodeAnalysis
 from capstone_project_team_5.data.models.user_profile import UserProfile
+from capstone_project_team_5.data.models.user_skill import UserSkill
 from capstone_project_team_5.data.models.work_experience import WorkExperience
 
 __all__ = [
@@ -47,5 +48,6 @@ __all__ = [
     "User",
     "UserCodeAnalysis",
     "UserProfile",
+    "UserSkill",
     "WorkExperience",
 ]

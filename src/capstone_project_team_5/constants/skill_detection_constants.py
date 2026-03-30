@@ -12,6 +12,15 @@ class SkillType(StrEnum):
     PRACTICE = "practice"
 
 
+class ProficiencyLevel(StrEnum):
+    """Proficiency levels for user skills."""
+
+    EXPERT = "expert"
+    PROFICIENT = "proficient"
+    INTERMEDIATE = "intermediate"
+    BEGINNER = "beginner"
+
+
 # Directories and files to skip during scanning (case-insensitive)
 SKIP_DIRS = {
     # Dependencies
