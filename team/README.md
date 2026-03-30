@@ -1,4 +1,53 @@
 # Team Weekly Logs
+
+<details>
+  <summary><h3>T2 Week 11 + 12 | March 15 - March 29 </h3></summary>
+
+  ### Burnup Chart
+<img width="1475" height="934" alt="image" src="https://github.com/user-attachments/assets/ade420d6-95b7-4e6f-ba6a-d717b24c0abb" />
+
+  ### Past Work
+- Completed the Milestone 3 presentation and peer testing successfully
+- Implemented feedback from presentation and peer testing
+- Completed video demo
+
+- [PR #408 - pre-peer testing ux tweaks](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/408): Applied UX tweaks in preparation for peer testing session.
+- [PR #409 - feat(resume): fix PDF preview, add tabs, direct download, and zoom](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/409): Fixed resume PDF preview with tabbed layout, direct download, and zoom controls.
+- [PR #411 - feat: add project thumbnail support to Electron frontend](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/411): Added project thumbnail image support in the Electron frontend.
+- [PR #413 - fix: more ux fixes for peer testing](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/413): Additional UX fixes addressing peer testing feedback.
+- [PR #414 - feat: Railway deployment support](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/414): Enabled Railway deployment support for running Zip2Job as a web app.
+- [PR #417 - fix(resumes): render edit form inline instead of at top of page](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/417): Fixed resume edit form to render inline alongside entries instead of jumping to top.
+- [PR #419 - feat: display resume bullet source on resume entries](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/419): Added bullet source labels (AI/Local) to resume entry display.
+- [PR #422 - feat(projects): enforce per-user project access controls](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/422): Enforced per-user project access controls so users can only see their own projects.
+- [PR #424 - PT2 Project Page Changes](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/424): Addressed peer testing feedback on the project page, including dynamic feature addition.
+- [PR #425 - Skill page additions](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/425): Enhanced the skills page with additional functionality and display improvements.
+- [PR #427 - Zippy Integration](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/427): Introduced Zippy, an onboarding mascot with a guided spotlight tour for new users, including backend tutorial-status tracking and frontend animated components.
+- [PR #428 - feat: portfolio revamp](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/428): Revamped the portfolio feature with externally viewable shareable links and multiple export templates.
+- [PR #431 - Implementation of heatmap](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/431): Added a contribution heatmap feature with full-stack git log parsing and frontend rendering.
+- [PR #432 - fix linting](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/432): Fixed linting issues across the codebase.
+- [PR #433 - Zippy Addresses Clippy Comments](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/433): Updated Zippy with visual and behavioural changes to differentiate from Clippy after M3 presentation feedback.
+- [PR #436 - Upload button enhance](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/436): Enhanced the upload button with improved UX and fixed import ordering issues.
+- [PR #437 - feat: add skill proficiency levels with manual rating UI](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/437): Added skill proficiency level ratings (Beginner/Intermediate/Proficient) with a manual rating UI.
+- [PR #439 - Added project features](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/439): Added project features functionality with backend support and test coverage.
+- [PR #443 - feat: featured projects + implement search on portfolio](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/443): Added featured projects support and search functionality on the portfolio page.
+- [PR #444 - Add UI Feedback Fixes for M3](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/444): Fixed three UI issues: setup tour gating, clickable resume checklist navigation, and repositioned add-entry button.
+- [PR #446 - Migration of Heatmap to Portfolio](https://github.com/COSC-499-W2025/capstone-project-team-5/pull/446) (open): Migrating the contribution heatmap into the portfolio page.
+
+  ### Updates on Previous To-Do's
+  | Task | Status | Notes |
+  | --- | --- | --- |
+  | Conduct peer-testing and gather feedback | ✅ Done | Peer testing #2 completed successfully. |
+  | Implement final frontend polish items from testing feedback | ✅ Done | UI feedback fixes, UX tweaks, and Zippy refinements all merged. |
+  | Continue integration validation for auth/session behavior | ✅ Done | Per-user project access controls enforced, auth flows stabilized. |
+  | Milestone 3 presentation | ✅ Done | Presented successfully in class. |
+  | Video demo | ✅ Done | Completed video demo recording. |
+
+  ### Future Work
+  - Code cleanup and final checks
+  - Small changes to ensure a complete, polished product
+  - Submit demo video and iron out remaining gaps
+</details>
+
 <details>
   <summary><h3>T2 Week 10 | March 8 - March 15 </h3></summary>
   ### Burnup Chart
