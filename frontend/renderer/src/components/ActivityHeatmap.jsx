@@ -80,11 +80,14 @@ const CELL = 9   // px: cell size
 const GAP  = 2   // px: gap between cells
 const STEP = CELL + GAP  // 11px per column
 
-export default function ActivityHeatmap() {
+export default function ActivityHeatmap({ projectIds }) {
   const { apiOk, user, analysisCache } = useApp()
   const [activityMap, setActivityMap] = useState({})
   const [total, setTotal] = useState(0)
   const [tooltip, setTooltip] = useState(null)
+
+  // Stable serialisation so the effect only re-runs when the actual IDs change.
+  const projectIdKey = projectIds ? JSON.stringify([...projectIds].sort()) : null
 
   useEffect(() => {
     if (!apiOk) return
@@ -103,6 +106,9 @@ export default function ActivityHeatmap() {
       // projectFreq: { [projectId]: { [YYYY-MM-DD]: count } }
       const projectFreq = {}
 
+      // When projectIds is provided, build a Set for fast lookup.
+      const allowedIds = projectIds ? new Set(projectIds.map(Number)) : null
+
       // Source 1: saved analyses from the server (persisted git data).
       if (username && typeof window.api?.getSavedProjects === 'function') {
         try {
@@ -110,6 +116,7 @@ export default function ActivityHeatmap() {
           if (!cancelled) {
             for (const upload of (savedUploads || [])) {
               for (const sp of (upload.projects || [])) {
+                if (allowedIds && !allowedIds.has(Number(sp.id))) continue
                 const latest = sp.analyses?.length > 0
                   ? sp.analyses[sp.analyses.length - 1]
                   : null
@@ -129,6 +136,7 @@ export default function ActivityHeatmap() {
       // Only fills in projects not already present from the server.
       const cache = analysisCache?.current ?? {}
       for (const [projectId, result] of Object.entries(cache)) {
+        if (allowedIds && !allowedIds.has(Number(projectId))) continue
         if (projectFreq[projectId]) continue  // server data takes precedence
         const freq = result?.git?.commit_frequency
         if (freq && typeof freq === 'object') {
@@ -155,7 +163,7 @@ export default function ActivityHeatmap() {
 
     load().catch(() => {})
     return () => { cancelled = true }
-  }, [apiOk, user?.username])
+  }, [apiOk, user?.username, projectIdKey])
 
   const weeks = useMemo(() => buildGrid(), [])
 
