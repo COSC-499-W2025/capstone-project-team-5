@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../../app/context/AppContext'
-import ActivityHeatmap from '../../components/ActivityHeatmap'
 import EmptyState from '../../components/EmptyState'
 import InlineError from '../../components/InlineError'
 import PageHeader from '../../components/PageHeader'
@@ -579,11 +578,6 @@ export default function PortfolioPage() {
         )}
 
         <InlineError message={error} />
-
-        {/* Activity heatmap — scoped to this portfolio's projects */}
-        <ActivityHeatmap
-          projectIds={items.filter((i) => !i.is_text_block && i.project_id).map((i) => i.project_id)}
-        />
 
         {/* Add project */}
         {addableProjects.length > 0 && (

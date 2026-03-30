@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import datetime
 import html as _hl
 import json
 import re as _re
@@ -55,6 +56,165 @@ def _extract_markdown(content: str) -> str:
         return decoded
 
     return ""
+
+
+def _aggregate_commit_frequency(project_ids: list[int], session: Session) -> dict[str, int]:
+    """Aggregate commit_frequency across project IDs from their latest analyses.
+
+    Returns a ``{YYYY-MM-DD: count}`` mapping covering the last 365 days.
+    """
+    if not project_ids:
+        return {}
+
+    analyses = (
+        session.query(CodeAnalysis)
+        .filter(CodeAnalysis.project_id.in_(project_ids))
+        .order_by(CodeAnalysis.project_id, CodeAnalysis.id.desc())
+        .all()
+    )
+
+    today = datetime.date.today()
+    start = today - datetime.timedelta(days=364)
+
+    seen: set[int] = set()
+    freq: dict[str, int] = {}
+    for analysis in analyses:
+        if analysis.project_id in seen:
+            continue
+        seen.add(analysis.project_id)
+        try:
+            metrics = json.loads(analysis.metrics_json or "{}")
+        except (json.JSONDecodeError, TypeError):
+            continue
+        cf = metrics.get("git", {}).get("commit_frequency", {})
+        if not isinstance(cf, dict):
+            continue
+        for date_str, count in cf.items():
+            if isinstance(count, int) and count > 0 and len(date_str) == 10:
+                try:
+                    d = datetime.date.fromisoformat(date_str)
+                except ValueError:
+                    continue
+                if start <= d <= today:
+                    freq[date_str] = freq.get(date_str, 0) + count
+    return freq
+
+
+def _render_heatmap_html(freq: dict[str, int]) -> str:
+    """Return self-contained HTML/CSS for a GitHub-style contribution heatmap."""
+    today = datetime.date.today()
+    start = today - datetime.timedelta(days=364)
+    # Roll back to the previous Sunday
+    start -= datetime.timedelta(days=start.weekday() + 1 if start.weekday() != 6 else 0)
+
+    total = sum(freq.values())
+    months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+    ]
+
+    def _level_color(count: int) -> str:
+        if count == 0:
+            return "#1e2229"
+        if count == 1:
+            return "rgba(99,102,241,0.28)"
+        if count == 2:
+            return "rgba(99,102,241,0.52)"
+        if count == 3:
+            return "rgba(99,102,241,0.76)"
+        return "var(--accent)"
+
+    # Build weeks grid
+    weeks: list[list[str | None]] = []
+    cur = start
+    while cur <= today:
+        week: list[str | None] = []
+        for _ in range(7):
+            week.append(cur.isoformat() if cur <= today else None)
+            cur += datetime.timedelta(days=1)
+        weeks.append(week)
+
+    cell = 9
+    gap = 2
+    step = cell + gap
+
+    # Month labels
+    month_labels: list[tuple[int, str]] = []
+    last_month = -1
+    for wi, week in enumerate(weeks):
+        first = next((d for d in week if d), None)
+        if not first:
+            continue
+        m = int(first[5:7]) - 1
+        if m != last_month:
+            month_labels.append((wi, months[m]))
+            last_month = m
+
+    month_row = ""
+    for wi, label in month_labels:
+        month_row += f'<div style="position:absolute;left:{wi * step}px;font-size:10px;color:var(--muted);font-family:var(--mono)">{label}</div>'
+
+    day_labels_html = ""
+    day_names = ["", "Mon", "", "Wed", "", "Fri", ""]
+    for _i, name in enumerate(day_names):
+        day_labels_html += (
+            f'<div style="height:{cell}px;line-height:{cell}px;font-size:10px;'
+            f'color:var(--muted);font-family:var(--mono);text-align:right">{name}</div>'
+        )
+
+    # Grid cells
+    cols_html = ""
+    for week in weeks:
+        cells = ""
+        for date_key in week:
+            if not date_key:
+                cells += f'<div style="width:{cell}px;height:{cell}px"></div>'
+            else:
+                count = freq.get(date_key, 0)
+                color = _level_color(count)
+                tooltip = f"{count} commit{'s' if count != 1 else ''} on {date_key}"
+                cells += (
+                    f'<div style="width:{cell}px;height:{cell}px;border-radius:2px;'
+                    f'background:{color}" title="{_hl.escape(tooltip)}"></div>'
+                )
+        cols_html += f'<div style="display:flex;flex-direction:column;gap:{gap}px">{cells}</div>'
+
+    # Legend
+    legend = ""
+    for lvl in range(5):
+        legend += (
+            f'<div style="width:{cell}px;height:{cell}px;border-radius:2px;'
+            f'background:{_level_color(lvl)}"></div>'
+        )
+
+    plural = "" if total == 1 else "s"
+    return (
+        f'<div style="margin-bottom:24px">'
+        f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+        f'<span style="font-size:11px;font-family:var(--mono);text-transform:uppercase;'
+        f'letter-spacing:.08em;color:var(--muted)">{total} commit{plural} in the last year</span>'
+        f'<div style="display:flex;align-items:center;gap:4px">'
+        f'<span style="font-size:10px;color:var(--muted);font-family:var(--mono)">Less</span>'
+        f"{legend}"
+        f'<span style="font-size:10px;color:var(--muted);font-family:var(--mono)">More</span>'
+        f"</div></div>"
+        f'<div style="overflow-x:auto">'
+        f'<div style="position:relative;margin-left:28px;height:14px;margin-bottom:4px">{month_row}</div>'
+        f'<div style="display:flex">'
+        f'<div style="display:flex;flex-direction:column;gap:{gap}px;width:24px;margin-right:4px">{day_labels_html}</div>'
+        f'<div style="display:flex;gap:{gap}px">{cols_html}</div>'
+        f"</div></div></div>"
+    )
 
 
 def _upsert_portfolio_item_for_user(
@@ -395,6 +555,10 @@ def _render_portfolio_for_id(portfolio_id: int, session: Session) -> HTMLRespons
             }
         )
 
+    # Aggregate commit frequency for the heatmap
+    project_ids = [item.project_id for item in items if item.project_id]
+    commit_freq = _aggregate_commit_frequency(project_ids, session)
+
     html = _render_portfolio_html(
         name=portfolio.name,
         owner=owner_name,
@@ -403,6 +567,7 @@ def _render_portfolio_for_id(portfolio_id: int, session: Session) -> HTMLRespons
         created_at=portfolio.created_at.strftime("%B %d, %Y"),
         template=portfolio.template or "grid",
         color_theme=portfolio.color_theme or "dark",
+        commit_frequency=commit_freq,
     )
     return HTMLResponse(content=html)
 
@@ -770,6 +935,7 @@ def _render_portfolio_html(
     created_at: str,
     template: str,
     color_theme: str = "dark",
+    commit_frequency: dict[str, int] | None = None,
 ) -> str:
     """Build a self-contained HTML dashboard for a shared portfolio."""
     name_e = _hl.escape(name)
@@ -871,6 +1037,14 @@ def _render_portfolio_html(
         "</div>"
     )
 
+    heatmap_html = ""
+    if commit_frequency:
+        heatmap_html = (
+            '<div class="content" style="padding-bottom:0">'
+            + _render_heatmap_html(commit_frequency)
+            + "</div>"
+        )
+
     body = (
         f"</head>\n<body>\n"
         f'<div class="hero">\n  <div class="hero-inner">\n'
@@ -880,6 +1054,7 @@ def _render_portfolio_html(
         f'    <div class="meta-row">'
         f'<span class="stat-pill">{item_count} project{plural}</span>'
         f"</div>\n  </div>\n</div>\n"
+        f"{heatmap_html}\n"
         f'<div class="content">\n{items_html}\n</div>\n'
         f"{modal_overlay}\n"
         f"<footer>Shared via Zip2Job</footer>\n"
