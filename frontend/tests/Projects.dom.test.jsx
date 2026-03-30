@@ -257,6 +257,20 @@ test('renders analysis results after successful analysis', async () => {
   expect(screen.getByText('Led full-stack development')).toBeInTheDocument()
 })
 
+test('dispatches z2j:analysis-complete event after successful analysis', async () => {
+  const handler = jest.fn()
+  window.addEventListener('z2j:analysis-complete', handler)
+
+  renderProjectsPage({ projectPayload: [RAW_PROJECT] })
+  await waitFor(() => expect(screen.getByText('demo-project')).toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: /demo-project/i }))
+  await waitFor(() => expect(screen.getByText('Analyze')).toBeInTheDocument())
+  fireEvent.click(screen.getByText('Analyze'))
+
+  await waitFor(() => expect(handler).toHaveBeenCalledTimes(1))
+  window.removeEventListener('z2j:analysis-complete', handler)
+})
+
 test('shows error message when analysis fails', async () => {
   renderProjectsPage({
     projectPayload: [RAW_PROJECT],
