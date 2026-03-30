@@ -6,6 +6,9 @@
 <!-- <details> -->
   <summary><h3>T2 Week 11 + 12</h3></summary>
 
+<img width="1382" height="805" alt="image" src="https://github.com/user-attachments/assets/c629ae56-c233-4186-b08e-03c37ec9ff63" />
+
+
 #### What Went Well
 - Prepared for and presented our Milestone 3 presentation
 - Worked on the video demo this week
