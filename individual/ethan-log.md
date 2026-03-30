@@ -170,14 +170,14 @@ Coding tasks involved building the UI display to show users a detailed view of t
 
 ![screenshot](Week9_checklist.png)
 
-## Term 2 - Week #11 (March 16 - 22)
+## Term 2 - Week #11-12 (March 16 - 29)
 
-Coding tasks involved making some small text size changes to the projects page after subsequent work resized some text as well as adding dynamic resizing to the drawer to allow the user to make it any size they like. https://github.com/COSC-499-W2025/capstone-project-team-5/pull/424. Added filtering to the skills page to allow for filtering by skill type (tool or practice) as well as searching by skill name. https://github.com/COSC-499-W2025/capstone-project-team-5/pull/425. Plans for the future involve presenting on monday and wrapping up any bugs or missing functionality.
+Coding tasks involved making some small text size changes to the projects page after subsequent work resized some text as well as adding dynamic resizing to the drawer to allow the user to make it any size they like. https://github.com/COSC-499-W2025/capstone-project-team-5/pull/424. Added filtering to the skills page to allow for filtering by skill type (tool or practice) as well as searching by skill name. https://github.com/COSC-499-W2025/capstone-project-team-5/pull/425. Plans for the future involve presenting on monday and wrapping up any bugs or missing functionality. Week 12 involved adding some additional project features such as deletion and adding a project importance rank attribute along with dynamic re-ranking cascading of rank on update and deletion of a project. https://github.com/COSC-499-W2025/capstone-project-team-5/pull/439. Plan for the future is to add finishing touches and complete project voting.
 
 | Task  | Status | Notes |
 | :---- | :------:| -------: |
 | Improving project readability | Done | Small changes completed. | 
-| Skills page filtering. | Done. | Pending review. |  
-| Finishing touches. | In progress. | To do. |
+| Skills page filtering. | Done. | Done. |  
+| Project features | In progress. | Need one more review |
 
 ![screenshot](Week9_checklist.png)
