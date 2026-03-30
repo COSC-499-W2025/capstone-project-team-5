@@ -357,7 +357,7 @@ Over the past few weeks, I focused on continuing enhancements to Requirement 24 
 
 This past week I focused mainly on frontend upload work. I connected the upload flow in the dashboard to the backend, fixed request/response issues in the frontend API layer, and worked through review feedback to make the upload experience more stable and predictable. I also improved the Projects page behavior after uploads (including created/merged highlighting and dismissal behavior), and handled a race-condition concern by adding safer handling during uploads. Next week I plan to continue with follow-up frontend fixes, start adding UI tests for the upload flow, and align with the team on what feature work should be prioritized next.
 
-### Previous Weeks:
+### Previous Week:
 | Task | Status | Notes |
 | :---- | :----- | :------- |
 | Quiz | Completed | Wrote quiz. |
@@ -383,7 +383,7 @@ This past week I focused mainly on frontend upload work. I connected the upload 
 
 This past week I focused on frontend follow-up work and UI feature implementation. I fixed a few minor bugs from last week's frontend code, implemented dashboard statistic cards, and built out the Skills page frontend. I also added DOM tests for these updates to improve confidence in rendering and interaction behavior as we continue toward peer-testing and final integration.
 
-### Previous Weeks:
+### Previous Week:
 | Task | Status | Notes |
 | :---- | :----- | :------- |
 | Team Meetings | Completed | Agreed on frontend priorities and prepared for peer-testing. |
@@ -399,4 +399,31 @@ This past week I focused on frontend follow-up work and UI feature implementatio
 | Peer-testing | Not Yet Started | Conduct peer-testing and gather information for final push. |
 | Team Meetings | Not Yet Started | Decide on changes and priorities based on peer-testing. |
 | Further Code Contribution | Not Yet Started | Write code based on team meetings. |
+</details>
+
+## T2 - Week 11-12 | 15  March 2026 - 29 March 2026
+
+<details>
+  <summary><h3></h3></summary>
+<alt="Screenshot 2026-03-29 163741" src="https://github.com/user-attachments/assets/8018854b-e379-4649-bd63-72b7d16472aa" />
+
+Over the past two weeks, I implemented a critical security fix enforcing per-user project access across all API routes. Key accomplishments include: scoping project operations (list, detail, update, delete, thumbnails, analysis) to authenticated owners, adding user_id ownership metadata to UploadRecord, improving the frontend thumbnail component with graceful error handling, and adding comprehensive regression tests for access control. In Week 12, I focused on frontend user experience improvements based on peer-testing feedback. I enhanced the upload button discoverability by adding an animated pulse effect to make it more visible for new users.
+
+### Previous Weeks:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Peer-testing | Completed | Conducted peer-testing and gathered information. |
+| Team Meetings | Completed | Decided on changes and priorities based on peer-testing. |
+| Security: Project Access Controls | Completed | Enforced per-user project access across all API routes. |
+| Database: User-Project Ownership | Completed | Added user_id FK to UploadRecord and User→UploadRecord relationship. |
+| Frontend: Thumbnail Error Handling | Completed | Graceful handling for image load failures with blob URL cleanup. |
+| Frontend: Upload Button Enhancement| Completed | Added animated pulse effect for new users. |
+| Testing: Regression & UI Tests | Completed | Added tests for cross-user access prevention, thumbnail errors, and React test for upload button pulse visibility. |
+| Milestone #3 Preparation | Completed | Prepared presentation with the team. |
+
+
+### Next Week:
+| Task | Status | Notes |
+| :---- | :----- | :------- |
+| Project Voting | Not Yet Started | Evaluate other team projects and vote. |
 </details>
