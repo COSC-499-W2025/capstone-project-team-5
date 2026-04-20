@@ -6,6 +6,8 @@ An application that analyzes code repositories, extracts developer skills, detec
 
 **Tech stack:** Electron + React frontend, FastAPI backend, SQLite database, Gemini AI integration.
 
+**Cloud-hosted:** Try it online at [zip2job.com](https://zip2job.com) — no install required.
+
 ---
 
 ## Documentation
